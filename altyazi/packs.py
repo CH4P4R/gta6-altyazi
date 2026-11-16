@@ -24,6 +24,9 @@ log = logging.getLogger(__name__)
 
 _TAG = re.compile(r"<[^<>]{0,40}>")
 _SENT = re.compile(r"(?<=[.!?…])\s+")
+# Konuşan adı ("FRANKLIN:", "Lamar -") ya da diyalog çizgisi: paketlerde çoğunlukla adsız satır vardır
+# (CouchSubs'ın arama sırasından: önce tüm satır, sonra adsız, sonra cümle cümle)
+_SPEAKER = re.compile(r"^\s*(?:([A-Z][A-Za-z.'\- ]{0,24}?)\s*:\s+|[-–—]\s*)(?=\S)")
 
 
 def canon(text: str) -> str:
@@ -102,6 +105,18 @@ class PackLibrary:
     def lookup(self, text: str) -> tuple[str, str] | None:
         if not self._index:
             return None
+        hit = self._lookup(text)
+        if hit:
+            return hit
+        m = _SPEAKER.match(text)
+        if m:
+            hit = self._lookup(text[m.end():])
+            if hit:
+                prefix = f"{m.group(1)}: " if m.group(1) else "- "
+                return prefix + hit[0], hit[1]
+        return None
+
+    def _lookup(self, text: str) -> tuple[str, str] | None:
         k = key(text)
         if k and k in self._index:
             return self._index[k]

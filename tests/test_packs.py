@@ -53,3 +53,14 @@ def test_engine_uses_pack_without_ai(tmp_path, monkeypatch):
     eng.packs = packs.PackLibrary(tmp_path / "paketler")
     got = eng.packs.lookup("Lose the cops.")
     assert got == ("Polislerden kurtul.", "p")
+
+
+def test_speaker_label_lookup(tmp_path):
+    folder = tmp_path / "p"
+    folder.mkdir()
+    data = {"id": "x", "title": "X", "entries": {packs.key("Get in the car."): "Arabaya bin."}}
+    (folder / "x.json").write_text(json.dumps(data), encoding="utf-8")
+    lib = packs.PackLibrary(folder)
+    assert lib.lookup("FRANKLIN: Get in the car.") == ("FRANKLIN: Arabaya bin.", "x")
+    assert lib.lookup("- Get in the car.") == ("Arabaya bin.", "x")      # çizgi sadeleştirmede zaten düşer
+    assert lib.lookup("Lamar: Go home.") is None
