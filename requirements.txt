@@ -1,0 +1,20 @@
+# Çekirdek
+numpy
+opencv-python
+pyyaml
+rapidfuzz
+PySide6-Essentials
+# OCR (GPU: onnxruntime-gpu, CUDA 12 + cuDNN 9 gerekir; kur.bat halleder)
+rapidocr_onnxruntime
+onnxruntime-gpu
+# Yerel çeviri (GPU)
+ctranslate2
+sentencepiece
+# Ekran / pencere yakalama (Windows)
+windows-capture; sys_platform == "win32"
+# Capture kart sesi
+sounddevice
+# Kalite katmanı
+anthropic
+requests
+# İsteğe bağlı: google-genai (Gemini), deepl

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+models/*
+!models/.gitkeep
+cache.sqlite*
+kalibrasyon*.png
+*.log
+config.local.yaml

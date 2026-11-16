@@ -1,0 +1,218 @@
+"""Kullanım:
+    python -m altyazi                  # çalıştır (config.yaml'a göre)
+    python -m altyazi pencereler       # açık pencereleri listele (chiaki'nin başlığını bulmak için)
+    python -m altyazi kameralar        # capture kartları ve ses girişlerini listele
+    python -m altyazi kalibre          # o anki kareyi bölgeler ve maskelerle kalibrasyon.png'ye kaydet
+    python -m altyazi test resim.png   # bir ekran görüntüsünde OCR + çeviriyi dene (pencere açmadan)
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+import threading
+import time
+
+from . import config as config_mod
+from . import winutil
+
+
+def _setup_logging(verbose: bool) -> None:
+    logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO,
+                        format="%(asctime)s.%(msecs)03d %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
+    for noisy in ("httpx", "httpx2", "anthropic", "urllib3", "google_genai"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
+
+def _recognizer(cfg):
+    from .ocr import Recognizer
+
+    rec = Recognizer(cfg.ocr.model or None, cfg.ocr.anahtar_dosyasi or None, use_gpu=cfg.ocr.gpu)
+    rec.warmup()
+    return rec
+
+
+def cmd_run(cfg) -> int:
+    from PySide6.QtWidgets import QApplication
+
+    from .capture import make_source
+    from .overlay import Bridge, OverlayWindow, Painter, QtSink, VideoWindow
+    from .pipeline import MultiSink, Pipeline
+    from .server import EventServer
+    from .translate import TranslationEngine
+
+    log = logging.getLogger("altyazi")
+    rec = _recognizer(cfg)
+    engine = TranslationEngine(cfg.ceviri)
+    source = make_source(cfg)
+
+    app = QApplication(sys.argv)
+    bridge = Bridge()
+    painter = Painter(cfg.gosterim.yazi_tipi, cfg.gosterim.gecikme_goster)
+    server = None
+    if cfg.sunucu.acik:
+        server = EventServer(cfg.sunucu.port)
+        server.start()
+    sink = MultiSink(QtSink(bridge), server)
+
+    frame_sink = None
+    if cfg.gosterim.mod == "pencere":
+        win = VideoWindow(painter, bridge, cfg.gosterim.tam_ekran)
+        frame_sink = win.push_frame
+    else:
+        win = OverlayWindow(painter, bridge, source.hwnd)
+    win.show()
+
+    audio = None
+    if cfg.kaynak.tur == "capture" and cfg.kaynak.capture_ses:
+        try:
+            from .audio import start_passthrough
+            audio = start_passthrough(cfg.kaynak.capture_ses_cihaz)
+        except Exception as e:  # noqa: BLE001
+            log.warning("Ses aktarımı başlatılamadı: %s", e)
+
+    pipe = Pipeline(cfg, sink, rec, engine, source, frame_sink=frame_sink)
+    pipe.start()
+    log.info("Hazır. Çıkmak için bu pencerede Ctrl+C.")
+    try:
+        code = app.exec()
+    except KeyboardInterrupt:
+        code = 0
+    pipe.stop()
+    if audio is not None:
+        audio.close()
+    return code
+
+
+def cmd_windows() -> int:
+    wins = winutil.list_windows()
+    if not wins:
+        print("Pencere bulunamadı (bu komut sadece Windows'ta çalışır).")
+    for hwnd, title in wins:
+        print(f"{hwnd:>10}  {title}")
+    return 0
+
+
+def cmd_cameras() -> int:
+    import cv2
+
+    print("Görüntü cihazları:")
+    for i in range(6):
+        cap = cv2.VideoCapture(i, getattr(cv2, "CAP_DSHOW", cv2.CAP_ANY))
+        if cap.isOpened():
+            print(f"  {i}: {int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}x{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
+        cap.release()
+    try:
+        from .audio import list_inputs
+        print("Ses girişleri:")
+        for i, n in list_inputs():
+            print(f"  {i}: {n}")
+    except Exception as e:  # noqa: BLE001
+        print(f"Ses cihazları okunamadı: {e}")
+    return 0
+
+
+def _grab_frame(cfg, timeout: float = 5.0):
+    from .capture import make_source
+
+    got: dict = {}
+    ev = threading.Event()
+
+    def on_frame(frame, _t):  # noqa: ANN001
+        got.setdefault("f", frame)
+        ev.set()
+
+    src = make_source(cfg)
+    src.start(on_frame)
+    ev.wait(timeout)
+    src.stop()
+    if "f" not in got:
+        raise RuntimeError("Kaynaktan kare alınamadı")
+    return got["f"]
+
+
+def cmd_calibrate(cfg, image: str | None) -> int:
+    import cv2
+    import numpy as np
+
+    from .detector import ZoneDetector, zone_rect
+
+    frame = cv2.imread(image) if image else _grab_frame(cfg)
+    frame = frame[..., :3].copy()
+    h, w = frame.shape[:2]
+    vis = frame.copy()
+    colors = [(0, 255, 255), (255, 128, 0), (0, 255, 0), (255, 0, 255), (0, 128, 255)]
+    for i, z in enumerate(cfg.bolgeler):
+        x0, y0, x1, y1 = zone_rect(z, w, h)
+        mask = ZoneDetector(z).text_mask(frame[y0:y1, x0:x1])
+        overlay = vis[y0:y1, x0:x1]
+        overlay[mask] = (0, 0, 255)                           # metin sayılan pikseller kırmızı
+        c = colors[i % len(colors)]
+        cv2.rectangle(vis, (x0, y0), (x1, y1), c, 2)
+        cv2.putText(vis, f"{z.ad} ({np.count_nonzero(mask)} px)", (x0 + 4, max(18, y0 - 6)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, c, 2)
+    cv2.imwrite("kalibrasyon.png", vis)
+    cv2.imwrite("kalibrasyon_ham.png", frame)
+    print(f"Kaydedildi: kalibrasyon.png (bölgeler + kırmızı = metin sayılan pikseller), {w}x{h}")
+    print("Ham kare: kalibrasyon_ham.png (bunu bana atarsan bölgeleri ayarlarım)")
+    return 0
+
+
+def cmd_test(cfg, path: str) -> int:
+    import cv2
+
+    from .pipeline import Pipeline
+    from .translate import TranslationEngine
+
+    frame = cv2.imread(path)
+    if frame is None:
+        print(f"Resim açılamadı: {path}")
+        return 1
+    rec = _recognizer(cfg)
+    engine = TranslationEngine(cfg.ceviri)
+    done = threading.Event()
+
+    class PrintSink:
+        def show(self, it):  # noqa: ANN001
+            print(f"[{it.zone}] {it.latency_ms:5.0f} ms  OCR {it.ocr_ms:3.0f} ms  {it.source:>16} {it.mt_ms:4.0f} ms"
+                  f"\n    EN: {it.english}\n    TR: {it.text}")
+            done.set()
+
+        def clear(self, zone):  # noqa: ANN001
+            pass
+
+    pipe = Pipeline(cfg, PrintSink(), rec, engine)
+    pipe.process(frame, time.perf_counter())
+    done.wait(3)
+    time.sleep(3 if engine.refine else 0.3)   # kalite katmanının sonucunu da bekle
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(prog="altyazi", description="GTA 6 gerçek zamanlı Türkçe altyazı")
+    ap.add_argument("komut", nargs="?", default="calistir",
+                    choices=["calistir", "pencereler", "kameralar", "kalibre", "test"])
+    ap.add_argument("dosya", nargs="?", help="kalibre/test için resim dosyası")
+    ap.add_argument("-c", "--config", default="config.yaml")
+    ap.add_argument("-v", "--ayrintili", action="store_true")
+    a = ap.parse_args(argv)
+    _setup_logging(a.ayrintili)
+    winutil.set_dpi_aware()
+    winutil.add_cuda_dll_dirs()
+    if a.komut == "pencereler":
+        return cmd_windows()
+    if a.komut == "kameralar":
+        return cmd_cameras()
+    cfg = config_mod.load(a.config)
+    if a.komut == "kalibre":
+        return cmd_calibrate(cfg, a.dosya)
+    if a.komut == "test":
+        if not a.dosya:
+            ap.error("test için resim dosyası verin")
+        return cmd_test(cfg, a.dosya)
+    return cmd_run(cfg)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

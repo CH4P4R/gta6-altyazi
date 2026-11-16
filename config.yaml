@@ -1,0 +1,67 @@
+# GTA 6 Türkçe Altyazı - ayarlar
+# Kişisel API anahtarlarını buraya değil, config.local.yaml dosyasına yaz (git'e girmez).
+
+kaynak:
+  # pencere : chiaki-ng / PS Remote Play penceresini yakala
+  # capture : capture kart (PS5 HDMI -> kart -> PC)
+  # video / resim : kayıttan test
+  tur: pencere
+  pencere_adi: "chiaki"          # Remote Play için: "PS Remote Play"
+  capture_cihaz: 0               # "python -m altyazi kameralar" ile bul
+  capture_genislik: 1920
+  capture_yukseklik: 1080
+  capture_fps: 60
+  capture_ses: true              # capture kartın sesini hoparlöre aktar
+  dosya: ""
+
+gosterim:
+  # overlay : oyun penceresinin üstüne saydam katman (pencere kaynağı için)
+  # pencere : görüntüyü + Türkçe yazıyı kendi penceresinde göster (capture kart için, F11 tam ekran)
+  mod: overlay
+  yazi_tipi: "Segoe UI Semibold"
+  gecikme_goster: true           # sağ üstte ms cinsinden gecikme
+  tam_ekran: false
+
+# Ekranda okunacak bölgeler. alan: [sol, üst, sağ, alt] - görüntünün oranı (0-1).
+# GTA 6 çıkınca gerçek ekran görüntülerine göre ayarlanacak (python -m altyazi kalibre).
+bolgeler:
+  - ad: altyazi                  # alt ortadaki diyalog altyazısı ve görev metni
+    alan: [0.10, 0.76, 0.90, 0.97]
+    tur: altyazi
+    hizalama: orta
+    capa: alt
+
+  - ad: yardim                   # sol üstteki yardım kutusu ("X'e basarak araca bin" gibi)
+    alan: [0.00, 0.00, 0.36, 0.32]
+    tur: arayuz
+    hizalama: sol
+    capa: ust
+    silme_ms: 300
+
+  - ad: bildirim                 # sağ üstteki bildirimler / telefon mesajları
+    alan: [0.64, 0.00, 1.00, 0.32]
+    tur: arayuz
+    hizalama: sag
+    capa: ust
+    silme_ms: 300
+
+ocr:
+  gpu: true
+
+ceviri:
+  # Hızlı katman (anında, GPU'da): yerel | google | yok
+  hizli: yerel
+  yerel_model: models/opus-mt-en-tr
+  # Kalite katmanı (0.4-1.5 sn sonra yazıyı daha doğal haliyle günceller): claude | gemini | deepl | yok
+  kalite: claude
+  claude_model: claude-opus-5-5   # daha ucuz/hızlı istersen: claude-haiku-5-5
+  claude_hizli_mod: true
+  claude_efor: low
+  baglam_satir: 6
+  onbellek: cache.sqlite
+  benzerlik: 92
+  sozluk: {}                     # örnek: {"Vice City": "Vice City"}
+
+sunucu:
+  acik: true                     # http://localhost:8787 (OBS: /obs)
+  port: 8787
