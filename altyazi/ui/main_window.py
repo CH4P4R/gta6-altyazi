@@ -721,7 +721,7 @@ class SettingsPage(QWidget):
         self.video = QLineEdit(cfg.kaynak.dosya)
         src.add(field("Kaynak", self.src))
         src.add(field("Pencere başlığında geçen", self.win_name, "chiaki-ng için \"chiaki\", resmi uygulama için "
-                                                                  "\"PS Remote Play\"."))
+                                                                  "\"PS Remote Play\", Veyra için \"Veyra\"."))
         src.add(field("chiaki-ng programı", hbox(self.chiaki, button("Gözat", None, self._browse),
                                                  button("İndir", "ghost", lambda: webbrowser.open(CHIAKI_DOWNLOAD)))))
         src.add(hbox(field("Capture kart numarası", self.cap_idx), field("Video dosyası", self.video), spacing=16))
