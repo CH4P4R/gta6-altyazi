@@ -1,0 +1,363 @@
+<title>GTA6 Altyazı Rehberi</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Düzen: dar tek sütun okuma kolonu; üstte ilerleme çubuğu yapışkan, adımlar işaretlenebilir kartlar */
+:root {
+  --bg: #0d0b13; --surface: #17131f; --surface2: #1f1a29; --line: #2c2538;
+  --fg: #f4f1fa; --muted: #a59bb8; --faint: #6f6683;
+  --a1: #ff4fa3; --a2: #ff9f43; --ok: #3ddc97; --warn: #ffb547;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #fbf8fc; --surface: #ffffff; --surface2: #f4eef6; --line: #e6dcea;
+  --fg: #1b1424; --muted: #5f5370; --faint: #8b7f9c;
+  --a1: #e0287f; --a2: #e07a14; --ok: #12935e; --warn: #b9740a; color-scheme: light } }
+:root[data-theme="light"] {
+  --bg: #fbf8fc; --surface: #ffffff; --surface2: #f4eef6; --line: #e6dcea;
+  --fg: #1b1424; --muted: #5f5370; --faint: #8b7f9c;
+  --a1: #e0287f; --a2: #e07a14; --ok: #12935e; --warn: #b9740a; color-scheme: light }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--body); }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 0 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: var(--a2); text-underline-offset: 3px }
+a:hover { color: var(--a1) }
+code, .mono { font-family: var(--mono); font-size: .88em; background: var(--surface2); border: 1px solid var(--line);
+  padding: .08em .4em; border-radius: 6px; overflow-wrap: anywhere }
+
+/* kapak */
+.hero { position: relative; overflow: hidden; border-radius: 0 0 24px 24px; margin-bottom: 28px;
+  background: linear-gradient(180deg, #2b1055 0%, #8e2c6c 52%, #ff8a4c 86%, #ffc36b 100%); }
+.hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-in { position: relative; padding: 44px 0 clamp(96px, 22vw, 130px); display: grid; gap: 14px; }
+.hero-in .wrap { padding-block: 0 }
+.badge { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center;
+  background: linear-gradient(135deg, #ff4fa3, #ff9f43); color: #fff; font: 800 18px/1 var(--display);
+  box-shadow: 0 8px 30px rgba(255, 79, 163, .35); }
+.hero h1 { font: 800 clamp(30px, 6vw, 46px)/1.04 var(--display); margin: 0; color: #fff; text-wrap: balance; letter-spacing: -.01em }
+.hero p { margin: 0; color: #ffeaf3; max-width: 56ch }
+.sub-line { display: inline-block; margin-top: 6px; background: rgba(0,0,0,.82); color: #fff; padding: 8px 14px;
+  border-radius: 8px; font-weight: 600; box-decoration-break: clone; -webkit-box-decoration-break: clone }
+
+/* ilerleme */
+.progress { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  padding: 12px 0; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+.progress-row { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 13px; color: var(--muted) }
+.bar { flex: 1; height: 8px; border-radius: 4px; background: var(--surface2); overflow: hidden }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--a1), var(--a2)); transition: width .3s }
+.progress button { background: none; border: 0; color: var(--faint); font: 600 12px var(--body); cursor: pointer; padding: 4px 6px; border-radius: 6px }
+.progress button:hover, .progress button:focus-visible { color: var(--fg); outline: 1px solid var(--line) }
+
+h2 { font: 700 22px/1.25 var(--display); margin: 34px 0 8px; text-wrap: balance }
+h2 + p.lead { margin-top: 0; color: var(--muted) }
+.lead { color: var(--muted) }
+
+/* adım kartları */
+.steps { display: grid; gap: 12px; counter-reset: step; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px 16px 16px;
+  display: grid; grid-template-columns: 34px 1fr; gap: 4px 14px; transition: border-color .2s, opacity .2s }
+.step.done { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)) }
+.step.done .body { opacity: .62 }
+.check { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface2);
+  display: grid; place-items: center; cursor: pointer; color: transparent; font: 700 15px var(--body); margin-top: 1px; transition: all .2s }
+.check:hover { border-color: var(--a1) }
+.check:focus-visible { outline: 2px solid var(--a2); outline-offset: 2px }
+.step.done .check { background: var(--ok); border-color: var(--ok); color: #08130d }
+.step h3 { margin: 2px 0 4px; font: 650 16px/1.35 var(--body); }
+.step h3 .n { color: var(--a2); font-family: var(--mono); font-size: 12px; margin-right: 8px; letter-spacing: .04em }
+.body { min-width: 0; grid-column: 2 }
+.body p { margin: 0 0 8px; color: var(--muted) }
+.body ol, .body ul { margin: 4px 0 8px; padding-left: 20px; color: var(--muted) }
+.body li { margin: 3px 0 }
+.body b, .body strong { color: var(--fg); font-weight: 600 }
+.path { color: var(--fg); font-weight: 600 }
+.path .sep { color: var(--a2); margin: 0 .3em }
+
+.note { border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 9%, var(--surface)); padding: 10px 14px;
+  border-radius: 0 10px 10px 0; color: var(--fg); margin: 10px 0 }
+.note.key { border-color: var(--a1); background: color-mix(in srgb, var(--a1) 9%, var(--surface)) }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #ff4fa3, #ff9f43); padding: 10px 16px; border-radius: 10px; margin: 4px 0 6px }
+.btn:hover { color: #fff; filter: brightness(1.08) }
+.btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px }
+
+/* oyun günü */
+.daily { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 6px 18px }
+.daily div { display: grid; grid-template-columns: 92px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line) }
+.daily div:last-child { border-bottom: 0 }
+.daily dt, .daily .k { font: 600 12px var(--mono); color: var(--a2); padding-top: 2px; letter-spacing: .03em }
+.daily .v { min-width: 0; color: var(--muted) }
+.daily .v b { color: var(--fg) }
+
+/* kısayollar */
+.keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px }
+.keycard { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; min-width: 0 }
+.keycard .combo { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px }
+kbd { font: 600 12px var(--mono); background: var(--surface2); border: 1px solid var(--line); border-bottom-width: 3px;
+  padding: 3px 8px; border-radius: 7px; color: var(--fg) }
+.keycard p { margin: 0; color: var(--muted); font-size: 14px }
+
+/* sorunlar */
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 0 16px; margin-bottom: 10px }
+summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px }
+summary::-webkit-details-marker { display: none }
+summary::after { content: "+"; color: var(--a2); font: 700 18px/1 var(--mono) }
+details[open] summary::after { content: "−" }
+summary:focus-visible { outline: 2px solid var(--a2); outline-offset: 2px; border-radius: 6px }
+details > div { padding: 0 0 14px; color: var(--muted) }
+details > div b { color: var(--fg) }
+
+footer { margin-top: 40px; color: var(--faint); font-size: 13px }
+@media (max-width: 520px) {
+  .daily div { grid-template-columns: 1fr; gap: 2px }
+  .step { grid-template-columns: 30px 1fr; padding: 14px 14px 14px 12px }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<header class="hero">
+  <canvas id="sky" aria-hidden="true"></canvas>
+  <div class="hero-in"><div class="wrap" style="display:grid;gap:14px">
+    <div class="badge">TR</div>
+    <h1>GTA6 Altyazı kurulumu</h1>
+    <p>Kasa, TCL TV, MacBook ve Discord için adım adım. Bitirdiğin adımları işaretle; ilerlemen bu tarayıcıda kalır.</p>
+    <div><span class="sub-line">Lucia, Vice City'den hemen çıkmamız lazım. Şimdi!</span></div>
+  </div></div>
+</header>
+
+<div class="wrap">
+  <div class="progress" aria-live="polite">
+    <div class="progress-row"><span id="ptext">0 / 0 adım</span><div class="bar"><i id="pbar"></i></div>
+      <button id="reset" type="button">Sıfırla</button></div>
+  </div>
+
+  <p class="lead">Nasıl çalışıyor: Sen oyunu TV'de HDMI'dan, gecikmesiz oynarsın. Kasa PS5'in görüntüsünü ikinci bir PSN hesabıyla chiaki-ng üzerinden alır, yazıları okur ve çevirir. Türkçe yazı TV'de oyunun üstünde, kasanın ekranında ve arkadaşlarının izlediği Discord yayınında görünür.</p>
+
+  <h2>Bir kerelik hazırlık</h2>
+  <p class="lead">Yaklaşık 20-30 dakika. Sırayla git.</p>
+  <div class="steps" id="steps">
+
+    <section class="step" data-id="ag">
+      <button class="check" type="button" aria-label="Ağ adımını tamamlandı olarak işaretle">✓</button>
+      <h3><span class="n">ADIM 1</span>Ağı hazırla</h3>
+      <div class="body">
+        <ul>
+          <li><b>Kasa:</b> kabloyla modeme.</li>
+          <li><b>PS5:</b> mümkünse kabloyla (modeme ya da menzil arttırıcının LAN girişine). chiaki görüntüsü bu yoldan gelir.</li>
+          <li><b>TV:</b> modemden gelen kabloya alabiliyorsan al, olmazsa Wi-Fi yeterli.</li>
+        </ul>
+        <p>Hepsi aynı ev ağında olmalı.</p>
+      </div>
+    </section>
+
+    <section class="step" data-id="psn">
+      <button class="check" type="button" aria-label="PSN adımını tamamlandı olarak işaretle">✓</button>
+      <h3><span class="n">ADIM 2</span>İkinci PSN hesabı aç ve PS5'i ayarla</h3>
+      <div class="body">
+        <div class="note key">chiaki'ye kendi hesabınla bağlanırsan TV'deki kolun kopar. Bu yüzden ücretsiz ikinci bir hesap şart.</div>
+        <ol>
+          <li><a href="https://www.playstation.com" target="_blank" rel="noopener">playstation.com</a>'dan yeni bir hesap aç.</li>
+          <li>PS5'te bu hesapla yeni kullanıcı olarak bir kez giriş yap.</li>
+          <li>Bu kullanıcıdayken <span class="path">Ayarlar<span class="sep">›</span>Sistem<span class="sep">›</span>Uzaktan Oynatma</span>: aç ve <b>Cihazı Bağla</b>'ya bas. 8 haneli kodu bir yere not et.</li>
+          <li><span class="path">Ayarlar<span class="sep">›</span>Sistem<span class="sep">›</span>Güç Tasarrufu<span class="sep">›</span>Dinlenme Modunda Kullanılabilir Özellikler</span>: <b>İnternete Bağlı Kal</b> ve <b>Ağ Üzerinden PS5'i Açmayı Etkinleştir</b>'i aç.</li>
+          <li>Kendi hesabına geri dön.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="step" data-id="chiaki">
+      <button class="check" type="button" aria-label="chiaki adımını tamamlandı olarak işaretle">✓</button>
+      <h3><span class="n">ADIM 3</span>Kasaya chiaki-ng kur ve PS5'i kaydet</h3>
+      <div class="body">
+        <ol>
+          <li><a href="https://github.com/streetpea/chiaki-ng/releases/latest" target="_blank" rel="noopener">chiaki-ng sürümler sayfası</a>'ndan Windows kurulumunu indir ve kur.</li>
+          <li>PS5'i eklerken <b>ikinci hesapla</b> giriş yap ve 8 haneli kodu gir.</li>
+          <li>Ayarlardan <b>1080p</b>, <b>60 fps</b> ve en yüksek bitrate'i seç.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="step" data-id="app">
+      <button class="check" type="button" aria-label="Uygulama kurulumunu tamamlandı olarak işaretle">✓</button>
+      <h3><span class="n">ADIM 4</span>GTA6 Altyazı'yı kur</h3>
+      <div class="body">
+        <a class="btn" href="https://github.com/CH4P4R/gta6-altyazi/releases" target="_blank" rel="noopener">Releases sayfasını aç ↗</a>
+        <ol>
+          <li>GitHub hesabınla girişliyken en üstteki sürümden <code>GTA6Altyazi-Setup.exe</code>'yi indir (yaklaşık 1,2 GB; depo gizli olduğu için giriş şart).</li>
+          <li>Çalıştır. Mavi "Windows kişisel bilgisayarınızı korudu" uyarısı çıkarsa <b>Ek bilgi › Yine de çalıştır</b>.</li>
+          <li>Güvenlik duvarı sorarsa <b>Özel ağlar</b>'ı işaretleyip izin ver. Yoksa TV ve telefon kasaya bağlanamaz.</li>
+        </ol>
+        <p>Kurulumun içinde her şey var: çeviri modeli, OCR, TV uygulaması ve TV'ye kurmak için gereken araçlar.</p>
+      </div>
+    </section>
+
+    <section class="step" data-id="key">
+      <button class="check" type="button" aria-label="Claude anahtarı adımını tamamlandı olarak işaretle">✓</button>
+      <h3><span class="n">ADIM 5</span>Claude API anahtarı al</h3>
+      <div class="body">
+        <p>En doğal Türkçe için. Anahtarsız da çalışır ama sadece yerel model çevirir.</p>
+        <ol>
+          <li><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>'da hesap aç, ödeme yöntemi ekle ve bir anahtar oluştur (<code>sk-ant-…</code>).</li>
+          <li>Uygulamanın sihirbazındaki <b>Çeviri</b> adımına yapıştır ve <b>Kaydet ve dene</b>'ye bas.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="step" data-id="tv">
+      <button class="check" type="button" aria-label="TV adımını tamamlandı olarak işaretle">✓</button>
+      <h3><span class="n">ADIM 6</span>TCL 65C6K'yı bağla</h3>
+      <div class="body">
+        <ol>
+          <li>TV'de <span class="path">Ayarlar<span class="sep">›</span>Sistem<span class="sep">›</span>Hakkında</span> menüsünde <b>Android TV OS derlemesi</b> satırına art arda <b>7 kez</b> bas.</li>
+          <li><span class="path">Ayarlar<span class="sep">›</span>Sistem<span class="sep">›</span>Geliştirici seçenekleri</span>: <b>USB hata ayıklama</b>'yı aç.</li>
+          <li>Uygulamada <b>Televizyon</b> sayfasında <b>Ağda ara</b>'ya bas, sonra <b>Bağlan, kur ve başlat</b>'a bas.</li>
+          <li>TV'de "Hata ayıklamaya izin verilsin mi?" çıkınca <b>Bu bilgisayardan her zaman izin ver</b>'i işaretle ve <b>İzin ver</b>'e bas.</li>
+          <li><b>Deneme altyazısı gönder</b> ile yerini kontrol et.</li>
+        </ol>
+        <div class="note">TV bulunamazsa ya da menüde USB hata ayıklama yoksa: <b>Kablosuz hata ayıklama</b>'yı aç, <b>Eşleştirme koduyla cihaz eşleştir</b>'e bas. TV'nin gösterdiği adres:port ve 6 haneli kodu uygulamadaki <b>Eşleştir</b> kısmına yaz.</div>
+        <p>TV oyunun üstüne çizime izin vermezse uygulama kendiliğinden yedek moda geçer: PS5 görüntüsü TV uygulamasının içinde açılır, kumandada sol/sağ ile doğru HDMI girişini seçersin.</p>
+      </div>
+    </section>
+
+    <section class="step" data-id="discord">
+      <button class="check" type="button" aria-label="Discord adımını tamamlandı olarak işaretle">✓</button>
+      <h3><span class="n">ADIM 7</span>Discord'u hazırla</h3>
+      <div class="body">
+        <p>Bir Discord hesabı aynı anda tek sesli kanalda olabildiği için iki hesap kullanılır.</p>
+        <ul>
+          <li><b>Kasa:</b> ikinci bir Discord hesabı aç (ör. "GTA Yayın") ve kasadaki Discord'a onunla gir.</li>
+          <li><b>MacBook:</b> kendi hesabınla. Konuşurken kulaklık kullan, yoksa mikrofon TV'nin sesini de alır.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="step" data-id="power">
+      <button class="check" type="button" aria-label="Güç ayarı adımını tamamlandı olarak işaretle">✓</button>
+      <h3><span class="n">ADIM 8</span>Kasanın uyumasını kapat</h3>
+      <div class="body">
+        <p>Ekran kilitlenir ya da uykuya geçerse okuma ve yayın durur.</p>
+        <p><span class="path">Windows Ayarlar<span class="sep">›</span>Sistem<span class="sep">›</span>Güç ve pil</span>: ekranı kapatma ve uyku için <b>Hiçbir zaman</b>. Ekran koruyucuyu da kapat.</p>
+      </div>
+    </section>
+  </div>
+
+  <h2>Her oyun günü</h2>
+  <p class="lead">Hazırlık bittikten sonra her seferinde yaptığın kısa sıra.</p>
+  <div class="daily">
+    <div><span class="k">KASA</span><span class="v">chiaki-ng'yi aç ve PS5'e bağlan (uygulamadaki <b>chiaki-ng'yi aç</b> düğmesi de açar). Pencereyi küçültme.</span></div>
+    <div><span class="k">UYGULAMA</span><span class="v">GTA6 Altyazı'da büyük <b>başlat</b> düğmesine bas. TV'deki uygulama kendiliğinden açılır.</span></div>
+    <div><span class="k">OYUN</span><span class="v">Oyunda <b>İngilizce altyazıyı aç</b>. Türkçesi üstüne gelecek.</span></div>
+    <div><span class="k">DISCORD</span><span class="v">Kasada ikinci hesapla sesli kanala gir, mikrofonu ve sesi kapat, <b>tüm ekranı</b> paylaş (Go Live). Mac'ten kendi hesabınla konuş.</span></div>
+    <div><span class="k">TELEFON</span><span class="v">Ana ekrandaki QR kodu okut: <b>Ekranı çevir</b> ve <b>Duraklat</b> düğmeleri telefonda olur.</span></div>
+  </div>
+
+  <h2>Kısayollar</h2>
+  <div class="keys">
+    <div class="keycard"><div class="combo"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>9</kbd></div>
+      <p>Ekrandaki her şeyi çevir: telefon mesajları, menüler, harita. Tekrar basınca ya da 20 sn sonra kapanır.</p></div>
+    <div class="keycard"><div class="combo"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>0</kbd></div>
+      <p>Çeviriyi duraklat / devam ettir.</p></div>
+  </div>
+
+  <h2>GTA 6 çıkınca (19 Kasım)</h2>
+  <p class="lead">Okuma alanları GTA V'e göre tahmin edildi; gerçek oyuna göre bir kez ayarlanmalı.</p>
+  <div class="steps">
+    <section class="step" data-id="calib">
+      <button class="check" type="button" aria-label="Kalibrasyonu tamamlandı olarak işaretle">✓</button>
+      <h3><span class="n">ADIM 9</span>Okuma alanlarını ayarla</h3>
+      <div class="body">
+        <ol>
+          <li>Oyunda bir diyalog altyazısı ekrandayken uygulamada <b>Okuma alanları › Görüntü al</b>'a bas.</li>
+          <li>Kutuları fareyle gerçek altyazının, sol üst yardım kutusunun ve bildirimlerin üstüne çek.</li>
+          <li>Kırmızı noktalar yazıların üstünde toplanıyorsa ayar doğru. <b>Kaydet</b>.</li>
+        </ol>
+      </div>
+    </section>
+  </div>
+
+  <h2>Sorun çıkarsa</h2>
+  <details><summary>TV kolu chiaki açılınca kopuyor</summary>
+    <div>chiaki'de PS5 <b>kendi hesabınla</b> kayıtlı. PS5'i chiaki'den silip <b>ikinci hesapla</b> yeniden kaydet (Adım 2-3).</div></details>
+  <details><summary>Uygulama "chiaki penceresi bulunamadı" diyor</summary>
+    <div>chiaki-ng açık ve PS5'e bağlı olmalı, pencere simge durumunda olmamalı. Başlıkta "chiaki" geçmiyorsa <b>Ayarlar › Pencere başlığında geçen</b> kısmına pencerenin adını yaz.</div></details>
+  <details><summary>TV ağda bulunamıyor</summary>
+    <div>TV açık mı, <b>USB hata ayıklama</b> açık mı kontrol et. Menzil arttırıcı cihazları ayırıyor olabilir: TV'yi kabloya al ya da IP'yi elle yaz (TV'de <span class="path">Ayarlar<span class="sep">›</span>Ağ</span>'da yazar). Yeni Google TV'lerde <b>Kablosuz hata ayıklama</b> ile eşleştir.</div></details>
+  <details><summary>TV'de altyazı çıkmıyor</summary>
+    <div>Büyük ihtimalle Windows güvenlik duvarı TV'nin kasaya bağlanmasını engelliyor. <span class="path">Windows Güvenliği<span class="sep">›</span>Güvenlik duvarı<span class="sep">›</span>Bir uygulamaya izin ver</span>'den <b>GTA6Altyazi</b>'yi <b>Özel</b> ağ için işaretle. Sonra <b>Deneme altyazısı gönder</b> ile dene.</div></details>
+  <details><summary>Bazı yazılar okunmuyor ya da yanlış yer kapanıyor</summary>
+    <div><b>Okuma alanları</b>'nda görüntü al ve kırmızı noktalara bak. Yazının üstünde kırmızı yoksa kutu yanlış yerdedir ya da yazı renklidir: <b>Renkli kelimeleri de oku</b>'yu aç. Menü, telefon ve harita için <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>9</kbd> kullan.</div></details>
+  <details><summary>Arkadaşlarım yayında Türkçeyi görmüyor</summary>
+    <div>Discord'da sadece chiaki penceresini paylaşıyorsun. Türkçe yazı ayrı bir katman; <b>Ekranlar</b> sekmesinden tüm monitörü paylaş.</div></details>
+  <details><summary>Çeviri hep "yerel" geliyor, Claude çalışmıyor</summary>
+    <div><b>Çeviri</b> sayfasında anahtarın girili mi bak, <b>Dene</b> ile test et. Anthropic hesabında bakiye olmalı. Hata ayrıntısı <b>Ayarlar › Kayıt ve ayar klasörü</b>'ndeki <code>altyazi.log</code>'da yazar.</div></details>
+
+  <footer>GTA6 Altyazı · Kayıt dosyası ve ayarlar: <code>%APPDATA%\GTA6Altyazi</code></footer>
+</div>
+
+<script>
+(() => {
+  const KEY = "gta6-rehber-v1";
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { state = {}; }
+  const steps = [...document.querySelectorAll(".step[data-id]")];
+  const ptext = document.getElementById("ptext"), pbar = document.getElementById("pbar");
+  function render() {
+    let done = 0;
+    for (const s of steps) {
+      const on = !!state[s.dataset.id];
+      s.classList.toggle("done", on);
+      s.querySelector(".check").setAttribute("aria-pressed", on ? "true" : "false");
+      if (on) done++;
+    }
+    ptext.textContent = done === steps.length ? "Hepsi tamam, iyi oyunlar!" : `${done} / ${steps.length} adım`;
+    pbar.style.width = (100 * done / steps.length) + "%";
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  for (const s of steps) {
+    s.querySelector(".check").addEventListener("click", () => { state[s.dataset.id] = !state[s.dataset.id]; save(); render(); });
+  }
+  document.getElementById("reset").addEventListener("click", () => { state = {}; save(); render(); });
+  render();
+
+  // kapak: şehir silueti ve palmiyeler
+  const cv = document.getElementById("sky"), ctx = cv.getContext("2d");
+  function draw() {
+    const r = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    cv.width = w * r; cv.height = h * r; ctx.setTransform(r, 0, 0, r, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const g = ctx.createRadialGradient(w * .72, h * 1.05, 10, w * .72, h * 1.05, h * .9);
+    g.addColorStop(0, "rgba(255,214,150,.85)"); g.addColorStop(.4, "rgba(255,150,90,.35)"); g.addColorStop(1, "rgba(255,120,80,0)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    let x = 0;
+    while (x < w) {
+      const bw = 18 + rnd() * 40, bh = Math.min(h * (.08 + rnd() * .16), 34 + rnd() * 70);
+      ctx.fillStyle = "rgba(30,12,42,.92)"; ctx.fillRect(x, h - bh, bw - 3, bh);
+      ctx.fillStyle = "rgba(255,190,120,.45)";
+      for (let wy = h - bh + 8; wy < h - 6; wy += 9) if (rnd() < .3) ctx.fillRect(x + 3 + rnd() * (bw - 10), wy, 3, 4);
+      x += bw;
+    }
+    ctx.strokeStyle = "rgba(18,8,26,.95)";
+    for (const px of [w * .08, w * .9]) {
+      const top = [px + 8, h - Math.min(h * .3, 120)]; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(px, h); ctx.quadraticCurveTo(px + 2, (h + top[1]) / 2, top[0], top[1]); ctx.stroke();
+      ctx.lineWidth = 3;
+      for (const a of [-160, -125, -90, -55, -20]) {
+        const rad = a * Math.PI / 180; ctx.beginPath(); ctx.moveTo(...top);
+        ctx.quadraticCurveTo(top[0] + Math.cos(rad) * 22, top[1] + Math.sin(rad) * 18, top[0] + Math.cos(rad) * 40, top[1] + Math.sin(rad) * 10 + 14);
+        ctx.stroke();
+      }
+    }
+  }
+  draw(); addEventListener("resize", draw);
+})();
+</script>
