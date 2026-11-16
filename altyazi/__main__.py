@@ -6,6 +6,7 @@
     python -m altyazi test resim.png   # bir ekran görüntüsünde OCR + çeviriyi dene (pencere açmadan)
     python -m altyazi tv bul           # ev ağındaki Android/Google TV'yi bul
     python -m altyazi tv kur [ip]      # TV uygulamasını kur ve başlat
+    python -m altyazi tv eslestir IP:PORT KOD   # yeni Google TV'lerde kablosuz hata ayıklama eşleştirmesi
 """
 
 from __future__ import annotations
@@ -194,18 +195,36 @@ def cmd_test(cfg, path: str) -> int:
     return 0
 
 
-def cmd_tv(cfg, action: str | None, ip: str | None) -> int:
+def cmd_tv(cfg, action: str | None, ip: str | None, extra: str | None = None) -> int:
+    import re
+
     from . import tv
 
     if action in (None, "bul"):
-        print("Ev ağında TV aranıyor (port 5555)...")
+        print("Ev ağında TV aranıyor...")
         found = tv.scan()
-        if not found:
-            print("Bulunamadı. TV açık mı? Geliştirici seçeneklerinde 'USB hata ayıklama' açık mı?")
-            return 1
+        try:
+            mdns = tv.Adb().run("mdns", "services", timeout=10)
+            paired = sorted(set(re.findall(r"_adb-tls-connect\S*\s+(\d+\.\d+\.\d+\.\d+)", mdns)))
+        except tv.TvError:
+            paired = []
         for h in found:
-            print(f"  {h}")
-        print(f"\nKurmak için: baslat.bat tv kur {found[0]}")
+            print(f"  {h}  (klasik ağ hata ayıklaması açık)")
+        for h in paired:
+            print(f"  {h}  (kablosuz hata ayıklama ile eşleştirilmiş)")
+        if not found and not paired:
+            print("Bulunamadı. TV açık mı? Geliştirici seçeneklerinde 'USB hata ayıklama' açık mı?\n"
+                  "Yeni Google TV'lerde: 'Kablosuz hata ayıklama' > 'Eşleştirme koduyla cihaz eşleştir', sonra:\n"
+                  "  baslat.bat tv eslestir IP:PORT KOD")
+            return 1
+        print(f"\nKurmak için: baslat.bat tv kur {(found or paired)[0]}")
+        return 0
+    if action == "eslestir":
+        if not ip or ":" not in ip or not extra:
+            print("Kullanım: baslat.bat tv eslestir 192.168.1.xx:PORT 123456  (TV'deki eşleştirme ekranında yazar)")
+            return 1
+        print(tv.Adb().pair(ip, extra))
+        print(f"Eşleştirildi. Şimdi: baslat.bat tv kur {ip.split(':')[0]}")
         return 0
     if action == "kur":
         host = ip or cfg.tv.ip
@@ -215,7 +234,7 @@ def cmd_tv(cfg, action: str | None, ip: str | None) -> int:
                 print("TV'nin adresini yaz: baslat.bat tv kur 192.168.1.xx" + (f"  (bulunanlar: {found})" if found else ""))
                 return 1
             host = found[0]
-        server = tv.setup(host, cfg.sunucu.port, force_install=True,
+        server = tv.setup(host.split(":")[0], cfg.sunucu.port, force_install=True,
                           on_prompt=lambda: print("TV'ye bak: 'Hata ayıklamaya izin verilsin mi?' -> "
                                                   "'Her zaman izin ver' + İzin ver (60 sn bekliyorum)"))
         print(f"Tamam! TV uygulaması kuruldu ve açıldı. TV bu bilgisayara bağlanacak: {server}")
@@ -223,7 +242,7 @@ def cmd_tv(cfg, action: str | None, ip: str | None) -> int:
             print(f"Bir dahakine otomatik açılması için config.local.yaml'a yaz:\n  tv:\n    ip: \"{host}\"")
         print("Not: Windows güvenlik duvarı sorarsa 'Özel ağlar'a izin ver, yoksa TV bağlanamaz.")
         return 0
-    print("Kullanım: tv bul | tv kur [ip]")
+    print("Kullanım: tv bul | tv kur [ip] | tv eslestir IP:PORT KOD")
     return 1
 
 
@@ -232,7 +251,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("komut", nargs="?", default="calistir",
                     choices=["calistir", "pencereler", "kameralar", "kalibre", "test", "tv"])
     ap.add_argument("dosya", nargs="?", help="kalibre/test için resim dosyası, tv için bul/kur")
-    ap.add_argument("ek", nargs="?", help="tv kur için TV'nin IP adresi")
+    ap.add_argument("ek", nargs="?", help="tv kur/eslestir için TV'nin adresi")
+    ap.add_argument("ek2", nargs="?", help="tv eslestir için eşleştirme kodu")
     ap.add_argument("-c", "--config", default="config.yaml")
     ap.add_argument("-v", "--ayrintili", action="store_true")
     a = ap.parse_args(argv)
@@ -247,7 +267,11 @@ def main(argv: list[str] | None = None) -> int:
     if a.komut == "kalibre":
         return cmd_calibrate(cfg, a.dosya)
     if a.komut == "tv":
-        return cmd_tv(cfg, a.dosya, a.ek)
+        try:
+            return cmd_tv(cfg, a.dosya, a.ek, a.ek2)
+        except Exception as e:  # noqa: BLE001
+            print(f"Hata: {e}")
+            return 1
     if a.komut == "test":
         if not a.dosya:
             ap.error("test için resim dosyası verin")

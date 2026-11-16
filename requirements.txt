@@ -18,4 +18,3 @@ sounddevice
 anthropic
 requests
 # İsteğe bağlı: google-genai (Gemini), deepl
-adb-shell

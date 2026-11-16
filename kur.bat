@@ -13,6 +13,11 @@ pip install --force-reinstall --no-deps onnxruntime-gpu
 rem CUDA 12 + cuDNN 9 kütüphaneleri (ayrıca CUDA kurmana gerek kalmasın)
 pip install nvidia-cublas-cu12 nvidia-cudnn-cu12 nvidia-cuda-runtime-cu12
 if not exist models\opus-mt-en-tr\model.bin python tools\model_indir.py
+rem TV kurulumu için Google'ın resmi adb aracı (platform-tools)
+if not exist tools\platform-tools\adb.exe (
+  echo adb indiriliyor...
+  powershell -NoProfile -Command "Invoke-WebRequest https://dl.google.com/android/repository/platform-tools-latest-windows.zip -OutFile tools\pt.zip; Expand-Archive -Force tools\pt.zip tools; Remove-Item tools\pt.zip"
+)
 echo.
 echo Kurulum bitti. Claude anahtarını config.local.yaml'a değil ortam değişkenine koy:
 echo     setx ANTHROPIC_API_KEY "anahtarin"
