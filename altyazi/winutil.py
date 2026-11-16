@@ -126,3 +126,75 @@ def set_autostart(enabled: bool) -> bool:
         return True
     except OSError:
         return False
+
+
+# ---------------------------------------------------------------- uyku engeli ve güvenlik duvarı
+# (fikirler CouchSubs'tan: SleepGuard ve yerel ağ güvenlik duvarı kuralı; https://github.com/yorulmazsinan/couchsubs)
+_ES_CONTINUOUS, _ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
+FIREWALL_RULE = "GTA6 Altyazı (yerel ağ)"
+
+
+def keep_awake(on: bool) -> None:
+    """Çeviri sürerken bilgisayar uykuya geçmesin (oyun kumandayla oynanır, fare/klavye boşta kalır)."""
+    if sys.platform != "win32":
+        return
+    flags = _ES_CONTINUOUS | (_ES_SYSTEM_REQUIRED if on else 0)
+    ctypes.windll.kernel32.SetThreadExecutionState(flags)
+
+
+def _program() -> str:
+    return sys.executable
+
+
+def firewall_ok() -> bool | None:
+    """Bu program için izin kuralı var mı? (Windows dışında None)"""
+    if sys.platform != "win32":
+        return None
+    import subprocess
+
+    try:
+        out = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", f"name={FIREWALL_RULE}"],
+                             capture_output=True, text=True, timeout=10,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return FIREWALL_RULE in out
+
+
+def firewall_allow() -> bool:
+    """Yönetici izniyle (UAC sorusu) TV ve telefonun bu programa bağlanmasına izin ver.
+
+    Kural yalnız Özel ağ profilinde ve yalnız yerel alt ağdan gelen bağlantılar içindir. Windows'un ilk açılıştaki
+    soruya "İptal" denince bu program için kendiliğinden koyduğu engelleme kuralları da kaldırılır.
+    """
+    if sys.platform != "win32":
+        return False
+    exe = _program().replace("'", "''")
+    ps = (f"$p='{exe}';"
+          "Get-NetFirewallApplicationFilter -Program $p -ErrorAction SilentlyContinue | Get-NetFirewallRule | "
+          "Where-Object {$_.Action -eq 'Block'} | Remove-NetFirewallRule;"
+          f"Remove-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -ErrorAction SilentlyContinue;"
+          f"New-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -Direction Inbound -Action Allow -Program $p "
+          "-Profile Private -RemoteAddress LocalSubnet -Protocol TCP | Out-Null;"
+          f"New-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -Direction Inbound -Action Allow -Program $p "
+          "-Profile Private -RemoteAddress LocalSubnet -Protocol UDP | Out-Null")
+    args = f'-NoProfile -WindowStyle Hidden -Command "{ps}"'
+    rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", "powershell.exe", args, None, 0)
+    return rc > 32
+
+
+def network_is_public() -> bool | None:
+    """Etkin ağ 'Ortak' profilde mi? (Öyleyse TV/telefon bağlanamaz; Özel yapılmalı.)"""
+    if sys.platform != "win32":
+        return None
+    import subprocess
+
+    try:
+        out = subprocess.run(["powershell", "-NoProfile", "-Command",
+                              "(Get-NetConnectionProfile | Where-Object {$_.IPv4Connectivity -ne 'Disconnected'}).NetworkCategory"],
+                             capture_output=True, text=True, timeout=15,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    cats = out.split()
+    return bool(cats) and all(c == "Public" for c in cats)

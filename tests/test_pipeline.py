@@ -215,3 +215,17 @@ def test_slang_rules():
     assert n("Bet.") == "Okay."
     assert n("GTA stands for Grand Theft Auto.") == "GTA stands for Grand Theft Auto."   # dokunulmaz
     assert n("That ain't right.") == "That is not right."
+
+
+def test_worse_reread_is_ignored():
+    from altyazi.pipeline import worse_reread
+    assert worse_reread("Get in the car, Franklin.", "Get in the car, Frank1in.")
+    assert not worse_reread("Get in the car, Frank1in.", "Get in the car, Franklin.")   # düzelme kabul
+    assert not worse_reread("I can do it.", "I can not do it.")                        # anlam değişti
+    assert not worse_reread("Go.", "Run!")
+
+
+def test_game_idioms_normalized():
+    from altyazi.slang import normalize
+    assert normalize("Heads up, we got company!") == "Watch out, enemies are coming!"
+    assert normalize("Shake the cops and lay low.") == "Lose the police and hide for a while."

@@ -182,6 +182,7 @@ class AppController(QObject):
                              frame_sink=frame_sink)
         self.pipe.notice = self._notice
         self.pipe.start()
+        winutil.keep_awake(True)
         self._set_state("calisiyor")
         self._notice("Çeviri başladı")
         if self.cfg.tv.ip and self.cfg.tv.otomatik and self.tv_state[0] != "bagli":
@@ -189,6 +190,7 @@ class AppController(QObject):
         return True
 
     def stop(self) -> None:
+        winutil.keep_awake(False)
         if self.pipe:
             self.pipe.stop()
             self.pipe = None
@@ -483,11 +485,11 @@ class AppController(QObject):
         """TV'de yerleşimi görmek için örnek altyazı gönder (3 sn)."""
         if not self.server:
             return
-        it = DisplayItem("test", (0.33, 0.86, 0.67, 0.93), (0.1, 0.76, 0.9, 0.97), 0.031,
+        it = DisplayItem("altyazi", (0.33, 0.86, 0.67, 0.93), (0.1, 0.76, 0.9, 0.97), 0.031,
                          "This is a test subtitle.", "Bu bir deneme altyazısı. Yazı burada görünecek.",
                          "orta", "alt", 255, self.cfg.bolgeler[0].yazi_olcek if self.cfg.bolgeler else 1.3)
         self.server.show(it)
-        threading.Timer(4.0, lambda: self.server.clear("test")).start()
+        threading.Timer(4.0, lambda: self.server.clear("altyazi")).start()
 
     # ------------------------------------------------------------------ kare / test
     def grab_frame(self) -> None:
@@ -540,6 +542,20 @@ class AppController(QObject):
         if self.engine:
             self.engine.packs.reload()
         return f"{pack.title}: {pack.count} satır eklendi"
+
+    # ------------------------------------------------------------------ güvenlik duvarı
+    def firewall_status(self) -> str:
+        """'tamam' | 'eksik' | 'ortak' (ağ Ortak profilde) | 'bilinmiyor'"""
+        if winutil.network_is_public():
+            return "ortak"
+        ok = winutil.firewall_ok()
+        return "bilinmiyor" if ok is None else ("tamam" if ok else "eksik")
+
+    def firewall_allow(self) -> None:
+        if winutil.firewall_allow():
+            self._notice("Windows izin isteyecek: Evet de. Sonra TV bu bilgisayara bağlanabilir.")
+        else:
+            self._notice("Güvenlik duvarı izni verilemedi.")
 
     def download_pack(self, pack_id: str) -> None:
         from . import paths, packs

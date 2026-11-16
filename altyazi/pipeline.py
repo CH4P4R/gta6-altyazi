@@ -76,6 +76,29 @@ def looks_like_text(text: str) -> bool:
     return letters >= 2 and letters >= 0.5 * len(text.replace(" ", ""))
 
 
+_TOKEN = re.compile(r"[\w']+")
+
+
+def _real_words(text: str) -> int:
+    return sum(1 for t in _TOKEN.findall(text) if t.replace("'", "").isalpha())
+_MEANING = re.compile(r"\b(not|no|never|don't|can't|won't|isn't|aren't|didn't)\b|\b\d+(st|nd|rd|th)?\b", re.IGNORECASE)
+
+
+def worse_reread(old: str, new: str) -> bool:
+    """Ekrandaki satırın daha kötü okunmuş hali mi (aynı cümle, daha az gerçek kelime)?
+
+    Parlak arka planda OCR bir kelimeyi kaçırınca çeviri bozulup geri düzelerek titriyordu. Yeni okuma bir olumsuzluk
+    ya da sayı ekliyorsa anlam değişmiş olabilir, atlanmaz. (Fikir CouchSubs'ın SubtitleStabilizer'ından.)
+    """
+    from rapidfuzz import fuzz
+
+    if not old or fuzz.ratio(old.lower(), new.lower()) < 85:
+        return False
+    if len(_MEANING.findall(new)) > len(_MEANING.findall(old)):
+        return False
+    return _real_words(new) < _real_words(old)
+
+
 class Pipeline:
     def __init__(self, cfg: Config, sink: Sink, recognizer, engine: TranslationEngine, source=None,
                  frame_sink=None):
@@ -315,8 +338,8 @@ class Pipeline:
                 continue
             with self._lock:
                 cur = self._current.get(zcfg.ad)
-                if cur and cur[1] == text:
-                    continue                      # aynı metin (arka plan oynadı ama yazı değişmedi)
+                if cur and (cur[1] == text or worse_reread(cur[1], text)):
+                    continue                      # aynı metin ya da aynı satırın daha kötü okunuşu
                 self._seq += 1
                 seq = self._seq
                 self._current[zcfg.ad] = (seq, text, 0)

@@ -54,6 +54,19 @@ _PHRASES = [
                                                     lambda m: f"{m.group(1)} are {'trying' if m.group(2).lower() == 'tryna' else 'going'} to"),
     (r"\b(he|she|it) (gonna|finna)\b", r"\1 is going to"),
     (r"\b(you|we|they) (gotta)\b", r"\1 have to"), (r"\b(he|she|it) gotta\b", r"\1 has to"),
+    # Oyun ve aksiyon deyimleri: makine çevirisi kelimesi kelimesine çevirip saçmalıyor
+    # (fikir CouchSubs'ın GameEnglish listesinden: https://github.com/yorulmazsinan/couchsubs, AGPL-3.0)
+    (r"\b(I've|I) got your (six|back)\b", "I am protecting you"), (r"\bgot your six\b", "got your back"),
+    (r"\bwatch your six\b", "watch behind you"), (r"\bon your six\b", "behind you"),
+    (r"\bwe('ve| have)? got company\b", "enemies are coming"), (r"\bheads up\b", "watch out"),
+    (r"\bfriendlies\b", "allies"), (r"\bhostiles\b", "enemies"), (r"\btangos?\b", "enemy"),
+    (r"\blay low\b", "hide for a while"), (r"\blie low\b", "hide for a while"),
+    (r"\bhit the road\b", "leave"), (r"\bbail\b(?! out)", "run away"), (r"\bfloor it\b", "drive faster"),
+    (r"\bstep on it\b", "drive faster"), (r"\bshake (them|'em|the cops|the police)\b", "lose \\1"),
+    (r"\blose the heat\b", "escape the police"), (r"\bwe're toast\b", "we are finished"),
+    (r"\bpiece of cake\b", "very easy"), (r"\bcut it out\b", "stop it"), (r"\bknock it off\b", "stop it"),
+    (r"\bgo dark\b", "stop all communication"), (r"\btake (him|her|them) out\b", "kill \\1"),
+    (r"\bsmoke (him|her|them)\b", "kill \\1"), (r"\bpop (him|her|them)\b", "shoot \\1"),
 ]
 _PHRASES_RE = [(re.compile(p, re.IGNORECASE), r) for p, r in _PHRASES]
 

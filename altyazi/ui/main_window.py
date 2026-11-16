@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 import webbrowser
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QHeaderView,
                                QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QPlainTextEdit, QSlider,
@@ -375,6 +375,8 @@ class RegionsPage(QWidget):
 
 # ============================================================================ TV
 class TvPage(QWidget):
+    _fwText = Signal(str)                      # arka plan iş parçacığından güvenlik duvarı durumu
+
     def __init__(self, ctl: AppController):
         super().__init__()
         self.ctl = ctl
@@ -443,22 +445,17 @@ class TvPage(QWidget):
         self.pair_card = pair
         root.addWidget(conn)
 
-        cal = Card()
-        cal.add(label("3 · Konum ayarı (gerekirse)", "h2"))
-        cal.add(label("TV görüntüyü kenarlardan kırpıyorsa (overscan) yazılar biraz kayabilir. Deneme altyazısı "
-                      "gönderip kaydırıcılarla düzelt.", "muted", wrap=True))
-        x, y, w, h = ctl.cfg.tv.kalibrasyon
-        self.cal = [slider(-50, 50, int(x * 1000)), slider(-50, 50, int(y * 1000)),
-                    slider(900, 1100, int(w * 1000)), slider(900, 1100, int(h * 1000))]
-        grid = QGridLayout()
-        for i, (name, s) in enumerate(zip(("Sağa/sola kaydır", "Yukarı/aşağı kaydır", "Genişlik", "Yükseklik"),
-                                          self.cal)):
-            grid.addWidget(label(name, "h3"), i // 2, (i % 2) * 2)
-            grid.addWidget(s, i // 2, (i % 2) * 2 + 1)
-        cal.add(grid)
-        cal.add(hbox(button("Kaydet ve dene", "primary", self._save_cal), button("Sıfırla", "ghost", self._reset_cal),
-                     None))
-        root.addWidget(cal)
+        fw = Card()
+        fw.add(label("3 · Bağlantı izni (Windows güvenlik duvarı)", "h2"))
+        fw.add(label("TV bu bilgisayara bağlanamıyorsa çoğu zaman sebep Windows güvenlik duvarıdır. Aşağıdaki düğme "
+                     "yalnız ev ağından (Özel ağ) gelen bağlantılara izin verir; Windows bir kez yönetici izni ister. "
+                     "TV yazının yerini kendisi ayarlar; altyazı yeri yanlışsa TV'de kumandanın Yeşil tuşu panelini açar.",
+                     "muted", wrap=True))
+        self.fw_state = label("", "faint", wrap=True)
+        fw.add(hbox(button("İzin ver", "primary", self._firewall), button("Durumu yenile", "ghost", self._fw_refresh),
+                    None, spacing=10))
+        fw.add(self.fw_state)
+        root.addWidget(fw)
         root.addStretch(1)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -467,6 +464,8 @@ class TvPage(QWidget):
         ctl.tvFound.connect(self.on_found)
         self.on_status(*ctl.tv_state)
         self._brand_changed()
+        self._fwText.connect(self.fw_state.setText)
+        self._fw_refresh()
 
     HOWTO = {
         "android": "① Ayarlar › Sistem › Hakkında › <b>Android TV OS derlemesi</b> satırına art arda 7 kez bas.<br>"
@@ -507,8 +506,6 @@ class TvPage(QWidget):
         cfg.tv.tizen_yolu = self.ss_tizen.text().strip()
         cfg.tv.mod = self.mode.currentData()
         cfg.tv.otomatik = self.auto.isChecked()
-        cfg.tv.kalibrasyon = [self.cal[0].value() / 1000, self.cal[1].value() / 1000,
-                              self.cal[2].value() / 1000, self.cal[3].value() / 1000]
         self.ctl.apply_config(cfg)
 
     def _connect(self) -> None:
@@ -542,13 +539,22 @@ class TvPage(QWidget):
         if self.pair_addr.text().strip() and self.pair_code.text().strip():
             self.ctl.tv_pair(self.pair_addr.text().strip(), self.pair_code.text().strip())
 
-    def _save_cal(self) -> None:
-        self._save_common()
-        self.ctl.tv_test()
+    def _firewall(self) -> None:
+        self.ctl.firewall_allow()
+        QTimer.singleShot(8000, self._fw_refresh)
 
-    def _reset_cal(self) -> None:
-        for s, v in zip(self.cal, (0, 0, 1000, 1000)):
-            s.setValue(v)
+    def _fw_refresh(self) -> None:
+        import threading
+
+        def run() -> None:
+            st = self.ctl.firewall_status()
+            text = {"tamam": "✓ İzin verilmiş.",
+                    "eksik": "İzin yok: TV bağlanamayabilir. \"İzin ver\"e bas.",
+                    "ortak": "Bu bilgisayarın ağı 'Ortak' görünüyor: Windows Ayarları › Ağ ve İnternet › (ağın) › "
+                             "Ağ profili türü › Özel yap. Yoksa TV bağlanamaz.",
+                    "bilinmiyor": ""}[st]
+            self._fwText.emit(text)
+        threading.Thread(target=run, daemon=True).start()
 
     def on_status(self, state: str, msg: str) -> None:
         color = {"bagli": T.OK, "hata": T.BAD, "onay": T.INFO, "baglaniyor": T.WARN}.get(state, T.MUTED)
