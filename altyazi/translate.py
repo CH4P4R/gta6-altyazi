@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from . import slang
+from . import slang, terms
 from .config import CeviriCfg
 
 log = logging.getLogger(__name__)
@@ -440,7 +440,13 @@ class TranslationEngine:
         t = time.perf_counter()
         try:
             src = slang.normalize(text) if self.cfg.argo_duzelt else text
-            tr = self._post(self.fast.translate(src))
+            tr = None
+            if self.fast.name == "yerel" and self.cfg.sozluk:
+                protected, mapping = terms.protect(src, self.cfg.sozluk)
+                if mapping:
+                    tr = terms.restore(self.fast.translate(protected), mapping)
+            if tr is None:
+                tr = self._post(self.fast.translate(src))
         except Exception as e:  # noqa: BLE001
             log.warning("Hızlı çeviri hatası: %s", e)
             return
