@@ -637,8 +637,16 @@ class TranslationPage(QWidget):
 
         cache = Card()
         self.cache_l = label("", "muted")
-        cache.add(hbox(vbox(label("Önbellek", "h2"), self.cache_l), None,
+        cache.add(hbox(vbox(label("Önbellek ve çeviri paketleri", "h2"), self.cache_l), None,
                        button("Klasörü aç", None, self._open_data)))
+        cache.add(label("Hazır çeviri paketi varsa pakette olan satırlar anında ve ücretsiz gelir, yapay zekaya sorulmaz. "
+                        "GameTranslator/topluluk paket biçimi (.json ya da .json.gz) desteklenir; paket dosyasını kendin "
+                        "edinip buradan ekle. Kendi önbelleğini de paket olarak arkadaşlarına verebilirsin.",
+                        "faint", wrap=True))
+        self.packs_l = label("", "muted", wrap=True)
+        cache.add(self.packs_l)
+        cache.add(hbox(button("Paket ekle", None, self._add_pack),
+                       button("Önbelleği paket olarak kaydet", None, self._export_pack), None, spacing=10))
         root.addWidget(cache)
         root.addLayout(hbox(None, button("Kaydet", "primary", self.save)))
         root.addStretch(1)
@@ -647,7 +655,8 @@ class TranslationPage(QWidget):
         lay.addWidget(scroll_page(content))
         self._results: list[str] = []
         ctl.testResult.connect(self.on_test)
-        ctl.enginesReady.connect(lambda i: self.cache_l.setText(f"{i.get('onbellek', 0)} çeviri kayıtlı"))
+        ctl.enginesReady.connect(lambda i: (self.cache_l.setText(f"{i.get('onbellek', 0)} çeviri kayıtlı"),
+                                            self._refresh_packs()))
         if ctl.engine_info:
             self.cache_l.setText(f"{ctl.engine_info.get('onbellek', 0)} çeviri kayıtlı")
         self._vis()
@@ -672,6 +681,29 @@ class TranslationPage(QWidget):
     def _open_data(self) -> None:
         from .. import paths
         open_path(str(paths.data_dir()))
+
+    def _refresh_packs(self) -> None:
+        ps = self.ctl.pack_list()
+        self.packs_l.setText("Yüklü paketler: " + ", ".join(f"<b>{p.title}</b> ({p.count:,} satır)".replace(",", ".")
+                                                             for p in ps) if ps else "Yüklü paket yok.")
+
+    def _add_pack(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Çeviri paketi seç", "", "Paket (*.json *.gz);;Tümü (*)")
+        if not path:
+            return
+        try:
+            msg = self.ctl.import_pack(path)
+        except Exception as e:  # noqa: BLE001
+            msg = f"Paket okunamadı: {e}"
+        self.window().toast.show_text(msg)
+        self._refresh_packs()
+
+    def _export_pack(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Önbelleği paket olarak kaydet", "gta6-altyazi-paket.json.gz",
+                                              "Paket (*.json.gz *.json)")
+        if path:
+            n = self.ctl.export_pack(path)
+            self.window().toast.show_text(f"{n} çeviri pakete yazıldı")
 
     def save(self) -> None:
         cfg = self.ctl.edit_config()

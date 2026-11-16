@@ -148,6 +148,7 @@ class AppController(QObject):
                              if f and f.name == "yerel" else (f.name if f else None))
             info["kalite"] = self.engine.refine.name if self.engine.refine else None
             info["onbellek"] = len(self.engine.cache.mem)
+            info["paket"] = sum(p.count for p in self.engine.packs.packs)
             self.engine_info = info
             self.enginesReady.emit(info)
             self._set_state("hazir")
@@ -511,6 +512,27 @@ class AppController(QObject):
             r.ms = (time.perf_counter() - t0) * 1000
             self.testResult.emit(r)
         self.engine.submit(text, "altyazi", cb)
+
+    # ------------------------------------------------------------------ çeviri paketleri
+    def pack_list(self) -> list:
+        return list(self.engine.packs.packs) if self.engine else []
+
+    def import_pack(self, src: str) -> str:
+        import shutil
+        from . import paths, packs
+        pack = packs.load(Path(src))                      # önce geçerli mi bak
+        dest = paths.data("paketler") / Path(src).name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src, dest)
+        if self.engine:
+            self.engine.packs.reload()
+        return f"{pack.title}: {pack.count} satır eklendi"
+
+    def export_pack(self, dest: str) -> int:
+        from . import packs
+        if not self.engine:
+            return 0
+        return packs.export_cache(self.engine.cache.rows(), Path(dest))
 
     def shutdown(self) -> None:
         self.stop()

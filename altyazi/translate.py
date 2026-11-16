@@ -51,7 +51,7 @@ def normalize(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------- önbellek
-class Cache:
+class Cache:  # noqa: D101
     def __init__(self, path: str, similarity: int):
         self.similarity = similarity
         self.lock = threading.Lock()
@@ -74,6 +74,11 @@ class Cache:
         with self.lock:
             m = process.extractOne(key, self.keys, scorer=fuzz.ratio, score_cutoff=self.similarity)
         return self.mem[m[0]] if m else None
+
+    def rows(self, min_quality: int = REFINED) -> list[tuple[str, str]]:
+        """(İngilizce, Türkçe) satırları (paket olarak dışa aktarmak için)."""
+        with self.lock:
+            return list(self.db.execute("SELECT kaynak, ceviri FROM ceviri WHERE kalite >= ?", (min_quality,)))
 
     def put(self, text: str, translation: str, quality: int, engine: str) -> None:
         key = normalize(text)
@@ -345,6 +350,8 @@ class TranslationEngine:
         from . import paths
         self.cache = Cache(str(paths.data(cfg.onbellek)) if not Path(cfg.onbellek).is_absolute() else cfg.onbellek,
                            cfg.benzerlik)
+        from .packs import PackLibrary
+        self.packs = PackLibrary(paths.data("paketler"))
         self.fast = self._make_fast(cfg)
         self.refine = self._make_refine(cfg)
         self.fast_pool = ThreadPoolExecutor(4, thread_name_prefix="hizli")
@@ -405,6 +412,12 @@ class TranslationEngine:
     def submit(self, text: str, kind: str, on_result: Callable[[Result], None], refine: bool = True) -> None:
         """Sonuçlar on_result ile (başka iş parçacığından) gelir: önce hızlı, sonra kaliteli."""
         t0 = time.perf_counter()
+        pack_hit = self.packs.lookup(text)
+        if pack_hit:                         # hazır paket: anında, ücretsiz, yapay zekaya sorulmaz
+            tr, pack_id = pack_hit
+            on_result(Result(tr, f"paket/{pack_id}", (time.perf_counter() - t0) * 1000, REFINED))
+            self._remember(kind, text, tr)
+            return
         hit = self.cache.get(text)
         if hit:
             tr, q, engine = hit
