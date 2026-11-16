@@ -10,7 +10,7 @@ ROOT = Path(SPECPATH).resolve().parent
 IS_WIN = sys.platform == "win32"
 
 datas = [(str(ROOT / "config.yaml"), ".")]
-for rel in ("tv-android/release", "models/opus-mt-en-tr", "tools/platform-tools"):
+for rel in ("tv-android/release", "models/opus-mt-en-tr", "models/ocr", "tools/platform-tools"):
     p = ROOT / rel
     if p.exists():
         datas.append((str(p), rel))

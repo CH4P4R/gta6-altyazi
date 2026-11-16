@@ -60,7 +60,26 @@ ceviri:
   baglam_satir: 6
   onbellek: cache.sqlite
   benzerlik: 92
-  sozluk: {}                     # örnek: {"Vice City": "Vice City"}
+  # Zorunlu terimler (İngilizce: Türkçe). Aynısını yazmak "çevirme" demek. Yapay zeka bunlara uyar.
+  sozluk:
+    Jason Duval: Jason Duval
+    Jason: Jason
+    Lucia Caminos: Lucia Caminos
+    Lucia: Lucia
+    Vice City: Vice City
+    Leonida: Leonida
+    Leonida Keys: Leonida Keys
+    Port Gellhorn: Port Gellhorn
+    Ambrosia: Ambrosia
+    Grassrivers: Grassrivers
+    Mount Kalaga: Mount Kalaga
+    Cal Hampton: Cal Hampton
+    Boobie Ike: Boobie Ike
+    Dre'Quan Priest: Dre'Quan Priest
+    Real Dimez: Real Dimez
+    Raul Bautista: Raul Bautista
+    Brian Heder: Brian Heder
+    Lifeinvader: Lifeinvader
 
 sunucu:
   acik: true                     # http://localhost:8787 (OBS: /obs)

@@ -28,8 +28,17 @@ class OcrLine:
     score: float
 
 
+ENGLISH_MODELS = ["models/ocr/en_PP-OCRv5_rec_mobile.onnx", "models/ocr/en_PP-OCRv4_rec_mobile.onnx"]
+
+
 def _default_model_path() -> Path:
-    """rapidocr_onnxruntime paketinin içindeki tanıma modelini bul."""
+    """Önce İngilizceye özel model (tools/ocr_model_indir.py), yoksa rapidocr paketindeki genel model."""
+    from . import paths
+
+    for rel in ENGLISH_MODELS:
+        p = paths.model_path(rel)
+        if p.exists():
+            return p
     import rapidocr_onnxruntime
 
     models = Path(rapidocr_onnxruntime.__file__).parent / "models"
@@ -65,10 +74,13 @@ class Recognizer:
         self.batch = batch
 
         meta = self.session.get_modelmeta().custom_metadata_map
+        sibling = path.with_name("en_dict.txt")
         if keys_path:
             chars = Path(keys_path).read_text(encoding="utf-8").splitlines()
         elif "character" in meta:
             chars = meta["character"].splitlines()
+        elif sibling.exists():
+            chars = sibling.read_text(encoding="utf-8").splitlines()
         else:
             raise ValueError("Model karakter listesi içermiyor, ocr.anahtar_dosyasi verin")
         self.chars = ["<blank>"] + chars + [" "]

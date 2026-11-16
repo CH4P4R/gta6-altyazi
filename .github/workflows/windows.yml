@@ -47,6 +47,9 @@ jobs:
         if: steps.model-cache.outputs.cache-hit != 'true'
         run: python tools/model_indir.py
 
+      - name: İngilizce OCR modeli
+        run: python tools/ocr_model_indir.py
+
       - name: adb (TV kurulumu için)
         run: |
           Invoke-WebRequest https://dl.google.com/android/repository/platform-tools-latest-windows.zip -OutFile pt.zip
