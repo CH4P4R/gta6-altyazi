@@ -62,3 +62,47 @@ def test_hotkey_parse():
     assert parse("ctrl+shift+9") == (0x2 | 0x4, ord("9"))
     assert parse("num9") == (0, 0x69)
     assert parse("alt+F10") == (0x1, 0x79)
+
+
+def test_claude_read_screen_request_shape(monkeypatch):
+    import threading as th
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    seen = {}
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            self.send_response(404)
+            self.end_headers()
+
+        def do_POST(self):
+            seen["body"] = json.loads(self.rfile.read(int(self.headers["content-length"])))
+            out = {"items": [{"id": 0, "english": "Go to the car.", "turkish": "Arabaya git.", "box": [0, 0, 0, 0]}]}
+            r = {"id": "msg_1", "type": "message", "role": "assistant", "model": "claude-opus-5-5",
+                 "stop_reason": "end_turn", "stop_sequence": None,
+                 "content": [{"type": "text", "text": json.dumps(out)}], "usage": {"input_tokens": 1, "output_tokens": 1}}
+            b = json.dumps(r).encode()
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    th.Thread(target=srv.serve_forever, daemon=True).start()
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", f"http://127.0.0.1:{srv.server_port}")
+    monkeypatch.setenv("NO_PROXY", "127.0.0.1")
+    from altyazi.config import CeviriCfg
+    from altyazi.translate import ClaudeMT
+    m = ClaudeMT(CeviriCfg(claude_anahtar="test"))
+    items = m.read_screen(b"\xff\xd8fakejpeg", [(0, "Go to the cor.")])
+    assert items == [{"id": 0, "english": "Go to the car.", "turkish": "Arabaya git.", "box": [0, 0, 0, 0]}]
+    b = seen["body"]
+    img, txt = b["messages"][0]["content"]
+    assert img["type"] == "image" and img["source"]["media_type"] == "image/jpeg"
+    assert "0: Go to the cor." in txt["text"]
+    assert b["output_config"]["format"]["type"] == "json_schema"
+    assert b["output_config"]["format"]["schema"]["required"] == ["items"]
+    assert b["speed"] == "fast" and b["fallbacks"] == "default"
+    srv.shutdown()

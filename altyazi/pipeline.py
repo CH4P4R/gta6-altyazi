@@ -181,6 +181,23 @@ class Pipeline:
         for z in zones:
             self.sink.clear(z)
 
+    def _show_fullscreen(self, blocks: list, t: float, quick: bool) -> None:
+        """Tam ekran blokları göster. quick=True: yerel çeviri (görsel okuma birazdan geliyorsa)."""
+        zones = []
+        for i, b in enumerate(blocks):
+            name = f"tam{i}"
+            zones.append(name)
+            with self._lock:
+                self._seq += 1
+                seq = self._seq
+                self._current[name] = (seq, b.text, 0)
+            base = DisplayItem(zone=name, rect=b.rect, zone_rect=b.rect, line_h=b.line_h, english=b.text,
+                               text="", align="sol", anchor="ust", box_opacity=255, font_scale=1.0, seq=seq)
+            self.engine.submit(b.text, "arayuz", lambda r, bb=base, t0=t: self._on_translation(bb, t0, r),
+                               refine=not quick)
+        self._fs_zones = zones
+        self._fs_until = time.time() + self.cfg.kisayol.tam_ekran_sure
+
     def _run_fullscreen(self, frame: np.ndarray, t: float) -> None:
         self._fs_busy = True
         try:
@@ -189,27 +206,82 @@ class Pipeline:
                 from .fullscreen import FullScreenReader
                 self._fs_reader = FullScreenReader()
             blocks = self._fs_reader.read(frame)
-            if not blocks:
+            vision = getattr(self.engine, "can_read_screen", False) and self.cfg.kisayol.tam_ekran_gorsel
+            if blocks:
+                self._show_fullscreen(blocks, t, quick=vision)
+            if vision:
+                self._say("Claude ekranı okuyor...")
+                items = self._vision(frame, blocks, t)
+                if items:
+                    self._say(f"Ekrandaki {len(items)} yazı Claude ile çevrildi")
+                    return
+            if blocks:
+                self._say(f"Ekrandaki {len(blocks)} yazı çevrildi")
+            else:
                 self._say("Ekranda çevrilecek yazı bulunamadı")
-                return
-            zones = []
-            for i, b in enumerate(blocks):
-                name = f"tam{i}"
-                zones.append(name)
-                with self._lock:
-                    self._seq += 1
-                    seq = self._seq
-                    self._current[name] = (seq, b.text, 0)
-                base = DisplayItem(zone=name, rect=b.rect, zone_rect=b.rect, line_h=b.line_h, english=b.text,
-                                   text="", align="sol", anchor="ust", box_opacity=255, font_scale=1.0, seq=seq)
-                self.engine.submit(b.text, "arayuz", lambda r, bb=base, t0=t: self._on_translation(bb, t0, r))
-            self._fs_zones = zones
-            self._fs_until = time.time() + self.cfg.kisayol.tam_ekran_sure
-            self._say(f"Ekrandaki {len(blocks)} yazı çevrildi")
         except Exception:  # noqa: BLE001
             log.exception("Tam ekran çeviri hatası")
         finally:
             self._fs_busy = False
+
+    def _vision(self, frame: np.ndarray, blocks: list, t: float) -> list:
+        """Ekran görüntüsünü (OCR kutuları numaralı) Claude'a gönder; sonuçları OCR konumlarıyla göster."""
+        import cv2
+
+        from .translate import REFINED
+        img = np.ascontiguousarray(frame[..., :3]).copy()
+        h, w = img.shape[:2]
+        for i, b in enumerate(blocks):
+            x0, y0, x1, y1 = (int(b.rect[0] * w), int(b.rect[1] * h), int(b.rect[2] * w), int(b.rect[3] * h))
+            cv2.rectangle(img, (x0, y0), (x1, y1), (60, 220, 255), 2)
+            cv2.putText(img, str(i), (x0, max(14, y0 - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (60, 220, 255), 2)
+        scale = min(1.0, 1568 / max(w, h))   # Claude'un önerdiği en büyük kenar
+        if scale < 1:
+            img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+        ok, jpg = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if not ok:
+            return []
+        try:
+            items = self.engine.refine.read_screen(jpg.tobytes(), [(i, b.text) for i, b in enumerate(blocks)])
+        except Exception as e:  # noqa: BLE001
+            log.warning("Claude görsel okuma hatası: %s", e)
+            return []
+        from .fullscreen import Block
+        shown = []
+        for it in items:
+            en, tr = (it.get("english") or "").strip(), (it.get("turkish") or "").strip()
+            if not en or not tr:
+                continue
+            i = it.get("id", -1)
+            if isinstance(i, int) and 0 <= i < len(blocks):
+                b = blocks[i]
+                rect, lh = b.rect, b.line_h
+            else:
+                box = it.get("box") or []
+                if len(box) != 4 or box[2] <= box[0] or box[3] <= box[1]:
+                    continue
+                rect = tuple(min(1.0, max(0.0, v / 1000)) for v in box)
+                lh = min(0.04, rect[3] - rect[1])
+            shown.append((Block(en, rect, lh), tr))
+            self.engine.cache.put(en, tr, REFINED, "claude-görsel")
+        if not shown:
+            return []
+        self._clear_fullscreen()
+        zones = []
+        for k, (b, tr) in enumerate(shown):
+            name = f"tam{k}"
+            zones.append(name)
+            with self._lock:
+                self._seq += 1
+                seq = self._seq
+                self._current[name] = (seq, b.text, REFINED)
+            item = DisplayItem(zone=name, rect=b.rect, zone_rect=b.rect, line_h=b.line_h, english=b.text, text=tr,
+                               align="sol", anchor="ust", box_opacity=255, font_scale=1.0, source="claude-görsel",
+                               quality=REFINED, latency_ms=(time.perf_counter() - t) * 1000, seq=seq)
+            self.sink.show(item)
+        self._fs_zones = zones
+        self._fs_until = time.time() + self.cfg.kisayol.tam_ekran_sure
+        return shown
 
     # -------------------------------------------------------------------- iş
     def process(self, frame: np.ndarray, t: float) -> None:

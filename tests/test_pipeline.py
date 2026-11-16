@@ -127,3 +127,36 @@ def test_pause_clears_and_skips(tmp_path):
     time.sleep(0.2)
     assert len(sink.items) == n
     assert p.toggle_pause() is False
+
+
+def test_fullscreen_with_claude_vision_uses_ocr_boxes_and_adds_missed_text(tmp_path):
+    from altyazi.fullscreen import Block
+    cfg = Config(bolgeler=[BolgeCfg()])
+    sink = Sink()
+    eng = make_engine(tmp_path, Echo("yerel"))
+    seen = {}
+
+    class Vision:
+        name = "claude"
+
+        def read_screen(self, jpeg, regions):
+            seen["jpeg"], seen["regions"] = jpeg, regions
+            return [{"id": 0, "english": "Where are you? The deal starts at midnight.",
+                     "turkish": "Neredesin? İş gece yarısı başlıyor.", "box": [0, 0, 0, 0]},
+                    {"id": -1, "english": "MISSION PASSED", "turkish": "GÖREV TAMAMLANDI", "box": [300, 400, 700, 460]},
+                    {"id": 5, "english": "", "turkish": "", "box": [0, 0, 0, 0]}]
+    eng.refine = Vision()
+    p = Pipeline(cfg, sink, FakeRec("x"), eng)
+
+    class Reader:
+        def read(self, frame):
+            return [Block("Where are you? The dea starts at midnight.", (0.75, 0.25, 0.93, 0.32), 0.025)]
+    p._fs_reader = Reader()
+    p._run_fullscreen(background(1920, 1080, 0), time.perf_counter())
+    final = {i.zone: i for i in sink.items if i.source == "claude-görsel"}
+    assert seen["jpeg"][:2] == b"\xff\xd8" and seen["regions"] == [(0, "Where are you? The dea starts at midnight.")]
+    assert sorted(i.text for i in final.values()) == ["GÖREV TAMAMLANDI", "Neredesin? İş gece yarısı başlıyor."]
+    by_text = {i.text: i for i in final.values()}
+    assert by_text["Neredesin? İş gece yarısı başlıyor."].rect == (0.75, 0.25, 0.93, 0.32)   # OCR'ın kesin konumu
+    assert by_text["GÖREV TAMAMLANDI"].rect == (0.3, 0.4, 0.7, 0.46)                     # OCR'ın kaçırdığı yazı
+    assert eng.cache.get("MISSION PASSED")[0] == "GÖREV TAMAMLANDI"

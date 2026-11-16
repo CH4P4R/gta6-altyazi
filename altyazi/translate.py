@@ -146,6 +146,39 @@ Never translate proper names: characters, gangs, places, businesses, brands, veh
 The English comes from OCR and may contain small recognition errors (l/I, missing apostrophes, stray characters). Silently translate what was obviously meant. If the input is not real language (OCR garbage), output it unchanged.{glossary}"""
 
 
+SCREEN_PROMPT = """You read a screenshot from the video game Grand Theft Auto VI and translate its on-screen English text into Turkish for a Turkish player.
+
+Numbered boxes drawn on the image mark text regions an OCR engine found; each number sits at its box's top-left corner and the user message lists what the OCR read there (it may contain errors). For each meaningful piece of text, read the English yourself from the image and translate it:
+- Text inside a numbered box: use that number as id and box [0, 0, 0, 0].
+- Text with no box (stylized titles, small print the OCR missed): id -1 and its box as [x0, y0, x1, y1] in 0-1000 coordinates of the whole image.
+- Merge lines that belong to the same message, menu entry or sentence into one item; if one item spans several numbered boxes, use the first box's id.
+- Skip HUD numbers, money, ammo, clock, map place names, button glyphs, logos and text that is not English.
+
+Translation style: dialogue and messages in natural spoken Turkish (keep slang and tone, "sen" between characters); menus, objectives and notifications in concise standard Turkish game UI style, objectives in the imperative. Keep button names (X, O, L2, R1, Options) and proper names (Jason, Lucia, Vice City, Leonida...) unchanged; add Turkish suffixes with an apostrophe.{glossary}"""
+
+SCREEN_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "english": {"type": "string"},
+                    "turkish": {"type": "string"},
+                    "box": {"type": "array", "items": {"type": "integer"}},
+                },
+                "required": ["id", "english", "turkish", "box"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["items"],
+    "additionalProperties": False,
+}
+
+
 def _glossary_text(sozluk: dict[str, str]) -> str:
     if not sozluk:
         return ""
@@ -177,6 +210,8 @@ class ClaudeMT:
         self.fast = cfg.claude_hizli_mod
         self.system = [{"type": "text", "text": SYSTEM_PROMPT.format(glossary=_glossary_text(cfg.sozluk)),
                         "cache_control": {"type": "ephemeral"}}]
+        self.screen_system = [{"type": "text", "text": SCREEN_PROMPT.format(glossary=_glossary_text(cfg.sozluk)),
+                               "cache_control": {"type": "ephemeral"}}]
         # TLS bağlantısını önceden kur ki ilk altyazı el sıkışmayı beklemesin (ücretsiz çağrı)
         threading.Thread(target=self._warm, daemon=True).start()
 
@@ -206,6 +241,39 @@ class ClaudeMT:
                 raise
             kwargs.pop("speed")  # hızlı modun ayrı limiti doldu: normal hızla dene
             return self.client.beta.messages.create(**kwargs)
+
+    def read_screen(self, jpeg: bytes, regions: list[tuple[int, str]]) -> list[dict]:
+        """Ekran görüntüsündeki yazıları Claude okusun ve çevirsin (tam ekran çeviri için)."""
+        import base64
+        import json
+
+        listing = "\n".join(f"{i}: {t}" for i, t in regions) or "(OCR found no text regions)"
+        kwargs = dict(
+            model=self.model,
+            max_tokens=8000,
+            system=self.screen_system,
+            messages=[{"role": "user", "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
+                                             "data": base64.standard_b64encode(jpeg).decode("ascii")}},
+                {"type": "text", "text": f"OCR regions (id: text as read by OCR):\n{listing}"},
+            ]}],
+            output_config={"effort": self.effort, "format": {"type": "json_schema", "schema": SCREEN_SCHEMA}},
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+        )
+        if self.fast:
+            kwargs["speed"] = "fast"
+        try:
+            r = self.client.beta.messages.create(**kwargs)
+        except self.anthropic.RateLimitError:
+            if not self.fast:
+                raise
+            kwargs.pop("speed")
+            r = self.client.beta.messages.create(**kwargs)
+        if r.stop_reason == "refusal":
+            return []
+        text = next((b.text for b in r.content if b.type == "text"), "")
+        return json.loads(text).get("items", []) if text else []
 
     def translate(self, text: str, kind: str = "", context=None) -> str | None:
         r = self._request(text, kind, context or [])
@@ -320,7 +388,11 @@ class TranslationEngine:
                 else:
                     self.context.append((en, tr))
 
-    def submit(self, text: str, kind: str, on_result: Callable[[Result], None]) -> None:
+    @property
+    def can_read_screen(self) -> bool:
+        return self.refine is not None and hasattr(self.refine, "read_screen")
+
+    def submit(self, text: str, kind: str, on_result: Callable[[Result], None], refine: bool = True) -> None:
         """Sonuçlar on_result ile (başka iş parçacığından) gelir: önce hızlı, sonra kaliteli."""
         t0 = time.perf_counter()
         hit = self.cache.get(text)
@@ -328,11 +400,12 @@ class TranslationEngine:
             tr, q, engine = hit
             on_result(Result(tr, f"önbellek/{engine}", (time.perf_counter() - t0) * 1000, q))
             self._remember(kind, text, tr)
-            if q >= REFINED or not self.refine:
+            if q >= REFINED or not self.refine or not refine:
                 return
         elif self.fast:
             self.fast_pool.submit(self._run_fast, text, kind, on_result)
-        self._schedule_refine(text, kind, on_result)
+        if refine:
+            self._schedule_refine(text, kind, on_result)
 
     def _run_fast(self, text: str, kind: str, on_result) -> None:
         t = time.perf_counter()

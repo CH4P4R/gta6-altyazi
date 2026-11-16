@@ -750,6 +750,10 @@ class SettingsPage(QWidget):
                       field("Ekran çevirisi kalma süresi", self.fs_time), spacing=16))
         keys.add(label("Örnek: ctrl+shift+9, alt+f10, num9. TV'den oynarken aynı düğmeler telefon kumandasında da var.",
                        "faint", wrap=True))
+        self.fs_vision = QCheckBox("Ekranı çevirirken Claude görsel okuma kullan (menü, telefon ve süslü yazılarda daha "
+                                   "doğru; 2-4 sn sürer, Claude anahtarı gerekir)")
+        self.fs_vision.setChecked(cfg.kisayol.tam_ekran_gorsel)
+        keys.add(self.fs_vision)
         root.addWidget(keys)
 
         auto = Card()
@@ -836,6 +840,7 @@ class SettingsPage(QWidget):
         cfg.kisayol.tam_ekran = self.k_fs.text().strip()
         cfg.kisayol.duraklat = self.k_pause.text().strip()
         cfg.kisayol.tam_ekran_sure = self.fs_time.value()
+        cfg.kisayol.tam_ekran_gorsel = self.fs_vision.isChecked()
         o = cfg.otomatik
         o.windows_ile_baslat = self.a_boot.isChecked()
         o.chiaki_gorunce_baslat = self.a_src.isChecked()

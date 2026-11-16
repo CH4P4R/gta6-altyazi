@@ -106,6 +106,7 @@ class KisayolCfg:
     tam_ekran: str = "ctrl+shift+9"   # ekrandaki her şeyi çevir (telefon, menü, harita)
     duraklat: str = "ctrl+shift+0"    # çeviriyi duraklat / devam ettir
     tam_ekran_sure: int = 20          # tam ekran çeviri kaç saniye ekranda kalsın
+    tam_ekran_gorsel: bool = True     # Claude anahtarı varsa ekran görüntüsünü Claude okusun (daha doğru, 2-4 sn)
 
 
 @dataclass
