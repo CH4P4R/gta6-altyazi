@@ -1,6 +1,18 @@
 # GTA 6 Türkçe Altyazı
 
-GTA 6'daki İngilizce yazıları gerçek zamanlı okuyup Türkçesini **aynı yere, İngilizcenin üstüne** yazan Windows uygulaması. Alt ortadaki diyalog altyazılarını, sol üstteki yardım kutusunu ve sağ üstteki bildirimleri çevirir. Discord yayınına da girer.
+GTA 6'daki İngilizce yazıları gerçek zamanlı okuyup Türkçesini **aynı yere, İngilizcenin üstüne** yazan Windows uygulaması. Alt ortadaki diyalog altyazılarını, sol üstteki yardım kutusunu ve sağ üstteki bildirimleri çevirir.
+
+Tek bilgisayar iki yere birden altyazı verir:
+
+```
+PS5 ──HDMI──► TV (sen buradan oynarsın, gecikmesiz)
+ │              ▲  TV uygulaması Türkçeyi oyunun üstüne çizer
+ │              │  (ev ağı)
+ └─ chiaki-ng ─► Kasa: okur → çevirir ──┤
+   (2. PSN hesabı)                      └─► Discord Go Live: arkadaşlar Türkçe altyazılı izler
+```
+
+> **İkinci PSN hesabı şart.** chiaki-ng'ye kendi hesabınla bağlanırsan TV'deki kolun kopar. Ücretsiz ikinci bir PSN hesabı aç, PS5'te bu hesapla bir kez oturum açıp Uzaktan Oynatma'yı etkinleştir ve chiaki-ng'yi bu hesapla kaydet.
 
 ## Nasıl çalışıyor, neden hızlı?
 
@@ -39,7 +51,7 @@ Tahmini gecikme (RTX 3060-4060): ilk Türkçe yazı **~40-80 ms**, Claude'un iyi
 
 **chiaki-ng neden resmi Remote Play'den iyi:** daha yüksek bitrate, 1080p60, daha düşük gecikme ve donanımsal kod çözme sunuyor. Kurulum: [chiaki-ng](https://github.com/streetpea/chiaki-ng) → PS5'i kaydet (PSN hesap kimliği + PS5'te Ayarlar > Sistem > Uzaktan Oynatma > Cihazı Eşleştir kodu) → ayarlardan 1080p, 60 fps, en yüksek bitrate ve PS5'i kabloyla bağla.
 
-**Bazı günler TV'den, bazı günler monitörden:** Monitör günlerinde chiaki-ng (ya da PS5 yanındaysa capture kart) ile bu uygulama çalışır. TV günlerinde bilgisayar arka planda chiaki-ng ile görüntüyü okumaya ve çevirmeye devam edebilir. Türkçe yazıyı TV'ye taşımak için iki yol var: `http://<bilgisayar-ip>:8787` sayfası şimdiden çalışıyor (telefon/tablet ya da TV tarayıcısı). TV görüntüsünün üstüne çizen bir Google TV uygulaması ise sonraki adım.
+**Bazı günler TV'den, bazı günler monitörden:** İkisi aynı anda çalışır. Kasa chiaki-ng ile okur ve çevirir. Türkçe yazı hem TV'deki uygulamaya hem de kasanın ekranındaki katmana (ve Discord yayınına) gider. Monitörden oynadığın günlerde chiaki penceresinden, TV'den oynadığın günlerde TV'den oynarsın. Hiçbir ayarı değiştirmen gerekmez.
 
 ## Kurulum (Windows 10/11, NVIDIA)
 
@@ -51,6 +63,31 @@ Tahmini gecikme (RTX 3060-4060): ilk Türkçe yazı **~40-80 ms**, Claude'un iyi
    ```
 4. chiaki-ng'yi aç ve PS5'e bağlan. Sonra `baslat.bat`'ı çalıştır.
 
+## TV kurulumu (Google/Android TV, ör. TCL)
+
+TV'de bir kez yapılır:
+1. **Ayarlar › Sistem › Hakkında › Android TV OS derlemesi** satırına art arda 7 kez bas ("Artık geliştiricisiniz" yazar).
+2. **Ayarlar › Sistem › Geliştirici seçenekleri › USB hata ayıklama**'yı aç.
+3. Bilgisayarda:
+   ```bat
+   baslat.bat tv bul
+   baslat.bat tv kur 192.168.1.xx
+   ```
+4. TV'de "Hata ayıklamaya izin verilsin mi?" sorusu çıkınca **Bu bilgisayardan her zaman izin ver**'i işaretle ve **İzin ver**'e bas.
+5. Çıkan IP'yi `config.local.yaml`'a yaz, sonraki açılışlarda TV uygulaması kendiliğinden başlar:
+   ```yaml
+   tv:
+     ip: "192.168.1.xx"
+   ```
+
+Windows güvenlik duvarı ilk açılışta sorarsa **Özel ağlar**'a izin ver, yoksa TV bilgisayara bağlanamaz. TV görüntüyü kenarlardan kırpıyorsa (overscan) `tv.kalibrasyon` ile kaydırabilirsin.
+
+TV'de İngilizce yazı anında görünür, Türkçesi ~0.1-0.2 sn sonra üstüne gelir. Bunun sebebi kasanın görüntüyü chiaki üzerinden biraz geç alması. Discord'daki arkadaşların ise Türkçeyi İngilizceyle aynı karede görür.
+
+TV uygulamasının kaynağı `tv-android/` klasöründe. APK, GitHub Actions ile `tv-android/release/` klasörüne otomatik derlenir.
+
+**Discord'da konuşmak:** Bir Discord hesabı aynı anda tek sesli kanalda olabiliyor. Kasa yayını ikinci bir Discord hesabıyla açarsa sen ana hesabınla PS5'in Discord sesli sohbetinden, Mac'ten ya da telefondan konuşabilirsin.
+
 ## Komutlar
 
 ```bat
@@ -59,6 +96,8 @@ baslat.bat pencereler      :: açık pencereler (chiaki başlığı farklıysa c
 baslat.bat kameralar       :: capture kartlar ve ses girişleri
 baslat.bat kalibre         :: o anki kareyi bölgeler + algılanan yazıyla kalibrasyon.png'ye kaydet
 baslat.bat test ekran.png  :: bir ekran görüntüsünde OCR + çeviriyi dene
+baslat.bat tv bul          :: ev ağındaki Android/Google TV'yi bul
+baslat.bat tv kur [ip]     :: TV uygulamasını kur/güncelle ve başlat
 ```
 
 **Discord'da yayın:** overlay modunda ekranın tamamını paylaş (Türkçe yazı ayrı bir katman olduğu için sadece chiaki penceresini paylaşırsan görünmez). Capture kart modunda sadece "GTA6 Altyazi" penceresini paylaşman yeterli. `F11` ile tam ekran olur.
@@ -91,6 +130,7 @@ python -m pytest tests
 
 - [ ] GTA 6 gerçek ekran görüntüleriyle bölge/renk kalibrasyonu
 - [ ] Telefon, harita ve menüler için tam ekran OCR modu (kısayol tuşuyla)
-- [ ] TV günleri için Google TV overlay uygulaması (`/olaylar` akışını dinler)
+- [x] Google/Android TV katman uygulaması ve ağdan otomatik kurulum
+- [ ] TV'de katman izni olmayan modeller için HDMI'yı uygulama içinde gösterme (TvView)
 - [ ] Capture kart modunda izleyiciler için görüntüyü geciktirip altyazıyla tam aynı karede gösterme
 - [ ] İngilizce'ye özel PP-OCRv4 tanıma modeli (`ocr.model`)

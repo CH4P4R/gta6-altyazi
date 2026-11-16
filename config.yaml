@@ -65,3 +65,8 @@ ceviri:
 sunucu:
   acik: true                     # http://localhost:8787 (OBS: /obs)
   port: 8787
+
+tv:
+  ip: ""                         # Google/Android TV adresi ("baslat.bat tv bul"). Boşsa TV kısmı kapalı.
+  otomatik: true                 # program açılınca TV'deki katmanı kendiliğinden başlat
+  kalibrasyon: [0.0, 0.0, 1.0, 1.0]  # TV görüntüyü kırpıyorsa: [x, y, genişlik, yükseklik]
