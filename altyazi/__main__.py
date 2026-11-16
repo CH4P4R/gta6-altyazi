@@ -264,6 +264,11 @@ def cmd_tv(cfg, action: str | None, ip: str | None, extra: str | None = None) ->
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):   # Windows konsolunda Türkçe karakterler
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(prog="altyazi", description="GTA 6 gerçek zamanlı Türkçe altyazı")
     ap.add_argument("komut", nargs="?", default="arayuz",
                     choices=["arayuz", "calistir", "pencereler", "kameralar", "kalibre", "test", "tv"])

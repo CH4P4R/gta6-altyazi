@@ -18,6 +18,11 @@ DEFAULT = "Helsinki-NLP/opus-mt-tc-big-en-tr"
 
 
 def main() -> int:
+    for stream in (sys.stdout, sys.stderr):   # Windows konsolunda Türkçe karakterler
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=DEFAULT)
     ap.add_argument("--cikti", default="models/opus-mt-en-tr")
