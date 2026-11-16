@@ -20,7 +20,7 @@ echo === 1/6 Derleme ortamı ===
 if not exist .venv-derle py -3.12 -m venv .venv-derle || py -3 -m venv .venv-derle
 call .venv-derle\Scripts\activate.bat
 python -m pip install --upgrade pip
-pip install numpy opencv-python pyyaml rapidfuzz PySide6-Essentials ctranslate2 sentencepiece windows-capture sounddevice anthropic requests segno pyinstaller pillow pyclipper shapely six || goto hata
+pip install numpy opencv-python pyyaml rapidfuzz PySide6-Essentials ctranslate2 sentencepiece windows-capture sounddevice anthropic requests segno paramiko pyinstaller pillow pyclipper shapely six || goto hata
 pip install --no-deps rapidocr_onnxruntime || goto hata
 pip install onnxruntime-directml nvidia-cublas-cu12 || goto hata
 
@@ -37,6 +37,7 @@ if not exist tools\platform-tools\adb.exe (
 
 echo === 5/6 Paketleme (birkaç dakika) ===
 python packaging\make_assets.py || goto hata
+python tools\tv_web_hazirla.py || goto hata
 pyinstaller --noconfirm --clean packaging\gta6altyazi.spec || goto hata
 
 echo === 6/6 Kurulum dosyası (5-10 dakika) ===

@@ -64,6 +64,14 @@ TV oyunun üstüne çizmeye izin vermezse uygulama kendiliğinden **yedek moda**
 
 TV'de İngilizce yazı anında görünür, Türkçesi ~0.1-0.2 sn sonra üstüne gelir. Bunun sebebi kasanın görüntüyü chiaki üzerinden biraz geç alması. Discord'daki arkadaşların ise Türkçeyi İngilizceyle aynı karede görür.
 
+### Diğer televizyonlar (LG ve Samsung)
+Programın **Televizyon** sayfasında markayı seç; her marka için adımlar orada yazar. Kısaca:
+- **Google TV / Android TV** (TCL, Sony, Philips, Xiaomi, Hisense, Vestel Android...): yukarıdaki TCL adımlarıyla aynı.
+- **LG (webOS):** TV'de LG Content Store'dan ücretsiz **Developer Mode** uygulamasını kur, LG hesabınla gir, **Dev Mode Status** ve **Key Server**'ı aç. Ekrandaki IP ve **Passphrase**'i programa yaz, Bağlan'a bas. Geliştirici modu bir süre sonra kapanır; uygulamadaki **EXTEND** ile uzatırsın.
+- **Samsung (Tizen):** Bilgisayara **Tizen Studio** + **Samsung Certificate Extension** kur. TV'de Uygulamalar ekranında **1-2-3-4-5** yazıp Developer mode'u aç, Host PC IP olarak bilgisayarın IP'sini gir ve TV'yi yeniden başlat. Tizen Studio'nun **Certificate Manager**'ında Samsung türünde `gta6` adlı bir profil oluştur (Samsung hesabınla, TV'nin DUID'iyle). Sonra programda Bağlan'a bas: imzalar, kurar, açar.
+
+LG ve Samsung TV'ler başka uygulamaların üstüne çizmeye izin vermez. Bu yüzden PS5'in HDMI görüntüsü bizim TV uygulamasının içinde açılır ve altyazı üstüne çizilir. Kumandada **◀ ▶** (ya da 1-4) ile doğru HDMI girişini seç, **Kırmızı** tuş deneme altyazısı gösterir. TV uygulaması bilgisayarı ağda kendisi bulur.
+
 ### 4. Discord (yayın kasadan, konuşma Mac'ten)
 - **Kasa:** ikinci bir Discord hesabıyla sesli kanala gir. Mikrofonu ve sesi kapat, sonra **Ekran paylaş › Ekranlar › chiaki'nin olduğu monitör › Go Live**. Tüm ekranı paylaşmak şart: Türkçe yazı ayrı bir katman olduğu için sadece chiaki penceresini paylaşırsan görünmez.
 - **MacBook:** kendi hesabınla aynı kanala gir ve konuş. Kulaklık kullan, yoksa mikrofon TV'nin sesini de alır.
@@ -108,6 +116,7 @@ python -m pytest tests
 | `altyazi/` | Çekirdek: yakalama, tespit, OCR, çeviri, hat, sunucu, TV kurulumu |
 | `altyazi/ui/` | Arayüz (PySide6) |
 | `tv-android/` | Android TV uygulaması (katman servisi + HDMI yedek modu) |
+| `tv-web/` | LG (webOS) ve Samsung (Tizen) TV uygulaması (HDMI tam ekran + altyazı) |
 | `packaging/` | PyInstaller tarifi, Inno Setup kurulum betiği, görseller |
 | `tests/` | Testler. `synth.py` GTA tarzı sahte kareler üretir |
 

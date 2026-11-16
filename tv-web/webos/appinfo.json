@@ -1,0 +1,13 @@
+{
+  "id": "com.gta6altyazi.tv",
+  "version": "0.3.1",
+  "vendor": "GTA6 Altyazi",
+  "type": "web",
+  "main": "index.html",
+  "title": "GTA6 Altyazı",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "bgColor": "#000000",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true
+}

@@ -10,7 +10,8 @@ ROOT = Path(SPECPATH).resolve().parent
 IS_WIN = sys.platform == "win32"
 
 datas = [(str(ROOT / "config.yaml"), ".")]
-for rel in ("tv-android/release", "models/opus-mt-en-tr", "models/ocr", "tools/platform-tools"):
+for rel in ("tv-android/release", "tv-web/release", "tv-web/build/tizen", "models/opus-mt-en-tr", "models/ocr",
+            "tools/platform-tools"):
     p = ROOT / rel
     if p.exists():
         datas.append((str(p), rel))
@@ -26,7 +27,8 @@ if IS_WIN:
     except ImportError:
         print("UYARI: nvidia-cublas-cu12 yok, çeviri modeli CPU'da çalışacak")
 
-hidden = collect_submodules("anthropic") + ["sounddevice", "segno", "rapidfuzz.fuzz", "rapidfuzz.process"]
+hidden = collect_submodules("anthropic") + collect_submodules("paramiko") + [
+    "sounddevice", "segno", "rapidfuzz.fuzz", "rapidfuzz.process"]
 if IS_WIN:
     hidden += ["windows_capture"]
 

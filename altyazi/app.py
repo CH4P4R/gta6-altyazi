@@ -413,11 +413,22 @@ class AppController(QObject):
 
         def run() -> None:
             from . import tv
+            t = self.cfg.tv
             try:
                 self._tv("baglaniyor", f"{host} adresine bağlanılıyor...")
-                server = tv.setup(host, self.cfg.sunucu.port, force_install=force_install, mode=self.cfg.tv.mod,
-                                  on_prompt=lambda: self._tv("onay", "TV'ye bak: \"Hata ayıklamaya izin verilsin mi?\" "
-                                                                    "sorusunda Her zaman izin ver + İzin ver"))
+                if t.marka == "lg":
+                    from . import tv_lg
+                    if not t.lg_parola:
+                        raise RuntimeError("LG Developer Mode ekranındaki parolayı (passphrase) yaz.")
+                    server = tv_lg.setup(host, t.lg_parola, self.cfg.sunucu.port, force_install=force_install)
+                elif t.marka == "samsung":
+                    from . import tv_samsung
+                    self._tv("baglaniyor", "Samsung TV'ye bağlanılıyor, uygulama imzalanıp kuruluyor (1-2 dk)...")
+                    server = tv_samsung.setup(host, t.samsung_profil, t.tizen_yolu)
+                else:
+                    server = tv.setup(host, self.cfg.sunucu.port, force_install=force_install, mode=t.mod,
+                                      on_prompt=lambda: self._tv("onay", "TV'ye bak: \"Hata ayıklamaya izin verilsin mi?\" "
+                                                                        "sorusunda Her zaman izin ver + İzin ver"))
                 self._tv("bagli", f"TV hazır ({host}). TV bu bilgisayara bağlanıyor: {server}")
             except Exception as e:  # noqa: BLE001
                 self._tv("hata", str(e))
@@ -426,6 +437,11 @@ class AppController(QObject):
     def tv_scan(self) -> None:
         def run() -> None:
             from . import tv
+            marka = self.cfg.tv.marka
+            if marka in ("lg", "samsung"):
+                port = 9922 if marka == "lg" else 26101
+                self.tvFound.emit([(h, marka.upper() if marka == "lg" else "Samsung") for h in tv.scan(port)])
+                return
             found = [(h, "klasik") for h in tv.scan()]
             try:
                 import re

@@ -1,0 +1,10 @@
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; font-family: "LG Smart UI", "SamsungOne", "Segoe UI", sans-serif; }
+#video-host, #video-host video { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #000; }
+#video-host.tizen { background: transparent; }
+#subs { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+#panel { position: absolute; left: 60px; top: 60px; padding: 26px 32px; background: rgba(13, 11, 19, .92); border: 2px solid #3a3148; border-radius: 22px; color: #f4f1fa; font-size: 30px; line-height: 1.5; }
+#panel .brand { font-size: 36px; font-weight: bold; margin-bottom: 10px; }
+#panel .badge { display: inline-block; padding: 2px 12px; border-radius: 10px; background: linear-gradient(135deg, #ff4fa3, #ff9f43); color: #fff; margin-right: 8px; }
+#panel .keys { color: #9d93b0; font-size: 24px; margin-top: 12px; }
+#toast { position: absolute; right: 60px; top: 60px; padding: 14px 24px; background: rgba(13, 11, 19, .9); color: #f4f1fa; border-radius: 14px; font-size: 26px; }
+.hidden { display: none; }

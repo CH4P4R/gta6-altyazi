@@ -124,7 +124,11 @@ class OtomatikCfg:
 
 @dataclass
 class TvCfg:
-    ip: str = ""                  # Google/Android TV'nin adresi ("python -m altyazi tv bul")
+    marka: str = "android"        # android (Google TV, TCL, Sony...) | lg (webOS) | samsung (Tizen)
+    ip: str = ""                  # TV'nin adresi
+    lg_parola: str = ""           # LG Developer Mode ekranındaki parola (passphrase)
+    samsung_profil: str = "gta6"  # Tizen Studio'daki Samsung sertifika profilinin adı
+    tizen_yolu: str = ""          # Tizen Studio klasörü (boşsa bilinen yerlerde aranır)
     otomatik: bool = True         # program açılınca TV uygulamasını kendiliğinden başlat
     # otomatik: TV izin verirse oyunun üstüne katman, vermezse yedek mod (HDMI uygulama içinde)
     mod: str = "otomatik"         # otomatik | katman | hdmi

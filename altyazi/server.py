@@ -147,6 +147,17 @@ class EventServer:
             def log_message(self, *a):  # noqa: ANN002
                 pass
 
+            def end_headers(self):  # noqa: N802
+                # LG / Samsung TV uygulaması başka bir adresten (kendi paketinden) bağlanır
+                self.send_header("Access-Control-Allow-Origin", "*")
+                super().end_headers()
+
+            def do_OPTIONS(self):  # noqa: N802
+                self.send_response(204)
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                self.send_header("Access-Control-Allow-Headers", "*")
+                self.end_headers()
+
             def _json(self, code: int, obj: dict) -> None:
                 body = json.dumps(obj, ensure_ascii=False).encode()
                 self.send_response(code)
@@ -167,6 +178,9 @@ class EventServer:
 
             def do_GET(self):  # noqa: N802
                 path = self.path.split("?")[0]
+                if path == "/kim":           # TV uygulaması kasayı ağda bu adresle bulur
+                    self._json(200, {"app": "gta6-altyazi"})
+                    return
                 if path in ("/kumanda", "/ekran"):
                     body = REMOTE.encode()
                     self.send_response(200)

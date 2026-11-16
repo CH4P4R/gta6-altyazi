@@ -19,3 +19,4 @@ anthropic
 requests
 # İsteğe bağlı: google-genai (Gemini), deepl
 segno
+paramiko

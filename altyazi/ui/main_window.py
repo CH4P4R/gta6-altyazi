@@ -386,11 +386,13 @@ class TvPage(QWidget):
         root.addLayout(page_header("Televizyon", "Türkçe altyazı TV'de oyunun üstünde görünür. Sen HDMI'dan "
                                    "gecikmesiz oynarsın, bilgisayar arka planda okur ve TV'ye gönderir."))
         steps = Card()
-        steps.add(label("1 · TV'de bir kerelik hazırlık (TCL / Google TV)", "h2"))
-        steps.add(label("① Ayarlar › Sistem › Hakkında › <b>Android TV OS derlemesi</b> satırına art arda 7 kez bas.<br>"
-                        "② Ayarlar › Sistem › <b>Geliştirici seçenekleri</b>'ne gir.<br>"
-                        "③ <b>USB hata ayıklama</b> varsa aç. Yoksa ya da TV bulunamazsa <b>Kablosuz hata ayıklama</b>'yı aç "
-                        "ve aşağıdaki eşleştirme kısmını kullan.", "muted", wrap=True))
+        self.brand = combo([("android", "Google TV / Android TV (TCL, Sony, Philips, Xiaomi, Hisense...)"),
+                            ("lg", "LG (webOS)"), ("samsung", "Samsung (Tizen)")], ctl.cfg.tv.marka)
+        self.brand.currentIndexChanged.connect(self._brand_changed)
+        steps.add(hbox(label("TV markası", "h2"), self.brand, None, spacing=14))
+        steps.add(label("1 · TV'de bir kerelik hazırlık", "h2"))
+        self.howto = label("", "muted", wrap=True)
+        steps.add(self.howto)
         root.addWidget(steps)
 
         conn = Card()
@@ -406,7 +408,22 @@ class TvPage(QWidget):
                            ("hdmi", "Yedek mod: HDMI uygulama içinde")], ctl.cfg.tv.mod)
         self.auto = QCheckBox("Çeviri başlayınca TV'yi kendiliğinden bağla")
         self.auto.setChecked(ctl.cfg.tv.otomatik)
-        conn.add(hbox(field("Mod", self.mode), None, self.auto, spacing=16))
+        self.mode_box = field("Mod", self.mode)
+        self.lg_pass = QLineEdit(ctl.cfg.tv.lg_parola)
+        self.lg_pass.setPlaceholderText("Developer Mode ekranındaki parola (ör. A1B2C3)")
+        self.lg_box = QWidget()
+        self.lg_box.setLayout(field("LG parola (passphrase)", self.lg_pass,
+                                    "Developer Mode uygulamasında Key Server açıkken ekranda görünür."))
+        self.ss_profile = QLineEdit(ctl.cfg.tv.samsung_profil)
+        self.ss_tizen = QLineEdit(ctl.cfg.tv.tizen_yolu)
+        self.ss_tizen.setPlaceholderText("C:\\tizen-studio (boşsa kendisi arar)")
+        self.ss_box = QWidget()
+        self.ss_box.setLayout(hbox(field("Sertifika profili", self.ss_profile), field("Tizen Studio klasörü", self.ss_tizen),
+                                   spacing=14))
+        mode_w = QWidget()
+        mode_w.setLayout(self.mode_box)
+        self.mode_w = mode_w
+        conn.add(hbox(mode_w, self.lg_box, self.ss_box, None, self.auto, spacing=16))
         self.connect_btn = button("Bağlan, kur ve başlat", "primary", self._connect)
         self.test_btn = button("Deneme altyazısı gönder", None, ctl.tv_test)
         conn.add(hbox(self.connect_btn, self.test_btn, None))
@@ -423,6 +440,7 @@ class TvPage(QWidget):
         self.pair_code.setFixedWidth(110)
         pair.add(hbox(self.pair_addr, self.pair_code, button("Eşleştir", None, self._pair), spacing=10))
         conn.add(pair)
+        self.pair_card = pair
         root.addWidget(conn)
 
         cal = Card()
@@ -448,10 +466,45 @@ class TvPage(QWidget):
         ctl.tvStatus.connect(self.on_status)
         ctl.tvFound.connect(self.on_found)
         self.on_status(*ctl.tv_state)
+        self._brand_changed()
+
+    HOWTO = {
+        "android": "① Ayarlar › Sistem › Hakkında › <b>Android TV OS derlemesi</b> satırına art arda 7 kez bas.<br>"
+                   "② Ayarlar › Sistem › <b>Geliştirici seçenekleri</b>'ne gir.<br>"
+                   "③ <b>USB hata ayıklama</b> varsa aç. Yoksa ya da TV bulunamazsa <b>Kablosuz hata ayıklama</b>'yı aç "
+                   "ve aşağıdaki eşleştirme kısmını kullan.",
+        "lg": "① TV'de <b>LG Content Store</b>'dan ücretsiz <b>Developer Mode</b> uygulamasını kur.<br>"
+              "② Uygulamayı aç, LG hesabınla gir (hesabı developer.lge.com'dan ücretsiz açabilirsin).<br>"
+              "③ <b>Dev Mode Status</b>'u aç, TV yeniden başlayınca uygulamada <b>Key Server</b>'ı da aç.<br>"
+              "④ Ekrandaki <b>IP</b>'yi ve <b>Passphrase</b>'i aşağıya yaz, Bağlan'a bas.<br>"
+              "<i>Not: Geliştirici modu bir süre sonra kapanır; uygulamadaki EXTEND ile uzatırsın.</i><br>"
+              "LG TV'ler başka uygulamaların üstüne çizmeye izin vermez: PS5'in HDMI görüntüsü bizim TV uygulamasının "
+              "içinde açılır ve altyazı üstüne çizilir. Kumandada ◀ ▶ ile doğru HDMI girişini seç.",
+        "samsung": "① Bilgisayara <b>Tizen Studio</b>'yu kur; Package Manager'dan <b>Samsung Certificate Extension</b>'ı ekle.<br>"
+                   "② TV'de <b>Uygulamalar</b> ekranında kumandayla <b>1-2-3-4-5</b> yaz, <b>Developer mode</b>'u aç, "
+                   "<b>Host PC IP</b> olarak bu bilgisayarın IP'sini yaz, TV'yi güç tuşuna 2 sn basılı tutup yeniden başlat.<br>"
+                   "③ Tizen Studio › Tools › <b>Certificate Manager</b>: <b>Samsung</b> türünde, adı aşağıdakiyle aynı "
+                   "(varsayılan <b>gta6</b>) bir profil oluştur; Samsung hesabınla gir ve TV'yi (DUID) ekle.<br>"
+                   "④ TV'nin IP'sini yaz, Bağlan'a bas. Program uygulamayı bu profille imzalar, kurar ve açar.<br>"
+                   "Samsung TV'ler de başka uygulamaların üstüne çizmeye izin vermez: HDMI görüntüsü bizim uygulamanın "
+                   "içinde açılır. Kumandada ◀ ▶ ile doğru HDMI girişini seç.",
+    }
+
+    def _brand_changed(self, *_a) -> None:  # noqa: ANN002
+        b = self.brand.currentData()
+        self.howto.setText(self.HOWTO[b])
+        self.mode_w.setVisible(b == "android")
+        self.pair_card.setVisible(b == "android")
+        self.lg_box.setVisible(b == "lg")
+        self.ss_box.setVisible(b == "samsung")
 
     def _save_common(self) -> None:
         cfg = self.ctl.edit_config()
         cfg.tv.ip = self.ip.text().strip()
+        cfg.tv.marka = self.brand.currentData()
+        cfg.tv.lg_parola = self.lg_pass.text().strip()
+        cfg.tv.samsung_profil = self.ss_profile.text().strip() or "gta6"
+        cfg.tv.tizen_yolu = self.ss_tizen.text().strip()
         cfg.tv.mod = self.mode.currentData()
         cfg.tv.otomatik = self.auto.isChecked()
         cfg.tv.kalibrasyon = [self.cal[0].value() / 1000, self.cal[1].value() / 1000,
@@ -466,6 +519,7 @@ class TvPage(QWidget):
         self.ctl.tv_connect(self.ip.text().strip(), force_install=True)
 
     def _scan(self) -> None:
+        self._save_common()                    # tarama seçili markanın portuna göre yapılır
         self.scan_btn.setEnabled(False)
         self.scan_btn.setText("Aranıyor...")
         self.ctl.tv_scan()
