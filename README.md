@@ -111,5 +111,6 @@ python -m pytest tests
 | `packaging/` | PyInstaller tarifi, Inno Setup kurulum betiği, görseller |
 | `tests/` | Testler. `synth.py` GTA tarzı sahte kareler üretir |
 
+- **Kendi bilgisayarında kurulum dosyası derlemek:** `derle.bat`'a çift tıkla (Python 3.12 ve Inno Setup gerekir, Inno Setup yoksa kendisi kurar). Sonuç: `dist\GTA6Altyazi-Setup.exe`.
 - **Derleme:** TV APK'sı `tv-android/` değişince GitHub Actions ile otomatik derlenir. Windows kurulum dosyası, commit mesajında `[exe]` geçince (ya da Actions'tan elle) derlenir ve Releases'e konur.
 - **Yerel çeviri modeli:** `python tools/model_indir.py` ile hazırlanır.

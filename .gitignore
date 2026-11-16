@@ -10,3 +10,6 @@ kalibrasyon*.png
 config.local.yaml
 tools/platform-tools/
 .adb/
+.venv-derle/
+build/
+dist/
