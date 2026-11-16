@@ -4,6 +4,8 @@
     python -m altyazi kameralar        # capture kartları ve ses girişlerini listele
     python -m altyazi kalibre          # o anki kareyi bölgeler ve maskelerle kalibrasyon.png'ye kaydet
     python -m altyazi test resim.png   # bir ekran görüntüsünde OCR + çeviriyi dene (pencere açmadan)
+    python -m altyazi tv bul           # ev ağındaki Android/Google TV'yi bul
+    python -m altyazi tv kur [ip]      # TV uygulamasını kur ve başlat
 """
 
 from __future__ import annotations
@@ -52,8 +54,11 @@ def cmd_run(cfg) -> int:
     painter = Painter(cfg.gosterim.yazi_tipi, cfg.gosterim.gecikme_goster)
     server = None
     if cfg.sunucu.acik:
-        server = EventServer(cfg.sunucu.port)
+        server = EventServer(cfg.sunucu.port, cfg.tv.kalibrasyon)
         server.start()
+        if cfg.tv.ip and cfg.tv.otomatik:
+            from .tv import setup_in_background
+            setup_in_background(cfg.tv.ip, cfg.sunucu.port)
     sink = MultiSink(QtSink(bridge), server)
 
     frame_sink = None
@@ -189,11 +194,45 @@ def cmd_test(cfg, path: str) -> int:
     return 0
 
 
+def cmd_tv(cfg, action: str | None, ip: str | None) -> int:
+    from . import tv
+
+    if action in (None, "bul"):
+        print("Ev ağında TV aranıyor (port 5555)...")
+        found = tv.scan()
+        if not found:
+            print("Bulunamadı. TV açık mı? Geliştirici seçeneklerinde 'USB hata ayıklama' açık mı?")
+            return 1
+        for h in found:
+            print(f"  {h}")
+        print(f"\nKurmak için: baslat.bat tv kur {found[0]}")
+        return 0
+    if action == "kur":
+        host = ip or cfg.tv.ip
+        if not host:
+            found = tv.scan()
+            if len(found) != 1:
+                print("TV'nin adresini yaz: baslat.bat tv kur 192.168.1.xx" + (f"  (bulunanlar: {found})" if found else ""))
+                return 1
+            host = found[0]
+        server = tv.setup(host, cfg.sunucu.port, force_install=True,
+                          on_prompt=lambda: print("TV'ye bak: 'Hata ayıklamaya izin verilsin mi?' -> "
+                                                  "'Her zaman izin ver' + İzin ver (60 sn bekliyorum)"))
+        print(f"Tamam! TV uygulaması kuruldu ve açıldı. TV bu bilgisayara bağlanacak: {server}")
+        if host != cfg.tv.ip:
+            print(f"Bir dahakine otomatik açılması için config.local.yaml'a yaz:\n  tv:\n    ip: \"{host}\"")
+        print("Not: Windows güvenlik duvarı sorarsa 'Özel ağlar'a izin ver, yoksa TV bağlanamaz.")
+        return 0
+    print("Kullanım: tv bul | tv kur [ip]")
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="altyazi", description="GTA 6 gerçek zamanlı Türkçe altyazı")
     ap.add_argument("komut", nargs="?", default="calistir",
-                    choices=["calistir", "pencereler", "kameralar", "kalibre", "test"])
-    ap.add_argument("dosya", nargs="?", help="kalibre/test için resim dosyası")
+                    choices=["calistir", "pencereler", "kameralar", "kalibre", "test", "tv"])
+    ap.add_argument("dosya", nargs="?", help="kalibre/test için resim dosyası, tv için bul/kur")
+    ap.add_argument("ek", nargs="?", help="tv kur için TV'nin IP adresi")
     ap.add_argument("-c", "--config", default="config.yaml")
     ap.add_argument("-v", "--ayrintili", action="store_true")
     a = ap.parse_args(argv)
@@ -207,6 +246,8 @@ def main(argv: list[str] | None = None) -> int:
     cfg = config_mod.load(a.config)
     if a.komut == "kalibre":
         return cmd_calibrate(cfg, a.dosya)
+    if a.komut == "tv":
+        return cmd_tv(cfg, a.dosya, a.ek)
     if a.komut == "test":
         if not a.dosya:
             ap.error("test için resim dosyası verin")

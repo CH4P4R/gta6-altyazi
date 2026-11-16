@@ -1,0 +1,39 @@
+name: TV uygulaması (APK)
+
+on:
+  push:
+    paths:
+      - 'tv-android/**'
+      - '!tv-android/release/**'
+      - '.github/workflows/tv-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  derle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: APK derle
+        working-directory: tv-android
+        run: gradle --no-daemon assembleRelease
+      - name: APK'yı depoya koy
+        run: |
+          cp tv-android/app/build/outputs/apk/release/app-release.apk tv-android/release/gta6-altyazi-tv.apk
+          grep -oP "versionCode \K\d+" tv-android/app/build.gradle > tv-android/release/gta6-altyazi-tv.version
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tv-android/release
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "TV APK derlendi (${GITHUB_SHA::7})"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

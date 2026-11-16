@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import queue
+import socket
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -41,8 +42,10 @@ go();
 
 
 class EventServer:
-    def __init__(self, port: int):
+    def __init__(self, port: int, tv_calibration: list[float] | None = None):
         self.port = port
+        x, y, w, h = tv_calibration or [0.0, 0.0, 1.0, 1.0]
+        self.tv = {"x": x, "y": y, "w": w, "h": h}
         self.clients: list[queue.Queue] = []
         self.lock = threading.Lock()
         self.state: dict[str, dict] = {}
@@ -50,7 +53,9 @@ class EventServer:
     # Sink arayüzü
     def show(self, it: DisplayItem) -> None:
         msg = {"type": "show", "zone": it.zone, "text": it.text, "english": it.english, "rect": it.rect,
-               "align": it.align, "anchor": it.anchor, "latency_ms": round(it.latency_ms)}
+               "zone_rect": it.zone_rect, "line_h": it.line_h, "align": it.align, "anchor": it.anchor,
+               "box_opacity": it.box_opacity, "font_scale": it.font_scale, "tv": self.tv,
+               "source": it.source, "latency_ms": round(it.latency_ms)}
         self.state[it.zone] = msg
         self._broadcast(msg)
 
@@ -81,6 +86,8 @@ class EventServer:
                     self.end_headers()
                     self.wfile.write(body)
                 elif path == "/olaylar":
+                    # Küçük mesajlar Nagle algoritması yüzünden 40-200 ms beklemesin
+                    self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     self.send_response(200)
                     self.send_header("Content-Type", "text/event-stream")
                     self.send_header("Cache-Control", "no-cache")

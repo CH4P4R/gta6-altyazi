@@ -100,6 +100,14 @@ class SunucuCfg:
 
 
 @dataclass
+class TvCfg:
+    ip: str = ""                  # Google/Android TV'nin adresi ("python -m altyazi tv bul")
+    otomatik: bool = True         # program açılınca TV uygulamasını kendiliğinden başlat
+    # TV ekranı oyun görüntüsünü kırpıyor/kaydırıyorsa (overscan): [x, y, genişlik, yükseklik] oran
+    kalibrasyon: list[float] = field(default_factory=lambda: [0.0, 0.0, 1.0, 1.0])
+
+
+@dataclass
 class Config:
     kaynak: KaynakCfg = field(default_factory=KaynakCfg)
     bolgeler: list[BolgeCfg] = field(default_factory=lambda: [BolgeCfg()])
@@ -107,6 +115,7 @@ class Config:
     ceviri: CeviriCfg = field(default_factory=CeviriCfg)
     gosterim: GosterimCfg = field(default_factory=GosterimCfg)
     sunucu: SunucuCfg = field(default_factory=SunucuCfg)
+    tv: TvCfg = field(default_factory=TvCfg)
 
 
 def _build(cls, data: Any, path: str):

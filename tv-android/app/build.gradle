@@ -1,0 +1,33 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.gta6altyazi.tv'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.gta6altyazi.tv'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0'
+    }
+    signingConfigs {
+        // Kişisel kullanım için sabit imza: aynı anahtarla imzalanan güncellemeler TV'de üstüne kurulur.
+        sabit {
+            storeFile file('../imza.jks')
+            storePassword 'gta6altyazi'
+            keyAlias 'gta6altyazi'
+            keyPassword 'gta6altyazi'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.sabit
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { abortOnError false; checkReleaseBuilds false }
+}
