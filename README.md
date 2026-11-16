@@ -58,19 +58,22 @@ chiaki-ng'ye kendi hesabınla bağlanırsan TV'deki kolun kopar.
 2. **Ayarlar › Sistem › Geliştirici seçenekleri**: **USB hata ayıklama**'yı aç. Yoksa ya da TV bulunamazsa **Kablosuz hata ayıklama**'yı aç.
 3. Uygulamada **Televizyon** sayfası: **Ağda ara › Bağlan, kur ve başlat**. TV'de çıkan "Hata ayıklamaya izin verilsin mi?" sorusunda **Her zaman izin ver**'i işaretleyip **İzin ver**'e bas.
    - Kablosuz hata ayıklamada önce TV'deki **Eşleştirme koduyla cihaz eşleştir** ekranındaki adres:port ve kodu **Eşleştir** kısmına yaz.
-4. **Deneme altyazısı gönder** ile TV'de yerini kontrol et. Kayıyorsa konum kaydırıcılarıyla düzelt.
+4. **Deneme altyazısı gönder** ile TV'de yerini kontrol et.
+5. TV bağlanamıyorsa aynı sayfadaki **Bağlantı izni › İzin ver** ile Windows güvenlik duvarına izin ver (Windows bir kez "Evet" ister).
 
-TV oyunun üstüne çizmeye izin vermezse uygulama kendiliğinden **yedek moda** geçer. Bu modda PS5'in HDMI görüntüsü TV uygulamasının içinde açılır ve altyazı üstüne çizilir. Kumandada sol/sağ ile HDMI girişi değiştirilir.
+TV uygulaması PS5'in HDMI görüntüsünü kendi içinde açar ve Türkçeyi üstüne çizer; PS5'in hangi HDMI'da olduğunu kendisi bulur (CEC adından). TCL gibi bazı Google TV'ler HDMI'yı öne alıp uygulamayı arka plana iter ya da görüntü siyah kalır; o zaman uygulama kendiliğinden **katman moduna** geçer (TV kendi HDMI ekranını gösterir, altyazı üstte). TV uygulaması CouchSubs'tan alındı ve TCL C6K dahil gerçek TV'lerde denenmiş.
+
+TV kumandası: **Yeşil** tuş bilgi panelini açar (bağlantı, HDMI, son altyazı), **◀ ▶** ya da **1-4** HDMI girişini seçer, **0** konsolu yeniden arar, **Kırmızı** deneme altyazısı gösterir.
 
 TV'de İngilizce yazı anında görünür, Türkçesi ~0.1-0.2 sn sonra üstüne gelir. Bunun sebebi kasanın görüntüyü chiaki üzerinden biraz geç alması. Discord'daki arkadaşların ise Türkçeyi İngilizceyle aynı karede görür.
 
 ### Diğer televizyonlar (LG ve Samsung)
 Programın **Televizyon** sayfasında markayı seç; her marka için adımlar orada yazar. Kısaca:
 - **Google TV / Android TV** (TCL, Sony, Philips, Xiaomi, Hisense, Vestel Android...): yukarıdaki TCL adımlarıyla aynı.
-- **LG (webOS):** TV'de LG Content Store'dan ücretsiz **Developer Mode** uygulamasını kur, LG hesabınla gir, **Dev Mode Status** ve **Key Server**'ı aç. Ekrandaki IP ve **Passphrase**'i programa yaz, Bağlan'a bas. Geliştirici modu bir süre sonra kapanır; uygulamadaki **EXTEND** ile uzatırsın.
+- **LG (webOS):** TV'de LG Content Store'dan ücretsiz **Developer Mode** uygulamasını kur, LG hesabınla gir, **Dev Mode Status** ve **Key Server**'ı aç. Ekrandaki IP ve **Passphrase**'i programa yaz, Bağlan'a bas. Geliştirici modu en çok 1000 saat açık kalır; program her bağlanışta süreyi kendisi baştan başlatır.
 - **Samsung (Tizen):** Bilgisayara **Tizen Studio** + **Samsung Certificate Extension** kur. TV'de Uygulamalar ekranında **1-2-3-4-5** yazıp Developer mode'u aç, Host PC IP olarak bilgisayarın IP'sini gir ve TV'yi yeniden başlat. Tizen Studio'nun **Certificate Manager**'ında Samsung türünde `gta6` adlı bir profil oluştur (Samsung hesabınla, TV'nin DUID'iyle). Sonra programda Bağlan'a bas: imzalar, kurar, açar.
 
-LG ve Samsung TV'ler başka uygulamaların üstüne çizmeye izin vermez. Bu yüzden PS5'in HDMI görüntüsü bizim TV uygulamasının içinde açılır ve altyazı üstüne çizilir. Kumandada **◀ ▶** (ya da 1-4) ile doğru HDMI girişini seç, **Kırmızı** tuş deneme altyazısı gösterir. TV uygulaması bilgisayarı ağda kendisi bulur.
+LG ve Samsung TV'ler başka uygulamaların üstüne çizmeye izin vermez. Bu yüzden PS5'in HDMI görüntüsü bizim TV uygulamasının içinde açılır ve altyazı üstüne çizilir. TV uygulaması PS5'in girişini ve bilgisayarı ağda kendisi bulur. Samsung TV kendiliğinden HDMI'ya geçiyorsa **Anynet+ (HDMI-CEC)** ve **Otomatik Kaynak Değiştirme**'yi kapat (TV de bunu ekranda söyler).
 
 ### 4. Discord (yayın kasadan, konuşma Mac'ten)
 - **Kasa:** ikinci bir Discord hesabıyla sesli kanala gir. Mikrofonu ve sesi kapat, sonra **Ekran paylaş › Ekranlar › chiaki'nin olduğu monitör › Go Live**. Tüm ekranı paylaşmak şart: Türkçe yazı ayrı bir katman olduğu için sadece chiaki penceresini paylaşırsan görünmez.
@@ -83,8 +86,8 @@ LG ve Samsung TV'ler başka uygulamaların üstüne çizmeye izin vermez. Bu yü
 |---|---|
 | **Ana ekran** | Büyük başlat/durdur düğmesi, ortalama gecikme grafiği, PS5/TV/çeviri motoru durumları, telefon kumandası QR kodu, canlı çeviri akışı (kopyalama düğmeli) |
 | **Okuma alanları** | Oyun görüntüsü üstünde bölgeleri fareyle taşı ve boyutlandır. Hazır konumlar sunar, yazı sayılan pikselleri kırmızıyla gösterir, Türkçe yazı boyutu ve kapatma kutusu buradan ayarlanır |
-| **Televizyon** | TV'yi ağda bulma, eşleştirme, kurma, mod seçimi (katman/yedek), konum ayarı, deneme altyazısı |
-| **Çeviri** | Yerel model / Google, Claude / Gemini / DeepL, API anahtarı, deneme çevirisi, sözlük |
+| **Televizyon** | TV'yi ağda bulma, eşleştirme, kurma, mod seçimi, deneme altyazısı, güvenlik duvarı izni |
+| **Çeviri** | Yerel model / Google, Claude / Gemini / DeepL, API anahtarı, deneme çevirisi, sözlük, hazır çeviri paketleri |
 | **Geçmiş** | Oturumdaki tüm çeviriler. Arama yapılabilir, metin olarak kaydedilebilir |
 | **Ayarlar** | Görüntü kaynağı (chiaki / capture kart), gösterim, kısayollar, OBS adresi, sihirbazı tekrar açma |
 
@@ -93,6 +96,13 @@ LG ve Samsung TV'ler başka uygulamaların üstüne çizmeye izin vermez. Bu yü
 - **Ctrl+Shift+0:** Duraklatır / devam ettirir.
 
 TV'den oynarken aynı düğmeler telefon kumandasında da var. QR kodunu okutman yeterli.
+
+## Hazır çeviri paketleri
+
+**Çeviri** sayfasındaki **Hazır paketi indir** ile GTA V, Red Dead Redemption 2 ve başka oyunların topluluk çeviri paketleri
+tek tıkla indirilir (GameTranslator'ın paket deposundan). Pakette olan satırlar anında ve ücretsiz gelir, yapay zekâya
+sorulmaz. GTA V paketiyle programı GTA 6'dan önce GTA V'te deneyebilirsin. Kendi önbelleğini **Önbelleği paket olarak
+kaydet** ile dosya yapıp arkadaşlarına verebilirsin; onlar **Paket ekle** ile yükler.
 
 ## GTA 6 çıkınca yapılacak ayar
 
