@@ -123,3 +123,10 @@ python -m pytest tests
 - **Kendi bilgisayarında kurulum dosyası derlemek:** `derle.bat`'a çift tıkla (Python 3.12 ve Inno Setup gerekir, Inno Setup yoksa kendisi kurar). Sonuç: `dist\GTA6Altyazi-Setup.exe`.
 - **Derleme:** TV APK'sı `tv-android/` değişince GitHub Actions ile otomatik derlenir. Windows kurulum dosyası, commit mesajında `[exe]` geçince (ya da Actions'tan elle) derlenir ve Releases'e konur.
 - **Yerel çeviri modeli:** `python tools/model_indir.py` ile hazırlanır.
+
+## Lisans
+
+GTA6 Altyazı, [GNU AGPL-3.0](LICENSE) ile lisanslanmıştır. Sinan Yorulmaz'ın
+[CouchSubs](https://github.com/yorulmazsinan/couchsubs) projesinden (ve ondan türeyen
+[GameTranslator](https://gitlab.com/sefflex/GameTranslator)'dan) alınan kodları içerir; ayrıntılar
+[NOTICE](NOTICE) dosyasında. CouchSubs geliştiricilerine teşekkürler.

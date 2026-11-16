@@ -645,6 +645,12 @@ class TranslationPage(QWidget):
                         "faint", wrap=True))
         self.packs_l = label("", "muted", wrap=True)
         cache.add(self.packs_l)
+        from ..packs import CATALOG
+        self.pack_combo = QComboBox()
+        for pid, title in CATALOG:
+            self.pack_combo.addItem(title, pid)
+        self.pack_dl = button("Hazır paketi indir", "primary", self._download_pack)
+        cache.add(hbox(self.pack_combo, self.pack_dl, None, spacing=10))
         cache.add(hbox(button("Paket ekle", None, self._add_pack),
                        button("Önbelleği paket olarak kaydet", None, self._export_pack), None, spacing=10))
         root.addWidget(cache)
@@ -655,6 +661,7 @@ class TranslationPage(QWidget):
         lay.addWidget(scroll_page(content))
         self._results: list[str] = []
         ctl.testResult.connect(self.on_test)
+        ctl.packProgress.connect(self._pack_progress)
         ctl.enginesReady.connect(lambda i: (self.cache_l.setText(f"{i.get('onbellek', 0)} çeviri kayıtlı"),
                                             self._refresh_packs()))
         if ctl.engine_info:
@@ -686,6 +693,19 @@ class TranslationPage(QWidget):
         ps = self.ctl.pack_list()
         self.packs_l.setText("Yüklü paketler: " + ", ".join(f"<b>{p.title}</b> ({p.count:,} satır)".replace(",", ".")
                                                              for p in ps) if ps else "Yüklü paket yok.")
+
+    def _download_pack(self) -> None:
+        self.pack_dl.setEnabled(False)
+        self.pack_dl.setText("İndiriliyor...")
+        self.ctl.download_pack(self.pack_combo.currentData())
+
+    def _pack_progress(self, _pid: str, f: float) -> None:
+        if 0 <= f < 1:
+            self.pack_dl.setText(f"İndiriliyor %{int(f * 100)}")
+            return
+        self.pack_dl.setEnabled(True)
+        self.pack_dl.setText("Hazır paketi indir")
+        self._refresh_packs()
 
     def _add_pack(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Çeviri paketi seç", "", "Paket (*.json *.gz);;Tümü (*)")
@@ -889,6 +909,12 @@ class SettingsPage(QWidget):
                        button("OBS katmanını kopyala", None, self._copy_obs), None, spacing=10))
         other.add(label(f"GTA6 Altyazı {__version__} · OBS tarayıcı kaynağı: http://localhost:{cfg.sunucu.port}/obs "
                         "(1920×1080)", "faint", wrap=True))
+        credit = label("GNU AGPL-3.0 ile lisanslıdır. Sinan Yorulmaz'ın <a href='https://github.com/yorulmazsinan/couchsubs'>"
+                       "CouchSubs</a> projesinden ve <a href='https://gitlab.com/sefflex/GameTranslator'>GameTranslator</a>"
+                       "'dan alınan kodları içerir. Kaynak kodu: <a href='https://github.com/CH4P4R/gta6-altyazi'>"
+                       "github.com/CH4P4R/gta6-altyazi</a>", "faint", wrap=True)
+        credit.setOpenExternalLinks(True)
+        other.add(credit)
         root.addWidget(other)
         root.addLayout(hbox(None, button("Kaydet", "primary", self.save)))
         root.addStretch(1)

@@ -1,0 +1,27 @@
+GTA6 Altyazı
+
+GTA6 Altyazı, aşağıdaki projelerden alınan kodları içerir ve bu projelerin
+değiştirilmiş bir türevidir:
+
+  CouchSubs
+  Copyright (C) 2026 Sinan Yorulmaz
+  https://github.com/yorulmazsinan/couchsubs
+
+  GameTranslator (CouchSubs'tan türetilmiştir)
+  Copyright (C) 2026 Sefflex
+  https://gitlab.com/sefflex/GameTranslator
+
+Based on CouchSubs by Sinan Yorulmaz (https://github.com/yorulmazsinan/couchsubs),
+modified since 2026-11-16. Alınan kodlar Python'a taşınmış, GTA 6'ya, chiaki-ng
+penceresinden okumaya ve bu projenin çeviri hattına göre değiştirilmiştir.
+Değişikliklerin listesi bu deponun git geçmişindedir; CouchSubs'tan alınan her
+dosyanın başında kaynağı belirtilir.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License version 3 (see LICENSE).
+This notice and the license notices must be kept intact in copies and modified
+versions (AGPL-3.0, sections 4 and 5).
+
+GTA6 Altyazı; Rockstar Games, Take-Two Interactive ya da Sony Interactive
+Entertainment ile bağlantılı değildir. "Grand Theft Auto" Take-Two'nun,
+"PlayStation" ve "PS5" Sony Interactive Entertainment Inc.'in ticari markalarıdır.

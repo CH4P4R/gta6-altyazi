@@ -86,6 +86,8 @@ class PackLibrary:
         self.packs, self._index = [], {}
         self.folder.mkdir(parents=True, exist_ok=True)
         for p in sorted(self.folder.glob("*.json*")):
+            if p.suffix == ".tmp":
+                continue
             try:
                 pack = load(p)
             except Exception as e:  # noqa: BLE001
@@ -122,3 +124,49 @@ def export_cache(db_rows: list[tuple[str, str]], dest: Path, title: str = "GTA6 
     raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
     dest.write_bytes(gzip.compress(raw) if dest.suffix == ".gz" else raw)
     return len(entries)
+
+
+# ---------------------------------------------------------------------------------------------- hazır paket kataloğu
+# GameTranslator'ın (CouchSubs türevi, AGPL-3.0) herkese açık "yamalar" klasöründeki paketler. Paketler kuruluma
+# gömülmez; kullanıcı istediğinde kaynağından indirilir.
+CATALOG_BASE = "https://gitlab.com/sefflex/GameTranslator/-/raw/main/yamalar/"
+CATALOG: list[tuple[str, str]] = [
+    ("gta-v", "Grand Theft Auto V"),
+    ("red-dead-redemption-2", "Red Dead Redemption 2"),
+    ("mafia-the-old-country", "Mafia: The Old Country"),
+    ("watch-dogs", "Watch Dogs"),
+    ("call-of-duty-modern-warfare-2019", "Call of Duty: Modern Warfare (2019)"),
+    ("assassins-creed-shadows", "Assassin's Creed Shadows"),
+    ("elden-ring", "Elden Ring"),
+    ("death-stranding-2", "Death Stranding 2"),
+    ("final-fantasy-vii-rebirth", "Final Fantasy VII Rebirth"),
+    ("marvels-spider-man-2", "Marvel's Spider-Man 2"),
+]
+
+
+def download(pack_id: str, folder: Path, progress=None) -> Pack:  # noqa: ANN001
+    """Kataloktaki paketi indir, gzip'leyip klasöre koy ve doğrula."""
+    import urllib.request
+
+    if pack_id not in dict(CATALOG):
+        raise ValueError(f"Bilinmeyen paket: {pack_id}")
+    folder.mkdir(parents=True, exist_ok=True)
+    req = urllib.request.Request(CATALOG_BASE + pack_id + ".json", headers={"User-Agent": "gta6-altyazi"})
+    chunks, done = [], 0
+    with urllib.request.urlopen(req, timeout=30) as r:
+        total = int(r.headers.get("Content-Length") or 0)
+        while True:
+            b = r.read(1 << 16)
+            if not b:
+                break
+            chunks.append(b)
+            done += len(b)
+            if progress and total:
+                progress(done / total)
+    raw = b"".join(chunks)
+    json.loads(raw.decode("utf-8"))                       # bozuk/yarım indirmeyi yazmadan yakala
+    dest = folder / f"{pack_id}.json.gz"
+    tmp = dest.with_suffix(".tmp")
+    tmp.write_bytes(gzip.compress(raw, 6))
+    tmp.replace(dest)
+    return load(dest)

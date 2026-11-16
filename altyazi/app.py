@@ -56,6 +56,7 @@ class AppController(QObject):
     frameGrabbed = Signal(object)         # numpy kare ya da None
     testResult = Signal(object)           # translate.Result
     ps5Found = Signal(list)               # [ps5.Console]
+    packProgress = Signal(str, float)     # (paket kimliği, 0..1; 1 bitti, -1 hata)
     _uiCommand = Signal(str)              # başka iş parçacıklarından gelen ve ana iş parçacığında yapılması gereken işler
 
     def __init__(self, cfg: config_mod.Config):
@@ -527,6 +528,23 @@ class AppController(QObject):
         if self.engine:
             self.engine.packs.reload()
         return f"{pack.title}: {pack.count} satır eklendi"
+
+    def download_pack(self, pack_id: str) -> None:
+        from . import paths, packs
+
+        def run() -> None:
+            try:
+                pack = packs.download(pack_id, paths.data("paketler"), lambda f: self.packProgress.emit(pack_id, min(f, 0.99)))
+                if self.engine:
+                    self.engine.packs.reload()
+                self.notice.emit(f"{pack.title}: {pack.count:,} satır hazır".replace(",", "."))
+                self.packProgress.emit(pack_id, 1.0)
+            except Exception as e:  # noqa: BLE001
+                log.warning("Paket indirilemedi: %s", e)
+                self.notice.emit(f"Paket indirilemedi: {e}")
+                self.packProgress.emit(pack_id, -1.0)
+
+        threading.Thread(target=run, daemon=True, name="paket").start()
 
     def export_pack(self, dest: str) -> int:
         from . import packs
