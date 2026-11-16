@@ -103,6 +103,8 @@ class SunucuCfg:
 class TvCfg:
     ip: str = ""                  # Google/Android TV'nin adresi ("python -m altyazi tv bul")
     otomatik: bool = True         # program açılınca TV uygulamasını kendiliğinden başlat
+    # otomatik: TV izin verirse oyunun üstüne katman, vermezse yedek mod (HDMI uygulama içinde)
+    mod: str = "otomatik"         # otomatik | katman | hdmi
     # TV ekranı oyun görüntüsünü kırpıyor/kaydırıyorsa (overscan): [x, y, genişlik, yükseklik] oran
     kalibrasyon: list[float] = field(default_factory=lambda: [0.0, 0.0, 1.0, 1.0])
 

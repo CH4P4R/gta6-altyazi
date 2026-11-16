@@ -184,22 +184,32 @@ class AndroidTv:
         if "Success" not in out:
             raise TvError(f"TV'ye kurulamadı: {out}")
 
-    def grant_overlay(self) -> None:
+    def grant_overlay(self) -> bool:
+        """Üstüne çizme iznini ver. İzin doğrulanabildiyse True."""
         out = self.sh(f"appops set {PACKAGE} SYSTEM_ALERT_WINDOW allow")
         if out:  # bazı sürümlerde izin olarak verilir
             self.sh(f"pm grant {PACKAGE} android.permission.SYSTEM_ALERT_WINDOW")
         state = self.sh(f"appops get {PACKAGE} SYSTEM_ALERT_WINDOW")
-        if "allow" not in state:  # "default" + verilmiş izin de olabilir; TV uygulaması eksikse ekranda söyler
-            log.warning("TV üstüne çizme izni doğrulanamadı: %s", state)
+        ok = "allow" in state
+        if not ok:
+            granted = self.sh(f"dumpsys package {PACKAGE} | grep SYSTEM_ALERT_WINDOW")
+            ok = "granted=true" in granted
+        if not ok:
+            log.warning("TV üstüne çizme iznini vermedi (%s); yedek HDMI modu kullanılacak", state)
         self.sh(f"pm grant {PACKAGE} android.permission.POST_NOTIFICATIONS")
         self.sh(f"cmd deviceidle whitelist +{PACKAGE}")   # arka planda öldürülmesin
+        return ok
 
-    def launch(self, server: str) -> None:
-        self.sh(f"am start -n {PACKAGE}/.MainActivity --es host {server}")
+    def launch(self, server: str, mode: str = "katman") -> None:
+        self.sh(f"am start -n {PACKAGE}/.MainActivity --es host {server} --es mod {mode}")
 
 
-def setup(host: str, server_port: int, force_install: bool = False, on_prompt=None, adb: Adb | None = None) -> str:  # noqa: ANN001
-    """Bağlan, gerekirse kur/güncelle, izni ver ve başlat. TV'nin bağlanacağı adresi döndürür."""
+def setup(host: str, server_port: int, force_install: bool = False, on_prompt=None, adb: Adb | None = None,  # noqa: ANN001
+          mode: str = "otomatik") -> str:
+    """Bağlan, gerekirse kur/güncelle, izni ver ve başlat. TV'nin bağlanacağı adresi döndürür.
+
+    mode: otomatik (izin varsa katman, yoksa hdmi) | katman | hdmi
+    """
     tv = AndroidTv(host, adb)
     tv.connect(on_prompt)
     log.info("TV bağlandı: %s (Android %s)", tv.serial, tv.android_version())
@@ -207,19 +217,22 @@ def setup(host: str, server_port: int, force_install: bool = False, on_prompt=No
     if force_install or have is None or (want is not None and have < want):
         log.info("TV uygulaması kuruluyor (TV'deki: %s, yeni: %s)...", have, want)
         tv.install()
-    tv.grant_overlay()
+    overlay_ok = tv.grant_overlay()
+    if mode == "otomatik":
+        mode = "katman" if overlay_ok else "hdmi"
     server = f"{local_ip(host)}:{server_port}"
-    tv.launch(server)
+    tv.launch(server, mode)
+    log.info("TV uygulaması başlatıldı (%s modu)", mode)
     return server
 
 
-def setup_in_background(host: str, server_port: int) -> None:
+def setup_in_background(host: str, server_port: int, mode: str = "otomatik") -> None:
     """Program açılışında TV'yi arka planda hazırla (TV kapalıysa birkaç kez dener, sonra vazgeçer)."""
 
     def run() -> None:
         for attempt in range(4):
             try:
-                server = setup(host, server_port)
+                server = setup(host, server_port, mode=mode)
                 log.info("TV hazır: %s → bu bilgisayar %s", host, server)
                 return
             except Exception as e:  # noqa: BLE001

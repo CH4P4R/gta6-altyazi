@@ -11,7 +11,8 @@ import android.widget.Toast;
 /**
  * Görünmez başlatıcı: bilgisayarın adresini kaydeder, katman servisini başlatır ve hemen kapanır,
  * böylece TV önceki ekrana (PS5'in HDMI girişine) geri döner.
- * Bilgisayar şöyle başlatır: am start -n com.gta6altyazi.tv/.MainActivity --es host 192.168.1.10:8787
+ * Bilgisayar şöyle başlatır: am start -n com.gta6altyazi.tv/.MainActivity --es host 192.168.1.10:8787 [--es mod hdmi]
+ * mod=katman (varsayılan): TV'nin kendi HDMI ekranının üstüne çizer. mod=hdmi: yedek mod (HdmiActivity).
  */
 public class MainActivity extends Activity {
     static final String PREFS = "ayarlar";
@@ -24,11 +25,16 @@ public class MainActivity extends Activity {
         if (host != null && !host.isEmpty()) {
             prefs.edit().putString("host", host).apply();
         }
+        String mode = getIntent().getStringExtra("mod");
+        if (mode != null) prefs.edit().putString("mod", mode).apply();
+        mode = prefs.getString("mod", "katman");
         host = prefs.getString("host", null);
+        boolean canOverlay = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this);
 
-        if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(this)) {
-            Toast.makeText(this, "Üstüne çizme izni yok. Bilgisayardaki programdan TV kurulumunu tekrar çalıştır.",
-                    Toast.LENGTH_LONG).show();
+        if (host != null && ("hdmi".equals(mode) || !canOverlay)) {
+            // Yedek mod: HDMI görüntüsünü uygulamanın içinde göster, altyazıyı üstüne çiz
+            stopService(new Intent(this, OverlayService.class));
+            startActivity(new Intent(this, HdmiActivity.class));
         } else if (host == null) {
             Toast.makeText(this, "Bilgisayarın adresi bilinmiyor. Bilgisayardaki programı başlat.",
                     Toast.LENGTH_LONG).show();

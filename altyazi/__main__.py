@@ -59,7 +59,7 @@ def cmd_run(cfg) -> int:
         server.start()
         if cfg.tv.ip and cfg.tv.otomatik:
             from .tv import setup_in_background
-            setup_in_background(cfg.tv.ip, cfg.sunucu.port)
+            setup_in_background(cfg.tv.ip, cfg.sunucu.port, cfg.tv.mod)
     sink = MultiSink(QtSink(bridge), server)
 
     frame_sink = None
@@ -234,7 +234,7 @@ def cmd_tv(cfg, action: str | None, ip: str | None, extra: str | None = None) ->
                 print("TV'nin adresini yaz: baslat.bat tv kur 192.168.1.xx" + (f"  (bulunanlar: {found})" if found else ""))
                 return 1
             host = found[0]
-        server = tv.setup(host.split(":")[0], cfg.sunucu.port, force_install=True,
+        server = tv.setup(host.split(":")[0], cfg.sunucu.port, force_install=True, mode=cfg.tv.mod,
                           on_prompt=lambda: print("TV'ye bak: 'Hata ayıklamaya izin verilsin mi?' -> "
                                                   "'Her zaman izin ver' + İzin ver (60 sn bekliyorum)"))
         print(f"Tamam! TV uygulaması kuruldu ve açıldı. TV bu bilgisayara bağlanacak: {server}")
