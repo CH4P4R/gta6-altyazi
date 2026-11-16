@@ -39,7 +39,7 @@ class BolgeCfg:
     min_skor: float = 0.55        # OCR güveni bunun altındaysa gösterme
     min_satir_yuksekligi: int = 10
     kutu_opaklik: int = 255       # İngilizceyi kapatan kutunun opaklığı (0-255)
-    yazi_olcek: float = 1.0
+    yazi_olcek: float = 1.3       # Türkçe yazı İngilizceden ne kadar büyük olsun (alttakini bastırsın)
 
 
 @dataclass

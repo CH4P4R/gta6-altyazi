@@ -150,6 +150,7 @@ Bölgelerin yeri ve yazı renkleri GTA V'e göre tahmin edildi. Oyun çıkınca 
 - `ceviri.sozluk`: zorunlu terimler. Yapay zekaya verilir.
 - `bolgeler[].sabit_kare`: 0 = en hızlı. Yazılar yavaşça beliriyorsa 1 yap.
 - `bolgeler[].kutu_opaklik`: İngilizceyi kapatan kutu (255 = tam kapalı).
+- `bolgeler[].yazi_olcek`: Türkçe yazının İngilizceye göre boyutu (varsayılan 1.3: daha büyük yazıyla alttakini tamamen bastırır).
 
 Kişisel ayarlar ve anahtarlar için `config.local.yaml` oluştur (git'e girmez). Bu dosya `config.yaml`'ın üstüne yazılır.
 

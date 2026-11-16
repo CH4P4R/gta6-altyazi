@@ -78,6 +78,7 @@ class Painter:
         zone_w = (zx1 - zx0) * A.width()
         line_px = max(14.0, it.line_h * A.height())
         font = QFont(self.family)
+        font.setWeight(QFont.DemiBold)
         font.setPixelSize(int(line_px * 0.92 * it.font_scale))
         fm = QFontMetricsF(font)
         pad = line_px * 0.28
