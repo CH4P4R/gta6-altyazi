@@ -1,6 +1,6 @@
 {
   "id": "com.gta6altyazi.tv",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "vendor": "GTA6 Altyazi",
   "type": "web",
   "main": "index.html",
@@ -9,5 +9,6 @@
   "largeIcon": "largeIcon.png",
   "bgColor": "#000000",
   "resolution": "1920x1080",
+  "requiredACG": [],
   "disableBackHistoryAPI": true
 }

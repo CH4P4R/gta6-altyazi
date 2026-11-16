@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import ipaddress
+import json
 import logging
 import os
 import re
@@ -201,15 +202,22 @@ class AndroidTv:
         self.sh(f"cmd deviceidle whitelist +{PACKAGE}")   # arka planda öldürülmesin
         return ok
 
-    def launch(self, server: str, mode: str = "katman") -> None:
-        self.sh(f"am start -n {PACKAGE}/.MainActivity --es host {server} --es mod {mode}")
+    def launch(self, server: str, mode: str = "otomatik") -> None:
+        """TV uygulamasını bu bilgisayarın adresiyle aç.
+
+        TV uygulaması (CouchSubs'tan) varsayılan olarak HDMI'yı kendi içinde gösterir; görüntü gelmezse ya da TV
+        (TCL gibi) HDMI'yı öne alıp uygulamayı arka plana iterse kendiliğinden katman moduna geçer.
+        """
+        params = json.dumps({"server": f"http://{server}"}, separators=(",", ":"))
+        display = "overlay" if mode == "katman" else "inApp"
+        self.sh(f"am start -n {PACKAGE}/.MainActivity --es params '{params}' --es displayMode {display}")
 
 
 def setup(host: str, server_port: int, force_install: bool = False, on_prompt=None, adb: Adb | None = None,  # noqa: ANN001
           mode: str = "otomatik") -> str:
     """Bağlan, gerekirse kur/güncelle, izni ver ve başlat. TV'nin bağlanacağı adresi döndürür.
 
-    mode: otomatik (izin varsa katman, yoksa hdmi) | katman | hdmi
+    mode: otomatik (uygulama içinde; görüntü gelmezse TV uygulaması kendisi katmana geçer) | katman | hdmi
     """
     tv = AndroidTv(host, adb)
     tv.connect(on_prompt)
@@ -219,8 +227,8 @@ def setup(host: str, server_port: int, force_install: bool = False, on_prompt=No
         log.info("TV uygulaması kuruluyor (TV'deki: %s, yeni: %s)...", have, want)
         tv.install()
     overlay_ok = tv.grant_overlay()
-    if mode == "otomatik":
-        mode = "katman" if overlay_ok else "hdmi"
+    if mode == "katman" and not overlay_ok:
+        mode = "hdmi"
     server = f"{local_ip(host)}:{server_port}"
     tv.launch(server, mode)
     log.info("TV uygulaması başlatıldı (%s modu)", mode)

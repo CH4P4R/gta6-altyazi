@@ -28,10 +28,13 @@ class FakeSSH:
 
     def exec_command(self, cmd, timeout=None):
         self.cmds.append(cmd)
-        if "appInstallService" in cmd:
-            if "installed" in self.install_reply:
+        if "luna-send-pub -i" in cmd and "appInstallService" in cmd:
+            self.started = True
+            return None, FakeOut(""), FakeOut("")
+        if "kurulum.log" in cmd and cmd.startswith("cat"):
+            if getattr(self, "started", False) and "installed" in self.install_reply:
                 self.version = self.version_after
-            return None, FakeOut(self.install_reply), FakeOut("")
+            return None, FakeOut(self.install_reply if getattr(self, "started", False) else ""), FakeOut("")
         if "appinfo.json" in cmd:
             return None, FakeOut(json.dumps({"version": self.version}) if self.version else ""), FakeOut("")
         if "applicationManager/launch" in cmd:
@@ -51,6 +54,12 @@ class FakeSSH:
 
     def close(self):
         pass
+
+
+@pytest.fixture(autouse=True)
+def fast_lg(monkeypatch):
+    monkeypatch.setattr(tv_lg.time, "sleep", lambda s: None)
+    monkeypatch.setattr(tv_lg.LgTv, "renew_devmode", lambda self: None)
 
 
 @pytest.fixture
@@ -89,7 +98,7 @@ def test_lg_setup_installs_and_launches_with_host(ipk, monkeypatch):
     install = next(c for c in fake.cmds if "appInstallService/dev/install" in c)
     assert '"ipkUrl": "/media/developer/temp/com.gta6altyazi.tv_0.3.1_all.ipk"' in install
     launch = next(c for c in fake.cmds if "applicationManager/launch" in c)
-    assert f'"host": "{server}"' in launch and server.endswith(":8787")
+    assert f'"server": "http://{server}"' in launch and server.endswith(":8787")
 
 
 def test_lg_same_version_skips_install(ipk, monkeypatch):
@@ -167,6 +176,20 @@ def test_server_discovery_endpoint_has_cors():
     s.close()
     EventServer(port).start()
     time.sleep(0.2)
-    with urllib.request.urlopen(f"http://127.0.0.1:{port}/kim", timeout=3) as r:
-        assert json.loads(r.read()) == {"app": "gta6-altyazi"}
+    with urllib.request.urlopen(f"http://127.0.0.1:{port}/hello", timeout=3) as r:
+        assert json.loads(r.read()) == {"app": "gta6altyazi"}
         assert r.headers["Access-Control-Allow-Origin"] == "*"
+
+
+def test_lg_install_verdict():
+    assert tv_lg.install_verdict('{"details":{"state":"installed"}}') == "installed"
+    assert tv_lg.install_verdict('{"returnValue":false,"errorText":"FAILED_IPKG_INSTALL"}') == "FAILED_IPKG_INSTALL"
+    assert tv_lg.install_verdict('{"returnValue":true}') is None
+
+
+def test_lg_passphrase_upper_retry():
+    import paramiko
+    key = paramiko.RSAKey.generate(1024)
+    buf = io.StringIO()
+    key.write_private_key(buf, password="ABC123")
+    assert tv_lg.load_key("abc123", buf.getvalue().encode()).get_bits() == 1024

@@ -97,6 +97,7 @@ class AppController(QObject):
         from .server import EventServer
         try:
             self.server = EventServer(self.cfg.sunucu.port, self.cfg.tv.kalibrasyon, on_command=self.command)
+            self._apply_tv_style()
             self.server.start()
         except OSError as e:
             self.server = None
@@ -279,6 +280,16 @@ class AppController(QObject):
         return sum(self.latencies) / len(self.latencies) if self.latencies else None
 
     # ------------------------------------------------------------------ ayarlar
+    def _apply_tv_style(self) -> None:
+        """TV uygulamasının görünümü: Türkçe, İngilizce satırın 'yazı ölçeği' katı boyda ve onu tam örterek."""
+        if not self.server:
+            return
+        main = next((b for b in self.cfg.bolgeler if b.ad == "altyazi"), None)
+        scale = main.yazi_olcek if main else 1.3
+        opacity = round((main.kutu_opaklik if main else 255) / 255 * 100)
+        self.server.set_tv_style(lineScale=float(scale), background=opacity,
+                                 displayMode="overlay" if self.cfg.tv.mod == "katman" else "inApp")
+
     def apply_config(self, cfg: config_mod.Config) -> None:
         old = self.cfg
         self.cfg = cfg
@@ -286,6 +297,7 @@ class AppController(QObject):
         if self.server:
             x, y, w, h = cfg.tv.kalibrasyon
             self.server.tv = {"x": x, "y": y, "w": w, "h": h}
+            self._apply_tv_style()
         engines_changed = old.ceviri != cfg.ceviri or old.ocr != cfg.ocr
         running = self.state == "calisiyor"
         if old.kisayol != cfg.kisayol:

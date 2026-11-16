@@ -26,21 +26,25 @@ jobs:
         with:
           gradle-version: '8.11.1'
       - name: İmza anahtarı (GitHub Secrets)
+        id: anahtar
         env:
           TV_KEYSTORE_B64: ${{ secrets.TV_KEYSTORE_B64 }}
           TV_KEYSTORE_PASSWORD: ${{ secrets.TV_KEYSTORE_PASSWORD }}
         run: |
           if [ -z "$TV_KEYSTORE_B64" ] || [ -z "$TV_KEYSTORE_PASSWORD" ]; then
-            echo "::error::TV_KEYSTORE_B64 ve TV_KEYSTORE_PASSWORD secret'ları eksik (Settings > Secrets and variables > Actions)"
-            exit 1
+            echo "::warning::TV_KEYSTORE_B64 ve TV_KEYSTORE_PASSWORD secret'ları eksik (Settings > Secrets and variables > Actions); Android APK bu sefer derlenmedi, LG paketi derleniyor"
+            echo "var=0" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           echo "$TV_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/tv.jks"
+          echo "var=1" >> "$GITHUB_OUTPUT"
       - name: APK derle
+        if: steps.anahtar.outputs.var == '1'
         working-directory: tv-android
         env:
           TV_KEYSTORE_FILE: ${{ runner.temp }}/tv.jks
           TV_KEYSTORE_PASSWORD: ${{ secrets.TV_KEYSTORE_PASSWORD }}
-        run: gradle --no-daemon assembleRelease
+        run: gradle --no-daemon assembleSideloadRelease testSideloadReleaseUnitTest
       - name: Anahtar dosyasını sil
         if: always()
         run: rm -f "$RUNNER_TEMP/tv.jks"
@@ -58,8 +62,10 @@ jobs:
           ls -la tv-web/release
       - name: Paketleri depoya koy
         run: |
-          cp tv-android/app/build/outputs/apk/release/app-release.apk tv-android/release/gta6-altyazi-tv.apk
-          grep -oP "versionCode \K\d+" tv-android/app/build.gradle > tv-android/release/gta6-altyazi-tv.version
+          if [ "${{ steps.anahtar.outputs.var }}" = "1" ]; then
+            cp tv-android/app/build/outputs/apk/sideload/release/app-sideload-release.apk tv-android/release/gta6-altyazi-tv.apk
+            grep -oP "versionCode \K\d+" tv-android/app/build.gradle > tv-android/release/gta6-altyazi-tv.version
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tv-android/release tv-web/release

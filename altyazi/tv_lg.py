@@ -6,6 +6,13 @@ TV'de bir kez: LG Content Store'dan ücretsiz "Developer Mode" uygulamasını ku
 
 Kasa: anahtarı TV'nin Key Server'ından (http://IP:9991/webos_rsa) alır, parolayla açar, SSH (9922, kullanıcı
 prisoner) ile bağlanıp .ipk'yı yükler ve LG'nin kurulum servisiyle kurar.
+
+Geliştirici modu en çok 1000 saat açık kalır; süre dolunca LG uygulamayı siler. Kasa her bağlanışta süreyi baştan
+başlatır (LG'nin ResetDevModeSession servisi).
+
+Kurulum ayrıntıları (abonelik çıkışını açık tutmak, details.state, kurulumdan sonra sürüm doğrulama, büyük harfli
+parola) ve geliştirici modu yenileme CouchSubs'tan (https://github.com/yorulmazsinan/couchsubs, AGPL-3.0, Sinan
+Yorulmaz) alınmıştır.
 """
 
 from __future__ import annotations
@@ -13,6 +20,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import re
 import time
 import urllib.request
 from pathlib import Path
@@ -25,6 +33,8 @@ APP_ID = "com.gta6altyazi.tv"
 SSH_PORT = 9922
 KEY_PORT = 9991
 REMOTE_DIR = "/media/developer/temp"
+DEVMODE_TOKEN = "/var/luna/preferences/devmode_enabled"
+DEVMODE_API = "https://developer.lge.com/secure/"
 
 
 class LgError(RuntimeError):
@@ -63,10 +73,14 @@ def load_key(passphrase: str, data: bytes | None = None):  # noqa: ANN201
     import paramiko
 
     data = data if data is not None else key_file().read_bytes()
-    try:
-        return paramiko.RSAKey.from_private_key(io.StringIO(data.decode()), password=passphrase.strip() or None)
-    except paramiko.SSHException as e:
-        raise LgError("Anahtar açılamadı: Developer Mode ekranındaki parolayı doğru yazdığından emin ol.") from e
+    pw = passphrase.strip()
+    # TV parolayı büyük harfle gösterir; küçük yazılmışsa büyük harfle de dene
+    for candidate in dict.fromkeys([pw, pw.upper()]):
+        try:
+            return paramiko.RSAKey.from_private_key(io.StringIO(data.decode()), password=candidate or None)
+        except paramiko.SSHException:
+            continue
+    raise LgError("Anahtar açılamadı: Developer Mode ekranındaki parolayı doğru yazdığından emin ol.")
 
 
 class LgTv:
@@ -97,23 +111,43 @@ class LgTv:
         return (stdout.read() + stderr.read()).decode(errors="replace")
 
     def install(self, ipk: Path) -> None:
+        self.run(f"mkdir -p {REMOTE_DIR}; rm -f {REMOTE_DIR}/*.ipk")
         remote = f"{REMOTE_DIR}/{ipk.name}"
         sftp = self.ssh.open_sftp()
         try:
-            self.run(f"mkdir -p {REMOTE_DIR}")
             sftp.put(str(ipk), remote)
         finally:
             sftp.close()
+        size = self.run(f"wc -c < {remote}").strip()
+        if size and size.isdigit() and int(size) != ipk.stat().st_size:
+            raise LgError(f"Paket TV'ye eksik yüklendi ({size}/{ipk.stat().st_size} bayt).")
         payload = json.dumps({"id": "com.ares.defaultName", "ipkUrl": remote, "subscribe": True})
+        log_file = f"{REMOTE_DIR}/kurulum.log"
+        # Bazı webOS sürümleri, girişi kapanan luna-send aboneliğinde kurulumu yarıda keser: giriş 'sleep' ile açık
+        # tutulur, çıktı dosyaya yazılır ve dosya izlenir.
+        self.run(f"rm -f {log_file}; (sleep 120 </dev/null | /usr/bin/luna-send-pub -i "
+                 f"'luna://com.webos.appInstallService/dev/install' '{payload}' > {log_file} 2>&1 &)", timeout=15)
+        result, deadline = "cevap yok", time.time() + 120
         try:
-            result = self._install_stream(f"/usr/bin/luna-send-pub -i 'luna://com.webos.appInstallService/dev/install' "
-                                          f"'{payload}'")
+            while time.time() < deadline:
+                time.sleep(1)
+                verdict = install_verdict(self.run(f"cat {log_file} 2>/dev/null", timeout=10))
+                if verdict:
+                    result = verdict
+                    break
         finally:
-            self.run(f"rm -f {remote}")
-        if result != "installed":
-            # Cevap okunamadıysa TV'deki sürüme bak (kurulum yine de olmuş olabilir)
-            if self.installed_version() != ipk_version(ipk):
-                raise LgError(f"TV'ye kurulamadı: {result}")
+            self.run(f"pkill -f 'appInstallService/dev/install' ; rm -f {remote} {log_file}", timeout=10)
+        # "installed" dese de TV'deki sürüm gerçekten yenilenene kadar bekle (cevap belirsizse daha uzun)
+        want = ipk_version(ipk)
+        wait = 30 if result == "installed" else 60
+        end = time.time() + wait
+        while time.time() < end:
+            if self.installed_version() == want:
+                return
+            if result not in ("installed", "cevap yok") and not result.startswith("zaman"):
+                break
+            time.sleep(2)
+        raise LgError(f"TV'ye kurulamadı: {result}")
 
     def installed_version(self) -> str | None:
         out = self.run(f"cat /media/developer/apps/usr/palm/applications/{APP_ID}/appinfo.json 2>/dev/null", timeout=15)
@@ -122,26 +156,25 @@ class LgTv:
         except ValueError:
             return None
 
-    def _install_stream(self, cmd: str, timeout: float = 90) -> str:
-        """Kurulum servisinin cevaplarını satır satır oku: 'installed' ya da hata metni döndür."""
-        _stdin, stdout, _stderr = self.ssh.exec_command(cmd, timeout=timeout)
-        lines = []
+    def renew_devmode(self) -> str | None:
+        """Geliştirici modu süresini baştan başlat; kalan süreyi ("999:59:59") döndür."""
+        token = self.run(f"cat {DEVMODE_TOKEN} 2>/dev/null", timeout=10).strip()
+        if not token:
+            return None
         try:
-            for line in iter(stdout.readline, ""):
-                lines.append(line.strip())
-                low = line.lower().replace(" ", "")
-                if '"state":"installed' in low or '"state":"success' in low:
-                    return "installed"
-                if '"returnvalue":false' in low or "failed" in low:
-                    return line.strip()[:300]
-        except Exception as e:  # noqa: BLE001  (zaman aşımı)
-            return f"zaman aşımı ({e})"
-        finally:
-            stdout.channel.close()
-        return " ".join(lines)[-300:] or "cevap yok"
+            with urllib.request.urlopen(f"{DEVMODE_API}ResetDevModeSession.dev?sessionToken={token}", timeout=10) as r:
+                ok = b"success" in r.read().lower()
+            with urllib.request.urlopen(f"{DEVMODE_API}CheckDevModeSession.dev?sessionToken={token}", timeout=10) as r:
+                left = r.read().decode(errors="replace")
+        except OSError as e:
+            log.warning("LG geliştirici modu süresi yenilenemedi: %s", e)
+            return None
+        m = re.search(r"\d{1,4}:\d{2}:\d{2}", left)
+        log.info("LG geliştirici modu %s; kalan süre %s", "yenilendi" if ok else "yenilenemedi", m.group(0) if m else "?")
+        return m.group(0) if m else None
 
     def launch(self, server: str) -> None:
-        params = json.dumps({"id": APP_ID, "params": {"host": server}})
+        params = json.dumps({"id": APP_ID, "params": {"server": f"http://{server}"}})
         out = self.run(f"/usr/bin/luna-send-pub -n 1 'luna://com.webos.applicationManager/launch' '{params}'", timeout=20)
         if '"returnValue":false' in out.replace(" ", ""):
             raise LgError(f"TV uygulaması başlatılamadı: {out.strip()[:300]}")
@@ -149,6 +182,17 @@ class LgTv:
     def close(self) -> None:
         if self.ssh:
             self.ssh.close()
+
+
+def install_verdict(text: str) -> str | None:
+    """Kurulum servisinin çıktısından sonuç: 'installed', hata metni ya da (henüz belli değilse) None."""
+    low = text.lower().replace(" ", "")
+    if '"state":"installed' in low or '"state":"success' in low:
+        return "installed"
+    if '"returnvalue":false' in low or "failed" in low:
+        m = re.search(r'"errorText"\s*:\s*"([^"]+)"', text)
+        return (m.group(1) if m else text.strip()[-300:]) or "hata"
+    return None
 
 
 def setup(host: str, passphrase: str, server_port: int, force_install: bool = False) -> str:
@@ -160,6 +204,7 @@ def setup(host: str, passphrase: str, server_port: int, force_install: bool = Fa
     tv = LgTv(host, passphrase)
     tv.connect()
     try:
+        tv.renew_devmode()
         if force_install or tv.installed_version() != ipk_version(ipk):
             log.info("LG TV uygulaması kuruluyor (%s)...", ipk.name)
             tv.install(ipk)

@@ -106,3 +106,58 @@ def test_claude_read_screen_request_shape(monkeypatch):
     assert b["output_config"]["format"]["schema"]["required"] == ["items"]
     assert b["speed"] == "fast" and b["fallbacks"] == "default"
     srv.shutdown()
+
+
+def test_tv_protocol_events():
+    """TV uygulamaları (CouchSubs protokolü): style ilk gelir, altyazı/ek alan/tam ekran olaylara çevrilir."""
+    import socket as _s
+    import time as _t
+    import urllib.request as _u
+
+    from altyazi.pipeline import DisplayItem
+    from altyazi.server import EventServer
+
+    s = _s.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    srv = EventServer(port)
+    srv.start()
+    _t.sleep(0.2)
+    resp = _u.urlopen(f"http://127.0.0.1:{port}/events", timeout=5)
+
+    def read_event():
+        name, data = None, None
+        while True:
+            line = resp.readline().decode().rstrip("\n")
+            if line.startswith("event: "):
+                name = line[7:]
+            elif line.startswith("data: "):
+                data = json.loads(line[6:])
+            elif line == "" and name:
+                return name, data
+
+    assert read_event()[0] == "style"
+    for _ in range(50):
+        if srv.tv_count:
+            break
+        _t.sleep(0.02)
+    base = dict(rect=(0.2, 0.8, 0.8, 0.86), zone_rect=(0, 0.75, 1, 0.95), line_h=0.03, english="Get in the car.",
+                align="orta", anchor="alt", box_opacity=255, font_scale=1.3)
+    srv.show(DisplayItem(zone="altyazi", text="Arabaya bin.", seq=5, **base))
+    name, data = read_event()
+    assert name == "subtitle" and data["text"] == "Arabaya bin." and data["box"]["top"] == 0.8 and "replace" not in data
+    srv.show(DisplayItem(zone="altyazi", text="Arabaya bin!", seq=5, **base))
+    assert read_event()[1]["replace"] is True
+    srv.show(DisplayItem(zone="yardim", text="Araca binmek için △", seq=6, **base))
+    name, data = read_event()
+    assert name == "region" and data["id"] == "yardim"
+    srv.clear("yardim")
+    assert read_event() == ("region", {"id": "yardim", "text": ""})
+    srv.show(DisplayItem(zone="tam0", text="Harita", seq=7, **base))
+    name, data = read_event()
+    assert name == "screen" and data["items"][0]["text"] == "Harita"
+    srv.clear("tam0")
+    assert read_event()[0] == "screen-clear"
+    srv.clear("altyazi")
+    assert read_event()[0] == "clear"

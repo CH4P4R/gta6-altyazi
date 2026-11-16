@@ -1,5 +1,7 @@
 """LG (webOS) ve Samsung (Tizen) TV uygulamalarının paket klasörlerini hazırlar.
 
+TV arayüzü CouchSubs'tan (AGPL-3.0, Sinan Yorulmaz) alınmıştır; bkz. NOTICE.
+
     python tools/tv_web_hazirla.py
 
 Çıktı: tv-web/build/webos (ares-package ile .ipk yapılır) ve tv-web/build/tizen
@@ -21,17 +23,17 @@ def main() -> int:
     sys.path.insert(0, str(ROOT / "packaging"))
     from make_assets import badge
 
-    for platform, extra in (("webos", ["appinfo.json"]), ("tizen", ["config.xml"])):
+    for platform, extra in (("webos", ["appinfo.json", "platform.js"]), ("tizen", ["config.xml", "platform.js"])):
         out = BUILD / platform
         if out.exists():
             shutil.rmtree(out)
         shutil.copytree(SRC, out)
         for name in extra:
             shutil.copy(ROOT / "tv-web" / platform / name, out / name)
-        if platform == "webos":
-            badge(80).save(out / "icon.png")
-            badge(130).save(out / "largeIcon.png")
-        else:
+        # index.html iki simgeyi de kullanır (bekleme ekranı ve panel)
+        badge(80).save(out / "icon.png")
+        badge(130).save(out / "largeIcon.png")
+        if platform == "tizen":
             badge(117).save(out / "icon.png")
         print("hazır:", out)
     return 0

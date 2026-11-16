@@ -4,6 +4,10 @@ http://localhost:8787/        -> siyah zeminde altyazı (TV/telefon için)
 http://localhost:8787/obs     -> saydam zeminde altyazı (OBS tarayıcı kaynağı, 1920x1080, oyun görüntüsünün üstüne)
 http://localhost:8787/kumanda -> telefondan "Ekranı çevir" / "Duraklat" düğmeleri + son altyazılar
 http://localhost:8787/olaylar -> Server-Sent Events akışı (JSON)
+http://localhost:8787/events  -> TV uygulamalarının akışı (CouchSubs TV protokolü: subtitle/clear/screen/region/style)
+http://localhost:8787/hello   -> TV uygulaması bilgisayarı ağda bu yanıtla tanır
+
+TV protokolü CouchSubs'tan (https://github.com/yorulmazsinan/couchsubs, AGPL-3.0, Sinan Yorulmaz) alınmıştır.
 """
 
 from __future__ import annotations
@@ -13,11 +17,24 @@ import logging
 import queue
 import socket
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .pipeline import DisplayItem
 
 log = logging.getLogger(__name__)
+
+MAIN_ZONE = "altyazi"
+PING_FRAME = ": ping\n\nevent: ping\ndata: {}\n\n"
+
+
+def _box(rect) -> dict:  # noqa: ANN001
+    x0, y0, x1, y1 = (max(0.0, min(1.0, float(v))) for v in rect)
+    return {"left": round(x0, 4), "top": round(y0, 4), "right": round(x1, 4), "bottom": round(y1, 4)}
+
+
+def frame(name: str, data: dict) -> str:
+    return f"event: {name}\ndata: {json.dumps(data, ensure_ascii=False, sort_keys=True)}\n\n"
 
 PAGE = """<!doctype html><html lang="tr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>GTA6 Altyazı</title>
@@ -114,6 +131,14 @@ class EventServer:
         self.clients: list[queue.Queue] = []
         self.lock = threading.Lock()
         self.state: dict[str, dict] = {}
+        # TV uygulamaları (CouchSubs protokolü)
+        self.tv_clients: list[queue.Queue] = []
+        self.tv_style = {"placement": "cover", "fontSize": 58, "lineScale": 1.3, "background": 100, "bold": True,
+                         "textColor": "white", "stackPrevious": True, "bottomPercent": 7, "backgroundShape": "fit",
+                         "displayMode": "inApp"}
+        self._screen: dict[str, dict] = {}
+        self._sub_seq = -1
+        self._tv_state: dict[str, str] = {}      # yeni bağlanan TV'ye gönderilecek son çerçeveler
 
     # Sink arayüzü
     def show(self, it: DisplayItem) -> None:
@@ -123,10 +148,58 @@ class EventServer:
                "source": it.source, "latency_ms": round(it.latency_ms)}
         self.state[it.zone] = msg
         self._broadcast(msg)
+        self._tv_show(it)
 
     def clear(self, zone: str) -> None:
         self.state.pop(zone, None)
         self._broadcast({"type": "clear", "zone": zone})
+        self._tv_clear(zone)
+
+    # ------------------------------------------------------------------ TV protokolü
+    def set_tv_style(self, **kw) -> None:  # noqa: ANN003
+        self.tv_style.update({k: v for k, v in kw.items() if v is not None})
+        self._tv_send(frame("style", self.tv_style))
+
+    def _tv_show(self, it: DisplayItem) -> None:
+        if not it.text:
+            return
+        if it.zone == MAIN_ZONE:
+            data = {"at": int(time.time() * 1000), "duration": 15000, "text": it.text, "box": _box(it.rect),
+                    "line": round(it.line_h, 4)}
+            if it.seq == self._sub_seq:          # aynı satırın daha iyi çevirisi: üst üste yığılmasın
+                data["replace"] = True
+            self._sub_seq = it.seq
+            f = frame("subtitle", data)
+            self._tv_state[MAIN_ZONE] = f
+        elif it.zone.startswith("tam"):
+            self._screen[it.zone] = {"box": _box(it.rect), "line": round(it.line_h, 4), "text": it.text}
+            f = frame("screen", {"duration": 20000, "items": [self._screen[k] for k in sorted(self._screen)]})
+            self._tv_state["tam"] = f
+        else:
+            f = frame("region", {"id": it.zone, "text": it.text, "box": _box(it.rect), "line": round(it.line_h, 4)})
+            self._tv_state[it.zone] = f
+        self._tv_send(f)
+
+    def _tv_clear(self, zone: str) -> None:
+        if zone == MAIN_ZONE:
+            self._tv_state.pop(MAIN_ZONE, None)
+            self._tv_send(frame("clear", {}))
+        elif zone.startswith("tam"):
+            if self._screen.pop(zone, None) is not None and not self._screen:
+                self._tv_state.pop("tam", None)
+                self._tv_send(frame("screen-clear", {}))
+        else:
+            if self._tv_state.pop(zone, None) is not None:
+                self._tv_send(frame("region", {"id": zone, "text": ""}))
+
+    def _tv_send(self, f: str) -> None:
+        with self.lock:
+            for q in self.tv_clients:
+                q.put(f)
+
+    @property
+    def tv_count(self) -> int:
+        return len(self.tv_clients)
 
     def notice(self, text: str) -> None:
         self._broadcast({"type": "notice", "mesaj": text})
@@ -176,10 +249,46 @@ class EventServer:
                 else:
                     self.send_error(404)
 
+            def _tv_stream(self) -> None:
+                self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                try:   # fişten çekilen / Wi-Fi'ı kopan TV'yi çabuk fark et
+                    self.connection.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                except OSError:
+                    pass
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "keep-alive")
+                self.end_headers()
+                q: queue.Queue = queue.Queue()
+                q.put("retry: 2000\n\n" + frame("style", srv.tv_style))
+                for f in list(srv._tv_state.values()):
+                    q.put(f)
+                with srv.lock:
+                    srv.tv_clients.append(q)
+                log.info("TV bağlandı: %s", self.client_address[0])
+                try:
+                    while True:
+                        try:
+                            data = q.get(timeout=15)
+                        except queue.Empty:
+                            data = PING_FRAME      # TV 45 sn ping almazsa bağlantıyı yeniden kurar
+                        self.wfile.write(data.encode("utf-8"))
+                        self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    pass
+                finally:
+                    with srv.lock:
+                        srv.tv_clients.remove(q)
+                    log.info("TV ayrıldı: %s", self.client_address[0])
+
             def do_GET(self):  # noqa: N802
                 path = self.path.split("?")[0]
-                if path == "/kim":           # TV uygulaması kasayı ağda bu adresle bulur
-                    self._json(200, {"app": "gta6-altyazi"})
+                if path in ("/kim", "/hello"):   # TV uygulaması kasayı ağda bu adresle bulur
+                    self._json(200, {"app": "gta6altyazi"})
+                    return
+                if path == "/events":
+                    self._tv_stream()
                     return
                 if path in ("/kumanda", "/ekran"):
                     body = REMOTE.encode()

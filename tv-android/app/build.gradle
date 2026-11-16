@@ -1,4 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Based on CouchSubs (https://github.com/yorulmazsinan/couchsubs), Copyright (C) 2026 Sinan Yorulmaz. Modified for GTA6 Altyazı since 2026-11-16.
 plugins { id 'com.android.application' }
+
+// İmza anahtarı repoda durmaz: GitHub Actions onu Secrets'tan (TV_KEYSTORE_B64 / TV_KEYSTORE_PASSWORD) geçici bir
+// dosyaya açar ve buraya ortam değişkenleriyle verir. Anahtar yoksa (yerel deneme) hata ayıklama anahtarıyla imzalanır.
+def releaseKeystore = System.getenv('TV_KEYSTORE_FILE')
 
 android {
     namespace 'com.gta6altyazi.tv'
@@ -7,32 +13,56 @@ android {
         applicationId 'com.gta6altyazi.tv'
         minSdk 24
         targetSdk 35
-        versionCode 3
-        versionName '0.3.1'
+        // Kasadaki uygulama beklenen TV sürümünü buradan alır (release/gta6-altyazi-tv.version).
+        versionCode 4
+        versionName '0.4.0'
     }
-    // İmza anahtarı repoda durmaz: GitHub Actions onu Secrets'tan (TV_KEYSTORE_B64 / TV_KEYSTORE_PASSWORD)
-    // geçici bir dosyaya açar ve buraya ortam değişkenleriyle verir. Anahtar yoksa (yerel deneme derlemesi)
-    // Android'in hata ayıklama anahtarıyla imzalanır.
-    def ksFile = System.getenv('TV_KEYSTORE_FILE')
+    buildFeatures { buildConfig true }
     signingConfigs {
-        sabit {
-            if (ksFile) {
-                storeFile file(ksFile)
+        release {
+            if (releaseKeystore) {
+                storeFile file(releaseKeystore)
                 storePassword System.getenv('TV_KEYSTORE_PASSWORD')
                 keyAlias 'gta6altyazi'
                 keyPassword System.getenv('TV_KEYSTORE_PASSWORD')
             }
         }
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-            signingConfig ksFile ? signingConfigs.sabit : signingConfigs.debug
+    // sideload: kasanın ADB ile kurduğu APK (katman modu var). play: katman modu olmayan çeşit (kullanılmıyor).
+    flavorDimensions = ['distribution']
+    productFlavors {
+        sideload {
+            dimension 'distribution'
+            buildConfigField 'boolean', 'OVERLAY_MODE', 'true'
+            signingConfig releaseKeystore ? signingConfigs.release : signingConfigs.debug
         }
+        play {
+            dimension 'distribution'
+            buildConfigField 'boolean', 'OVERLAY_MODE', 'false'
+            signingConfig releaseKeystore ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+    buildTypes {
+        release { minifyEnabled false }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
     lint { abortOnError false; checkReleaseBuilds false }
+    sourceSets.main.assets.srcDirs += layout.buildDirectory.dir('generated/tv-assets')
 }
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}
+
+// Arayüz LG ve Samsung'la ortaktır (tv-web/src).
+tasks.register('copyTvAssets', Copy) {
+    into layout.buildDirectory.dir('generated/tv-assets/tv')
+    from('../../tv-web/src') { include 'app.js', 'i18n.js', 'config.js', 'index.html', 'style.css' }
+    from('..') { include 'platform.js' }
+    from('src/main/res/mipmap-nodpi') { include 'icon.png'; rename { 'icon.png' } }
+    from('src/main/res/mipmap-nodpi') { include 'icon.png'; rename { 'largeIcon.png' } }
+}
+preBuild.dependsOn 'copyTvAssets'
