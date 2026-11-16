@@ -23,9 +23,25 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
+      - name: İmza anahtarı (GitHub Secrets)
+        env:
+          TV_KEYSTORE_B64: ${{ secrets.TV_KEYSTORE_B64 }}
+          TV_KEYSTORE_PASSWORD: ${{ secrets.TV_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$TV_KEYSTORE_B64" ] || [ -z "$TV_KEYSTORE_PASSWORD" ]; then
+            echo "::error::TV_KEYSTORE_B64 ve TV_KEYSTORE_PASSWORD secret'ları eksik (Settings > Secrets and variables > Actions)"
+            exit 1
+          fi
+          echo "$TV_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/tv.jks"
       - name: APK derle
         working-directory: tv-android
+        env:
+          TV_KEYSTORE_FILE: ${{ runner.temp }}/tv.jks
+          TV_KEYSTORE_PASSWORD: ${{ secrets.TV_KEYSTORE_PASSWORD }}
         run: gradle --no-daemon assembleRelease
+      - name: Anahtar dosyasını sil
+        if: always()
+        run: rm -f "$RUNNER_TEMP/tv.jks"
       - name: APK'yı depoya koy
         run: |
           cp tv-android/app/build/outputs/apk/release/app-release.apk tv-android/release/gta6-altyazi-tv.apk
