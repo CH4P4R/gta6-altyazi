@@ -1,0 +1,97 @@
+name: Windows kurulum dosyası (Setup.exe)
+
+# Windows derlemesi uzun sürdüğü için her commit'te değil, commit mesajında [exe] geçince ya da elle çalışır.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  setup-exe:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[exe]')
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Bağımlılıklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy opencv-python pyyaml rapidfuzz PySide6-Essentials ctranslate2 sentencepiece windows-capture sounddevice anthropic requests segno pyinstaller pillow pyclipper shapely six pytest
+          # rapidocr CPU onnxruntime'ı çekmesin; yerine her ekran kartında çalışan DirectML sürümü
+          pip install --no-deps rapidocr_onnxruntime
+          pip install onnxruntime-directml
+          # ctranslate2'nin GPU'da çevirmesi için NVIDIA cuBLAS
+          pip install nvidia-cublas-cu12
+
+      - name: Çeviri modeli önbelleği
+        id: model-cache
+        uses: actions/cache@v4
+        with:
+          path: models/opus-mt-en-tr
+          key: opus-mt-tc-big-en-tr-ct2-int8f16-v1
+
+      - name: Çeviri modelini indir ve dönüştür
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        run: python tools/model_indir.py
+
+      - name: adb (TV kurulumu için)
+        run: |
+          Invoke-WebRequest https://dl.google.com/android/repository/platform-tools-latest-windows.zip -OutFile pt.zip
+          Expand-Archive pt.zip tools -Force
+          Remove-Item pt.zip
+
+      - name: Testler
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py
+
+      - name: İkon ve kurulum görselleri
+        run: python packaging/make_assets.py
+
+      - name: Uygulamayı paketle (PyInstaller)
+        run: pyinstaller --noconfirm --clean packaging/gta6altyazi.spec
+
+      - name: Paketlenen uygulama açılıyor mu
+        env:
+          QT_QPA_PLATFORM: offscreen
+          ALTYAZI_DATA: ${{ runner.temp }}\altyazi-test
+        run: |
+          $p = Start-Process dist\GTA6Altyazi\GTA6Altyazi.exe -PassThru
+          Start-Sleep -Seconds 25
+          if ($p.HasExited) { Get-Content "$env:ALTYAZI_DATA\altyazi.log" -ErrorAction SilentlyContinue; throw "Uygulama kapandı (kod $($p.ExitCode))" }
+          Stop-Process $p
+          Get-Content "$env:ALTYAZI_DATA\altyazi.log"
+
+      - name: Kurulum sihirbazı (Inno Setup)
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          $v = python -c "import altyazi; print(altyazi.__version__)"
+          & $iscc /DAppVersion=$v packaging\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup hatası" }
+          Get-Item dist\GTA6Altyazi-Setup.exe | Format-List Name, Length
+
+      - name: Sürümler sayfasına koy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = python -c "import altyazi; print(altyazi.__version__)"
+          $tag = "v$v"
+          $sha = "${{ github.sha }}".Substring(0, 7)
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --target "${{ github.sha }}" --prerelease --title "GTA6 Altyazı $v" --notes "Windows kurulum dosyası. GTA6Altyazi-Setup.exe'yi indir ve çalıştır. (derleme $sha)"
+          } else {
+            gh release edit $tag --notes "Windows kurulum dosyası. GTA6Altyazi-Setup.exe'yi indir ve çalıştır. (derleme $sha)"
+          }
+          gh release upload $tag dist\GTA6Altyazi-Setup.exe --clobber

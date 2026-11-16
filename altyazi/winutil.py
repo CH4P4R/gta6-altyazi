@@ -75,8 +75,15 @@ def add_cuda_dll_dirs() -> None:
     import site
     from pathlib import Path
 
+    import sys as _sys
+    dirs = []
     for sp in site.getsitepackages():
-        for bin_dir in Path(sp, "nvidia").glob("*/bin"):
+        dirs += list(Path(sp, "nvidia").glob("*/bin"))
+    if getattr(_sys, "frozen", False):   # kurulu sürüm: DLL'ler paketin içinde
+        base = Path(getattr(_sys, "_MEIPASS", Path(_sys.executable).parent))
+        dirs += [base / "ctranslate2", base / "onnxruntime" / "capi"]
+    for bin_dir in dirs:
+        if bin_dir.is_dir():
             try:
                 os.add_dll_directory(str(bin_dir))
             except OSError:

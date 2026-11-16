@@ -289,8 +289,17 @@ class TranslationEngine:
 
     @staticmethod
     def _make_refine(cfg: CeviriCfg):
+        import os
         makers = {"claude": ClaudeMT, "gemini": GeminiMT, "deepl": DeepLMT}
         if cfg.kalite not in makers:
+            return None
+        has_key = {
+            "claude": bool(cfg.claude_anahtar or os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")),
+            "gemini": bool(cfg.gemini_anahtar or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")),
+            "deepl": bool(cfg.deepl_anahtar),
+        }[cfg.kalite]
+        if not has_key:
+            log.info("Kalite katmanı (%s) için anahtar girilmedi; sadece hızlı katman kullanılacak", cfg.kalite)
             return None
         try:
             return makers[cfg.kalite](cfg)
