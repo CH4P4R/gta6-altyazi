@@ -64,6 +64,8 @@ MESSAGES = {
 class SamsungInstallError(SamsungError):
     """Tizen Studio'suz kurulumun hatası: ``kind`` türü, ``detail`` TV'nin/Samsung'un ham yanıtı (kısaltılmış)."""
 
+    network = False   # sertifika sunucusuna hiç ulaşılamadı (yeniden giriş işe yaramaz)
+
     def __init__(self, kind: str, detail: str = "", message: str | None = None):
         self.kind = kind
         self.detail = (detail or "").strip()

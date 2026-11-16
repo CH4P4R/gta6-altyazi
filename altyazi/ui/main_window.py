@@ -418,9 +418,10 @@ class TvPage(QWidget):
                                     "Developer Mode uygulamasında Key Server açıkken ekranda görünür."))
         self.ss_profile = QLineEdit(ctl.cfg.tv.samsung_profil)
         self.ss_tizen = QLineEdit(ctl.cfg.tv.tizen_yolu)
-        self.ss_tizen.setPlaceholderText("C:\\tizen-studio (boşsa kendisi arar)")
+        self.ss_tizen.setPlaceholderText("Boş bırak: Tizen Studio gerekmez")
         self.ss_box = QWidget()
-        self.ss_box.setLayout(hbox(field("Sertifika profili", self.ss_profile), field("Tizen Studio klasörü", self.ss_tizen),
+        self.ss_box.setLayout(hbox(field("Tizen Studio klasörü (gelişmiş, isteğe bağlı)", self.ss_tizen),
+                                   field("Sertifika profili (yalnız Tizen Studio ile)", self.ss_profile),
                                    spacing=14))
         mode_w = QWidget()
         mode_w.setLayout(self.mode_box)
@@ -479,19 +480,31 @@ class TvPage(QWidget):
               "<i>Not: Geliştirici modu bir süre sonra kapanır; uygulamadaki EXTEND ile uzatırsın.</i><br>"
               "LG TV'ler başka uygulamaların üstüne çizmeye izin vermez: PS5'in HDMI görüntüsü bizim TV uygulamasının "
               "içinde açılır ve altyazı üstüne çizilir. Kumandada ◀ ▶ ile doğru HDMI girişini seç.",
-        "samsung": "① Bilgisayara <b>Tizen Studio</b>'yu kur; Package Manager'dan <b>Samsung Certificate Extension</b>'ı ekle.<br>"
-                   "② TV'de <b>Uygulamalar</b> ekranında kumandayla <b>1-2-3-4-5</b> yaz, <b>Developer mode</b>'u aç, "
-                   "<b>Host PC IP</b> olarak bu bilgisayarın IP'sini yaz, TV'yi güç tuşuna 2 sn basılı tutup yeniden başlat.<br>"
-                   "③ Tizen Studio › Tools › <b>Certificate Manager</b>: <b>Samsung</b> türünde, adı aşağıdakiyle aynı "
-                   "(varsayılan <b>gta6</b>) bir profil oluştur; Samsung hesabınla gir ve TV'yi (DUID) ekle.<br>"
-                   "④ TV'nin IP'sini yaz, Bağlan'a bas. Program uygulamayı bu profille imzalar, kurar ve açar.<br>"
+        "samsung": "<b>Tizen Studio gerekmez.</b><br>"
+                   "① TV'de <b>Uygulamalar</b> ekranını aç, kumandayla <b>1-2-3-4-5</b> yaz; <b>Developer mode</b>'u "
+                   "<b>On</b> yap, <b>Host PC IP</b> olarak bu bilgisayarın IP'sini (<b>{pc_ip}</b>) yaz ve TV'yi "
+                   "güç tuşuna <b>2 sn basılı tutarak</b> yeniden başlat.<br>"
+                   "② TV ayarlarında <b>Anynet+ (HDMI-CEC)</b> ve <b>Otomatik Kaynak Değiştirme</b>'yi kapat; yoksa TV "
+                   "uygulamamızdan kendiliğinden HDMI'a geçebilir.<br>"
+                   "③ TV'nin IP'sini yaz, Bağlan'a bas. <b>İlk seferde</b> tarayıcıda Samsung hesabı giriş sayfası "
+                   "açılır; bir kez gir (hesap ücretsiz). Program bu TV'ye özel imza sertifikasını Samsung'dan alır, "
+                   "uygulamayı imzalar, kurar ve açar. Sonraki kurulumlarda giriş gerekmez.<br>"
                    "Samsung TV'ler de başka uygulamaların üstüne çizmeye izin vermez: HDMI görüntüsü bizim uygulamanın "
-                   "içinde açılır. Kumandada ◀ ▶ ile doğru HDMI girişini seç.",
+                   "içinde açılır. Kumandada ◀ ▶ ile doğru HDMI girişini seç.<br>"
+                   "<i>Gelişmiş: Tizen Studio'yla kurmak istersen klasörünü ve sertifika profilini aşağıya yaz.</i>",
     }
 
     def _brand_changed(self, *_a) -> None:  # noqa: ANN002
         b = self.brand.currentData()
-        self.howto.setText(self.HOWTO[b])
+        text = self.HOWTO[b]
+        if "{pc_ip}" in text:
+            from ..tv import local_ip
+            try:
+                ip = local_ip()
+            except OSError:
+                ip = "ağ bağlantısı yok"
+            text = text.replace("{pc_ip}", ip)
+        self.howto.setText(text)
         self.mode_w.setVisible(b == "android")
         self.pair_card.setVisible(b == "android")
         self.lg_box.setVisible(b == "lg")

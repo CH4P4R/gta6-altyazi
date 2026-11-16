@@ -437,10 +437,26 @@ class AppController(QObject):
                     if not t.lg_parola:
                         raise RuntimeError("LG Developer Mode ekranındaki parolayı (passphrase) yaz.")
                     server = tv_lg.setup(host, t.lg_parola, self.cfg.sunucu.port, force_install=force_install)
-                elif t.marka == "samsung":
+                elif t.marka == "samsung" and t.tizen_yolu:
+                    # Gelişmiş: Tizen Studio klasörü seçildiyse onun araçları ve sertifika profiliyle kur
                     from . import tv_samsung
-                    self._tv("baglaniyor", "Samsung TV'ye bağlanılıyor, uygulama imzalanıp kuruluyor (1-2 dk)...")
+                    self._tv("baglaniyor", "Samsung TV'ye bağlanılıyor, uygulama Tizen Studio ile imzalanıp kuruluyor "
+                                           "(1-2 dk)...")
                     server = tv_samsung.setup(host, t.samsung_profil, t.tizen_yolu)
+                elif t.marka == "samsung":
+                    # Varsayılan: Tizen Studio'suz, doğrudan (sdb + Samsung sertifikası + imza Python'da)
+                    from .samsung import setup_direct
+
+                    def login_needed(_url: str) -> None:
+                        if not force_install:    # kendiliğinden bağlanırken habersiz tarayıcı açma
+                            raise RuntimeError("Samsung hesabıyla bir kez giriş gerekiyor: Televizyon sayfasında "
+                                               "\"Bağlan, kur ve başlat\"a bas.")
+                        self._tv("onay", "Tarayıcıda açılan Samsung sayfasında hesabına gir (yalnız ilk sefer, 5 dk "
+                                         "içinde). Giriş bitince kurulum kendiliğinden sürer.")
+
+                    server = setup_direct(host, force_install=force_install,
+                                          progress=lambda msg: self._tv("baglaniyor", msg),
+                                          on_login_needed=login_needed)
                 else:
                     server = tv.setup(host, self.cfg.sunucu.port, force_install=force_install, mode=t.mod,
                                       on_prompt=lambda: self._tv("onay", "TV'ye bak: \"Hata ayıklamaya izin verilsin mi?\" "

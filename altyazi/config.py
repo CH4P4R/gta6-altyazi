@@ -127,8 +127,8 @@ class TvCfg:
     marka: str = "android"        # android (Google TV, TCL, Sony...) | lg (webOS) | samsung (Tizen)
     ip: str = ""                  # TV'nin adresi
     lg_parola: str = ""           # LG Developer Mode ekranındaki parola (passphrase)
-    samsung_profil: str = "gta6"  # Tizen Studio'daki Samsung sertifika profilinin adı
-    tizen_yolu: str = ""          # Tizen Studio klasörü (boşsa bilinen yerlerde aranır)
+    samsung_profil: str = "gta6"  # Gelişmiş: Tizen Studio'daki Samsung sertifika profilinin adı
+    tizen_yolu: str = ""          # Gelişmiş: Tizen Studio klasörü. Boşsa Tizen Studio'suz doğrudan kurulur
     otomatik: bool = True         # program açılınca TV uygulamasını kendiliğinden başlat
     # otomatik: TV izin verirse oyunun üstüne katman, vermezse yedek mod (HDMI uygulama içinde)
     mod: str = "otomatik"         # otomatik | katman | hdmi

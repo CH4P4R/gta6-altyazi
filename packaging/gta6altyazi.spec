@@ -15,6 +15,8 @@ for rel in ("tv-android/release", "tv-web/release", "tv-web/build/tizen", "model
     p = ROOT / rel
     if p.exists():
         datas.append((str(p), rel))
+# Samsung'un geliştirici ara sertifikaları (Tizen Studio'suz Samsung kurulumu imzaya ekler)
+datas.append((str(ROOT / "altyazi" / "samsung" / "ca"), "altyazi/samsung/ca"))
 datas += collect_data_files("rapidocr_onnxruntime")      # OCR modelleri
 binaries = collect_dynamic_libs("ctranslate2") + collect_dynamic_libs("onnxruntime")
 if IS_WIN:
