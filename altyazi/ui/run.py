@@ -26,7 +26,7 @@ def setup_logging() -> None:
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
-def run_gui(argv: list[str] | None = None) -> int:
+def run_gui(argv: list[str] | None = None, background: bool = False) -> int:
     from .. import winutil
     winutil.set_dpi_aware()
     winutil.add_cuda_dll_dirs()
@@ -59,6 +59,9 @@ def run_gui(argv: list[str] | None = None) -> int:
     cfg = config_mod.load()
     ctl = AppController(cfg)
     win = MainWindow(ctl)
+    if background:          # Windows açılışında: simge durumunda başla, sihirbazı açma
+        win.showMinimized()
+        return app.exec()
     win.show()
     if first:
         config_mod.save(cfg)   # sihirbaz yarıda kapatılsa da bir dahakine ana ekran açılsın

@@ -233,6 +233,10 @@ class Wizard(QDialog):
         tips.add(feature("regions", "GTA 6 çıkınca",
                          "Okuma alanları sayfasında Görüntü al'a bas, kutuları gerçek altyazının üstüne çek."))
         lay.addWidget(tips)
+        self.auto_cb = QCheckBox("TV günleri için her şey kendiliğinden olsun: bilgisayar açılınca uygulama açılsın, "
+                                 "PS5'i açınca chiaki bağlansın ve çeviri başlasın")
+        self.auto_cb.setChecked(True)
+        lay.addWidget(self.auto_cb)
         qr = QrCode(110)
         qr.setData(self.ctl.server_url("kumanda"))
         lay.addLayout(hbox(qr, vbox(label("Telefon kumandası", "h3"),
@@ -261,7 +265,14 @@ class Wizard(QDialog):
         if i == 3:
             self._save_translation()
         if i == 4:
+            o = self.cfg.otomatik
+            on = self.auto_cb.isChecked()
+            o.windows_ile_baslat = on
+            o.chiaki_gorunce_baslat = True
+            o.ps5_acilinca_baglan = on
             self.ctl.apply_config(self.cfg)
+            if on and not (o.ps5_adi and o.ps5_ip):
+                self.ctl.find_ps5(save=True)
             self.accept()
             return
         self._go(i + 1)

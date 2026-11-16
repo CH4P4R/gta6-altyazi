@@ -16,7 +16,7 @@ import time
 from collections import deque
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
 
 from . import config as config_mod
 from . import winutil
@@ -55,6 +55,8 @@ class AppController(QObject):
     enginesReady = Signal(dict)
     frameGrabbed = Signal(object)         # numpy kare ya da None
     testResult = Signal(object)           # translate.Result
+    ps5Found = Signal(list)               # [ps5.Console]
+    _uiCommand = Signal(str)              # başka iş parçacıklarından gelen ve ana iş parçacığında yapılması gereken işler
 
     def __init__(self, cfg: config_mod.Config):
         super().__init__()
@@ -72,11 +74,19 @@ class AppController(QObject):
         self.server = None
         self.hotkeys = None
         self.tv_state = ("yok", "")
+        self._user_stopped = False        # kullanıcı elle durdurduysa pencere açıkken kendiliğinden başlatma
+        self._last_launch = 0.0
+        self._ps5_busy = False
+        self.ps5_state: str = ""          # "acik" | "uykuda" | "" (bilinmiyor)
+        self._uiCommand.connect(self._run_ui_command, Qt.QueuedConnection)
         self._start_server()
         self._start_hotkeys()
         self._src_timer = QTimer(self)
         self._src_timer.timeout.connect(self._check_source)
         self._src_timer.start(2000)
+        self._ps5_timer = QTimer(self)
+        self._ps5_timer.timeout.connect(self._auto_connect_tick)
+        self._ps5_timer.start(10000)
         self.warmup()
 
     # ------------------------------------------------------------------ altyapı
@@ -101,6 +111,8 @@ class AppController(QObject):
     def _set_state(self, s: str) -> None:
         self.state = s
         self.stateChanged.emit(s)
+        if self.server:
+            self.server.status(s)
 
     def _notice(self, msg: str) -> None:
         self.notice.emit(msg)
@@ -189,7 +201,27 @@ class AppController(QObject):
             self._notice("Çeviri durduruldu")
 
     def toggle(self) -> None:
-        self.stop() if self.state == "calisiyor" else self.start()
+        """Kullanıcının kendi bastığı başlat/durdur."""
+        if self.state == "calisiyor":
+            self._user_stopped = True
+            self.stop()
+        else:
+            self._user_stopped = False
+            self.start()
+
+    def _run_ui_command(self, name: str) -> None:
+        if name == "toggle":
+            self.toggle()
+        elif name == "baglan":
+            self.launch_chiaki(stream=True)
+        elif name == "ps5_kaydet" and getattr(self, "_found_ps5", None):
+            cfg = self.edit_config()
+            cfg.otomatik.ps5_adi, cfg.otomatik.ps5_ip = self._found_ps5.name, self._found_ps5.ip
+            self.apply_config(cfg)
+            self._notice(f"PS5 kaydedildi: {self._found_ps5.name}")
+        elif name == "baglan_oto":
+            self._notice("PS5 açık, chiaki kendiliğinden bağlanıyor...")
+            self.launch_chiaki(stream=True)
 
     def command(self, name: str) -> dict:
         """Kısayol, kumanda sayfası ve arayüz düğmeleri buradan geçer (her iş parçacığından çağrılabilir)."""
@@ -204,6 +236,19 @@ class AppController(QObject):
                 return {"mesaj": "Çeviri çalışmıyor", "duraklatildi": True}
             paused = pipe.toggle_pause()
             return {"mesaj": "Duraklatıldı" if paused else "Devam ediyor", "duraklatildi": paused}
+        if name == "baslat_durdur":
+            running = self.state == "calisiyor"
+            if self.state not in ("hazir", "calisiyor"):
+                return {"mesaj": "Uygulama hazırlanıyor, birkaç saniye sonra tekrar dene", "durum": self.state}
+            self._uiCommand.emit("toggle")
+            return {"mesaj": "Durduruluyor..." if running else "Başlatılıyor...", "durum": self.state}
+        if name == "baglan":
+            self._uiCommand.emit("baglan")
+            return {"mesaj": "chiaki-ng açılıyor..."}
+        if name == "durum":
+            return {"durum": self.state, "ps5": self.ps5_state, "duraklatildi": bool(pipe and pipe.paused),
+                    "mesaj": {"calisiyor": "Çeviri açık", "hazir": "Çeviri kapalı",
+                              "hazirlaniyor": "Hazırlanıyor"}.get(self.state, self.state)}
         return {"mesaj": f"Bilinmeyen komut: {name}"}
 
     # Sink arayüzü (Pipeline buraya yazar; başka iş parçacığından gelir, sinyaller kuyruğa alınır)
@@ -245,6 +290,8 @@ class AppController(QObject):
             if self.hotkeys:
                 self.hotkeys.stop()
             self._start_hotkeys()
+        if old.otomatik.windows_ile_baslat != cfg.otomatik.windows_ile_baslat:
+            winutil.set_autostart(cfg.otomatik.windows_ile_baslat)
         if engines_changed:
             if running:
                 self.stop()
@@ -269,18 +316,88 @@ class AppController(QObject):
             return
         found = winutil.find_window(k.pencere_adi) if winutil.IS_WIN else None
         self.sourceStatus.emit(bool(found), found[1] if found else "")
+        self._auto_source(bool(found))
+
+    def _auto_source(self, found: bool) -> None:
+        """chiaki penceresi açılınca başlat, kapanınca durdur (TV günleri: kasada kimse yok)."""
+        if not found:
+            self._user_stopped = False
+            if self.state == "calisiyor":
+                self._notice("chiaki penceresi kapandı, çeviri durduruldu")
+                self.stop()
+            return
+        if self.cfg.otomatik.chiaki_gorunce_baslat and self.state == "hazir" and not self._user_stopped:
+            self._notice("chiaki bağlandı, çeviri kendiliğinden başlıyor")
+            self.start()
+
+    def _auto_connect_tick(self) -> None:
+        """PS5 açılınca chiaki'yi kendiliğinden bağla."""
+        o = self.cfg.otomatik
+        if not o.ps5_acilinca_baglan or self._ps5_busy or self.cfg.kaynak.tur != "pencere":
+            return
+        if time.time() - self._last_launch < 45:
+            return
+        if winutil.IS_WIN and winutil.find_window(self.cfg.kaynak.pencere_adi):
+            return
+
+        def run() -> None:
+            from . import ps5
+            self._ps5_busy = True
+            try:
+                consoles = ps5.discover(1.2, targets=[o.ps5_ip] if o.ps5_ip else None)
+                mine = [c for c in consoles if not o.ps5_adi or c.name == o.ps5_adi] or consoles
+                self.ps5_state = ("acik" if any(c.awake for c in mine) else "uykuda") if mine else ""
+                if any(c.awake for c in mine):
+                    self._last_launch = time.time()
+                    self._uiCommand.emit("baglan_oto")
+            except Exception:  # noqa: BLE001
+                log.debug("PS5 keşfi başarısız", exc_info=True)
+            finally:
+                self._ps5_busy = False
+        threading.Thread(target=run, daemon=True, name="ps5").start()
+
+    def find_ps5(self, save: bool = False) -> None:
+        """PS5'i ağda ara; save=True ise bulunanın adını ve IP'sini ayarlara yaz."""
+        def run() -> None:
+            from . import ps5
+            try:
+                consoles = ps5.discover(2.0)
+                if save and consoles:
+                    self._found_ps5 = consoles[0]
+                    self._uiCommand.emit("ps5_kaydet")
+                self.ps5Found.emit(consoles)
+            except Exception as e:  # noqa: BLE001
+                self._notice(f"PS5 aranamadı: {e}")
+                self.ps5Found.emit([])
+        threading.Thread(target=run, daemon=True, name="ps5-bul").start()
 
     def chiaki_path(self) -> str | None:
         return find_chiaki(getattr(self.cfg.kaynak, "chiaki_yolu", ""))
 
-    def launch_chiaki(self) -> bool:
+    def chiaki_args(self, stream: bool) -> list[str]:
+        """chiaki-ng komut satırı: 'stream <PS5 adı> <ip>' doğrudan bağlanır (chiaki-ng gui/src/main.cpp)."""
+        o = self.cfg.otomatik
+        if not (stream and o.ps5_adi and o.ps5_ip):
+            return []
+        args = ["stream", o.ps5_adi, o.ps5_ip, "--exit-app-on-stream-exit"]
+        if o.chiaki_tam_ekran:
+            args.append("--fullscreen")
+        return args
+
+    def launch_chiaki(self, stream: bool = False) -> bool:
         path = self.chiaki_path()
         if not path:
             self._notice("chiaki-ng bulunamadı. Ayarlardan yerini seç ya da indir.")
             return False
+        if winutil.IS_WIN and winutil.find_window(self.cfg.kaynak.pencere_adi):
+            self._notice("chiaki-ng zaten açık")
+            return True
+        args = self.chiaki_args(stream)
         flags = getattr(subprocess, "DETACHED_PROCESS", 0)
-        subprocess.Popen([path], cwd=str(Path(path).parent), creationflags=flags, close_fds=True)
-        self._notice("chiaki-ng açılıyor... PS5'e ikinci hesapla bağlan.")
+        subprocess.Popen([path, *args], cwd=str(Path(path).parent), creationflags=flags, close_fds=True)
+        self._last_launch = time.time()
+        self._notice("chiaki-ng PS5'e bağlanıyor..." if args else
+                     "chiaki-ng açılıyor... PS5'e ikinci hesapla bağlan.")
         return True
 
     # ------------------------------------------------------------------ TV

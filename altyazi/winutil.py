@@ -95,3 +95,34 @@ def add_cuda_dll_dirs() -> None:
             ort.preload_dlls()
     except Exception:  # noqa: BLE001
         pass
+
+
+RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+RUN_NAME = "GTA6Altyazi"
+
+
+def autostart_command() -> str:
+    import sys
+    if getattr(sys, "frozen", False):
+        return f'"{sys.executable}" --arka-plan'
+    exe = sys.executable.replace("python.exe", "pythonw.exe")
+    return f'"{exe}" -m altyazi --arka-plan'
+
+
+def set_autostart(enabled: bool) -> bool:
+    """Windows açılışında başlat (kullanıcı kayıt defteri, yönetici izni gerekmez)."""
+    if not IS_WIN:
+        return False
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as k:
+            if enabled:
+                winreg.SetValueEx(k, RUN_NAME, 0, winreg.REG_SZ, autostart_command())
+            else:
+                try:
+                    winreg.DeleteValue(k, RUN_NAME)
+                except FileNotFoundError:
+                    pass
+        return True
+    except OSError:
+        return False

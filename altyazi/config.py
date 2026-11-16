@@ -109,6 +109,17 @@ class KisayolCfg:
 
 
 @dataclass
+class OtomatikCfg:
+    """TV günleri için: kasada kimse yokken her şey kendiliğinden çalışsın."""
+    windows_ile_baslat: bool = False   # bilgisayar açılınca uygulama simge durumunda açılsın
+    chiaki_gorunce_baslat: bool = True  # chiaki penceresi açılınca çeviri başlasın, kapanınca dursun
+    ps5_acilinca_baglan: bool = False  # PS5 açılınca chiaki kendiliğinden bağlansın
+    chiaki_tam_ekran: bool = True      # otomatik bağlanınca chiaki tam ekran açılsın
+    ps5_adi: str = ""                  # chiaki'de kayıtlı PS5 adı (ör. PS5-123); "PS5'i bul" doldurur
+    ps5_ip: str = ""
+
+
+@dataclass
 class TvCfg:
     ip: str = ""                  # Google/Android TV'nin adresi ("python -m altyazi tv bul")
     otomatik: bool = True         # program açılınca TV uygulamasını kendiliğinden başlat
@@ -128,6 +139,7 @@ class Config:
     sunucu: SunucuCfg = field(default_factory=SunucuCfg)
     tv: TvCfg = field(default_factory=TvCfg)
     kisayol: KisayolCfg = field(default_factory=KisayolCfg)
+    otomatik: OtomatikCfg = field(default_factory=OtomatikCfg)
 
 
 def _build(cls, data: Any, path: str):

@@ -69,12 +69,18 @@ button{border:0;border-radius:18px;padding:22px 10px;font-size:17px;font-weight:
  background:var(--card);border:1px solid var(--line);transition:transform .08s}
 button:active{transform:scale(.97)}
 #fs{background:linear-gradient(135deg,var(--a1),var(--a2));border:0}
+#go.on{background:#1f3b2e;border-color:#2f6b4f}
+.state{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:14px;
+ padding:10px 14px;margin-bottom:12px;font-weight:600}.state i{width:10px;height:10px;border-radius:50%;background:#6c6380}
+.state.on i{background:#3ddc97;box-shadow:0 0 10px #3ddc97}.row+.row{margin-top:12px}
 #st{color:var(--mut);font-size:13px;min-height:18px;margin:10px 2px}
 .sub{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-top:10px}
 .sub .tr{font-size:20px;font-weight:600;line-height:1.35}.sub .en{color:var(--mut);font-size:13px;margin-top:6px}
 .sub .z{font-size:11px;color:var(--a2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
 </style></head><body>
 <h1>🎮 <b>GTA6 Altyazı</b> kumanda</h1>
+<div class="state" id="state"><i></i><span id="stxt">Bağlanıyor...</span></div>
+<div class="row"><button id="go">▶ Çeviriyi başlat</button><button id="cn">🎮 PS5'e bağlan</button></div>
 <div class="row"><button id="fs">📖 Ekranı çevir</button><button id="pz">⏸ Duraklat</button></div>
 <div id="st">Bağlanıyor...</div><div id="list"></div>
 <script>
@@ -82,14 +88,18 @@ const st=document.getElementById('st'),list=document.getElementById('list'),subs
 async function cmd(n){st.textContent='Gönderildi...';try{const r=await fetch('/komut/'+n,{method:'POST'});
  const j=await r.json();st.textContent=j.mesaj||'Tamam';if(n==='duraklat')pz.textContent=j.duraklatildi?'▶ Devam':'⏸ Duraklat'}
  catch(e){st.textContent='Bilgisayara ulaşılamadı'}}
-fs.onclick=()=>cmd('tam_ekran');pz.onclick=()=>cmd('duraklat');
+fs.onclick=()=>cmd('tam_ekran');pz.onclick=()=>cmd('duraklat');go.onclick=()=>cmd('baslat_durdur');cn.onclick=()=>cmd('baglan');
+function showState(s){const on=s==='calisiyor';document.getElementById('state').classList.toggle('on',on);go.classList.toggle('on',on);
+ stxt.textContent={calisiyor:'Çeviri açık',hazir:'Çeviri kapalı',hazirlaniyor:'Uygulama hazırlanıyor',hata:'Bir sorun var'}[s]||s;
+ go.textContent=on?'⏹ Çeviriyi durdur':'▶ Çeviriyi başlat'}
+fetch('/komut/durum',{method:'POST'}).then(r=>r.json()).then(j=>showState(j.durum)).catch(()=>{});
 function render(){list.innerHTML='';Object.values(subs).sort((a,b)=>b.t-a.t).slice(0,6).forEach(d=>{
  const e=document.createElement('div');e.className='sub';const z=document.createElement('div');z.className='z';
  z.textContent=d.zone.startsWith('tam')?'ekran':d.zone;const tr=document.createElement('div');tr.className='tr';tr.textContent=d.text;
  const en=document.createElement('div');en.className='en';en.textContent=d.english||'';e.append(z,tr,en);list.appendChild(e)})}
 function go(){const es=new EventSource('/olaylar');es.onopen=()=>{st.textContent='Bağlı'};
  es.onmessage=m=>{const d=JSON.parse(m.data);if(d.type==='show'){d.t=Date.now();subs[d.zone]=d}
-  else if(d.type==='notice'){st.textContent=d.mesaj}else delete subs[d.zone];render()};
+  else if(d.type==='notice'){st.textContent=d.mesaj}else if(d.type==='durum'){showState(d.durum)}else delete subs[d.zone];render()};
  es.onerror=()=>{st.textContent='Bağlantı koptu, tekrar deneniyor...';es.close();setTimeout(go,1500)}}
 go();
 </script></body></html>"""
@@ -120,6 +130,9 @@ class EventServer:
 
     def notice(self, text: str) -> None:
         self._broadcast({"type": "notice", "mesaj": text})
+
+    def status(self, state: str) -> None:
+        self._broadcast({"type": "durum", "durum": state})
 
     def _broadcast(self, msg: dict) -> None:
         data = json.dumps(msg, ensure_ascii=False)

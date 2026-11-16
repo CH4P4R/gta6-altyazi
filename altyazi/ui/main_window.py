@@ -752,6 +752,33 @@ class SettingsPage(QWidget):
                        "faint", wrap=True))
         root.addWidget(keys)
 
+        auto = Card()
+        o = cfg.otomatik
+        auto.add(label("TV günleri: kendiliğinden çalışma", "h2"))
+        auto.add(label("Kasa başka odadayken her şey kendiliğinden olsun: sen TV'de PS5'i açarsın, kasa chiaki'yi "
+                       "bağlar, çeviri başlar ve TV'ye altyazı gider. PS5'i kapatınca hepsi durur.", "muted", wrap=True))
+        self.a_boot = QCheckBox("Bilgisayar açılınca GTA6 Altyazı da açılsın (simge durumunda)")
+        self.a_boot.setChecked(o.windows_ile_baslat)
+        self.a_src = QCheckBox("chiaki bağlanınca çeviri kendiliğinden başlasın, kapanınca dursun")
+        self.a_src.setChecked(o.chiaki_gorunce_baslat)
+        self.a_ps5 = QCheckBox("PS5 açılınca chiaki kendiliğinden bağlansın")
+        self.a_ps5.setChecked(o.ps5_acilinca_baglan)
+        self.a_fs = QCheckBox("Otomatik bağlanınca chiaki tam ekran açılsın")
+        self.a_fs.setChecked(o.chiaki_tam_ekran)
+        for w in (self.a_boot, self.a_src, self.a_ps5, self.a_fs):
+            auto.add(w)
+        self.ps5_name = QLineEdit(o.ps5_adi)
+        self.ps5_name.setPlaceholderText("PS5 adı (ör. PS5-123)")
+        self.ps5_ip = QLineEdit(o.ps5_ip)
+        self.ps5_ip.setPlaceholderText("PS5 IP adresi")
+        self.ps5_btn = button("PS5'i bul", None, self._find_ps5)
+        auto.add(hbox(self.ps5_name, self.ps5_ip, self.ps5_btn, spacing=10))
+        auto.add(label("PS5'in adı chiaki'de kayıtlı adla aynı olmalı. \"PS5'i bul\" PS5 açıkken ya da dinlenme "
+                       "modundayken ağdan bulur. Telefon kumandasında da Başlat/Durdur ve PS5'e bağlan düğmeleri var.",
+                       "faint", wrap=True))
+        root.addWidget(auto)
+        ctl.ps5Found.connect(self._on_ps5)
+
         other = Card()
         other.add(label("Diğer", "h2"))
         other.add(hbox(button("Kurulum sihirbazını aç", None, lambda: self.window().open_wizard()),
@@ -770,6 +797,22 @@ class SettingsPage(QWidget):
         path, _ = QFileDialog.getOpenFileName(self, "chiaki-ng programını seç", "", "Program (*.exe);;Tümü (*)")
         if path:
             self.chiaki.setText(path)
+
+    def _find_ps5(self) -> None:
+        self.ps5_btn.setEnabled(False)
+        self.ps5_btn.setText("Aranıyor...")
+        self.ctl.find_ps5()
+
+    def _on_ps5(self, consoles: list) -> None:
+        self.ps5_btn.setEnabled(True)
+        self.ps5_btn.setText("PS5'i bul")
+        if not consoles:
+            self.window().toast.show_text("PS5 bulunamadı. Açık ya da dinlenme modunda ve aynı ağda mı?")
+            return
+        c = consoles[0]
+        self.ps5_name.setText(c.name)
+        self.ps5_ip.setText(c.ip)
+        self.window().toast.show_text(f"PS5 bulundu: {c.name} ({c.ip}) · {'açık' if c.awake else 'dinlenme modunda'}")
 
     def _open_data(self) -> None:
         from .. import paths
@@ -793,6 +836,13 @@ class SettingsPage(QWidget):
         cfg.kisayol.tam_ekran = self.k_fs.text().strip()
         cfg.kisayol.duraklat = self.k_pause.text().strip()
         cfg.kisayol.tam_ekran_sure = self.fs_time.value()
+        o = cfg.otomatik
+        o.windows_ile_baslat = self.a_boot.isChecked()
+        o.chiaki_gorunce_baslat = self.a_src.isChecked()
+        o.ps5_acilinca_baglan = self.a_ps5.isChecked()
+        o.chiaki_tam_ekran = self.a_fs.isChecked()
+        o.ps5_adi = self.ps5_name.text().strip()
+        o.ps5_ip = self.ps5_ip.text().strip()
         self.ctl.apply_config(cfg)
         self.window().toast.show_text("Ayarlar kaydedildi")
 

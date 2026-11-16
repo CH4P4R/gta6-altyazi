@@ -277,10 +277,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("ek2", nargs="?", help="tv eslestir için eşleştirme kodu")
     ap.add_argument("-c", "--config", default="config.yaml")
     ap.add_argument("-v", "--ayrintili", action="store_true")
+    ap.add_argument("--arka-plan", action="store_true", help="simge durumunda başlat (Windows açılışı)")
     a = ap.parse_args(argv)
     if a.komut == "arayuz":
         from .ui.run import run_gui
-        return run_gui()
+        return run_gui(background=a.arka_plan)
     _setup_logging(a.ayrintili)
     winutil.set_dpi_aware()
     winutil.add_cuda_dll_dirs()
