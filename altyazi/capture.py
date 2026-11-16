@@ -43,23 +43,35 @@ class WindowSource(Source):
     def start(self, on_frame: FrameCallback) -> None:
         from windows_capture import WindowsCapture
 
-        kwargs = dict(cursor_capture=False, window_name=self.title)
-        try:
-            cap = WindowsCapture(draw_border=False, **kwargs)  # Windows 11: sarı çerçeve yok
-        except Exception:  # noqa: BLE001  (Windows 10 çerçeveyi kapatmaya izin vermez)
-            cap = WindowsCapture(**kwargs)
+        def build(target: dict, border: bool | None):  # noqa: ANN202
+            cap = WindowsCapture(cursor_capture=False, draw_border=border, **target)
 
-        @cap.event
-        def on_frame_arrived(frame, control):  # noqa: ANN001
-            # Kütüphane tamponu yeniden kullanır, bu yüzden kopyalıyoruz (~1 ms)
-            on_frame(np.array(frame.frame_buffer, copy=True), time.perf_counter())
+            @cap.event
+            def on_frame_arrived(frame, control):  # noqa: ANN001
+                # Kütüphane tamponu yeniden kullanır, bu yüzden kopyalıyoruz (~1 ms)
+                on_frame(np.array(frame.frame_buffer, copy=True), time.perf_counter())
 
-        @cap.event
-        def on_closed():
-            log.warning("Yakalanan pencere kapandı")
+            @cap.event
+            def on_closed():
+                log.warning("Yakalanan pencere kapandı")
 
-        self._control = cap.start_free_threaded()
-        log.info("Pencere yakalanıyor: %s", self.title)
+            return cap.start_free_threaded()
+
+        # Pencere kimliği (HWND) başlık değişse de doğru pencereyi tutar; eski sürümlerde başlıkla dene.
+        # Windows 10 sarı çerçeveyi kapatmaya izin vermeyebilir; o zaman çerçeveli yakala.
+        last_error = None
+        for target in ({"window_hwnd": self.hwnd}, {"window_name": self.title}):
+            for border in (False, None):
+                try:
+                    self._control = build(target, border)
+                    log.info("Pencere yakalanıyor: %s", self.title)
+                    return
+                except TypeError as e:      # bu sürümde window_hwnd yok
+                    last_error = e
+                    break
+                except Exception as e:  # noqa: BLE001
+                    last_error = e
+        raise RuntimeError(f"Pencere yakalanamadı: {last_error}")
 
     def stop(self) -> None:
         if self._control is not None:
