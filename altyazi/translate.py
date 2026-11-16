@@ -94,7 +94,8 @@ class LocalMT:
         import ctranslate2
         import sentencepiece as spm
 
-        p = Path(path)
+        from . import paths
+        p = paths.model_path(path)
         if not (p / "model.bin").exists():
             raise FileNotFoundError(f"{p} içinde model yok. Önce: python tools/model_indir.py")
         if device == "auto":
@@ -170,7 +171,7 @@ class ClaudeMT:
 
         self.anthropic = anthropic
         # Kimlik bilgisi ortamdan okunur: ANTHROPIC_API_KEY (ya da `ant auth login` profili)
-        self.client = anthropic.Anthropic(max_retries=1, timeout=10.0)
+        self.client = anthropic.Anthropic(api_key=cfg.claude_anahtar or None, max_retries=1, timeout=10.0)
         self.model = cfg.claude_model
         self.effort = cfg.claude_efor
         self.fast = cfg.claude_hizli_mod
@@ -263,7 +264,9 @@ class DeepLMT:
 class TranslationEngine:
     def __init__(self, cfg: CeviriCfg):
         self.cfg = cfg
-        self.cache = Cache(cfg.onbellek, cfg.benzerlik)
+        from . import paths
+        self.cache = Cache(str(paths.data(cfg.onbellek)) if not Path(cfg.onbellek).is_absolute() else cfg.onbellek,
+                           cfg.benzerlik)
         self.fast = self._make_fast(cfg)
         self.refine = self._make_refine(cfg)
         self.fast_pool = ThreadPoolExecutor(2, thread_name_prefix="hizli")

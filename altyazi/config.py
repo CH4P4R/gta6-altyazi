@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field, fields, is_dataclass
+from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from pathlib import Path
 from typing import Any, get_args, get_origin, get_type_hints
 
@@ -46,6 +46,7 @@ class BolgeCfg:
 class KaynakCfg:
     tur: str = "pencere"          # pencere | capture | video | resim
     pencere_adi: str = "chiaki"   # başlıkta geçen metin (ör. "chiaki", "PS Remote Play")
+    chiaki_yolu: str = ""         # chiaki-ng programının yeri (boşsa bilinen yerlerde aranır)
     capture_cihaz: int = 0
     capture_genislik: int = 1920
     capture_yukseklik: int = 1080
@@ -71,6 +72,7 @@ class CeviriCfg:
     yerel_beam: int = 2
     # Kalite katmanı: yapay zeka daha doğal çeviriyi gönderir, ekrandaki yazı güncellenir
     kalite: str = "claude"        # claude | gemini | deepl | yok
+    claude_anahtar: str = ""      # boşsa ANTHROPIC_API_KEY ortam değişkeni kullanılır
     claude_model: str = "claude-opus-5-5"
     claude_hizli_mod: bool = True  # Opus 5.5 "fast mode": ~2.5 kat hızlı üretim (2 kat fiyat)
     claude_efor: str = "low"
@@ -153,16 +155,49 @@ def _build(cls, data: Any, path: str):
     return cls(**kwargs)
 
 
-def load(path: str | Path = "config.yaml") -> Config:
-    p = Path(path)
-    if not p.exists():
-        log.warning("%s bulunamadı, varsayılan ayarlar kullanılıyor", p)
-        return Config()
-    data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-    local = p.with_name("config.local.yaml")  # kişisel anahtarlar için, git'e girmez
+def load(path: str | Path | None = None) -> Config:
+    """Ayarları katman katman yükle: varsayılanlar < paketteki config.yaml < kullanıcı ayarları < config.local.yaml.
+
+    path verilirse (komut satırı -c) kullanıcı ayarları yerine o dosya kullanılır.
+    """
+    from . import paths
+
+    data: dict = {}
+    layers = [paths.default_config()]
+    if path is not None and Path(path).resolve() != paths.default_config().resolve():
+        layers.append(Path(path))
+    elif path is None:
+        layers.append(paths.user_config())
+    for p in layers:
+        p = Path(p)
+        if p.exists():
+            _merge(data, yaml.safe_load(p.read_text(encoding="utf-8")) or {})
+    local = Path(layers[-1]).with_name("config.local.yaml")
     if local.exists():
         _merge(data, yaml.safe_load(local.read_text(encoding="utf-8")) or {})
     return _build(Config, data, "config")
+
+
+def to_dict(cfg) -> dict:  # noqa: ANN001
+    return asdict(cfg)
+
+
+def save(cfg: Config, path: str | Path | None = None) -> Path:
+    """Kullanıcı ayarlarını yaz (arayüzden yapılan değişiklikler)."""
+    from . import paths
+
+    p = Path(path) if path else paths.user_config()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(yaml.safe_dump(to_dict(cfg), allow_unicode=True, sort_keys=False), encoding="utf-8")
+    tmp.replace(p)
+    return p
+
+
+def is_first_run() -> bool:
+    from . import paths
+
+    return not paths.user_config().exists()
 
 
 def _merge(base: dict, extra: dict) -> None:

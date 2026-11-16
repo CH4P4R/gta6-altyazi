@@ -94,3 +94,10 @@ def test_no_overlay_permission_falls_back_to_hdmi_mode(fake, adb_port):
     set_state(installed=True, no_overlay=True)
     tv.setup("127.0.0.1", 8787)
     assert any(c[-1].endswith("--es mod hdmi") for c in get_state()["calls"] if "shell" in c)
+
+
+def test_older_tv_app_gets_updated(fake, adb_port):
+    set_state, get_state = fake
+    set_state(installed=True, version=1)
+    tv.setup("127.0.0.1", 8787)
+    assert any("install" in c for c in get_state()["calls"])

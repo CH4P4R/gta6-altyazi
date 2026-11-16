@@ -1,5 +1,6 @@
 """Kullanım:
-    python -m altyazi                  # çalıştır (config.yaml'a göre)
+    python -m altyazi                  # arayüzlü uygulama
+    python -m altyazi calistir         # arayüzsüz çalıştır (config.yaml'a göre)
     python -m altyazi pencereler       # açık pencereleri listele (chiaki'nin başlığını bulmak için)
     python -m altyazi kameralar        # capture kartları ve ses girişlerini listele
     python -m altyazi kalibre          # o anki kareyi bölgeler ve maskelerle kalibrasyon.png'ye kaydet
@@ -264,14 +265,17 @@ def cmd_tv(cfg, action: str | None, ip: str | None, extra: str | None = None) ->
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="altyazi", description="GTA 6 gerçek zamanlı Türkçe altyazı")
-    ap.add_argument("komut", nargs="?", default="calistir",
-                    choices=["calistir", "pencereler", "kameralar", "kalibre", "test", "tv"])
+    ap.add_argument("komut", nargs="?", default="arayuz",
+                    choices=["arayuz", "calistir", "pencereler", "kameralar", "kalibre", "test", "tv"])
     ap.add_argument("dosya", nargs="?", help="kalibre/test için resim dosyası, tv için bul/kur")
     ap.add_argument("ek", nargs="?", help="tv kur/eslestir için TV'nin adresi")
     ap.add_argument("ek2", nargs="?", help="tv eslestir için eşleştirme kodu")
     ap.add_argument("-c", "--config", default="config.yaml")
     ap.add_argument("-v", "--ayrintili", action="store_true")
     a = ap.parse_args(argv)
+    if a.komut == "arayuz":
+        from .ui.run import run_gui
+        return run_gui()
     _setup_logging(a.ayrintili)
     winutil.set_dpi_aware()
     winutil.add_cuda_dll_dirs()
@@ -279,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_windows()
     if a.komut == "kameralar":
         return cmd_cameras()
-    cfg = config_mod.load(a.config)
+    cfg = config_mod.load(a.config if a.config != "config.yaml" else None)
     if a.komut == "kalibre":
         return cmd_calibrate(cfg, a.dosya)
     if a.komut == "tv":

@@ -39,7 +39,7 @@ elif cmd == "shell":
     if sh.startswith("getprop"):
         out = "14"
     elif sh.startswith("dumpsys package"):
-        out = "    versionCode=1 minSdk=24 targetSdk=35" if st.get("installed") else ""
+        out = f"    versionCode={st.get('version', 1000)} minSdk=24 targetSdk=35" if st.get("installed") else ""
     elif sh.startswith("appops get"):
         out = "SYSTEM_ALERT_WINDOW: ignore" if st.get("no_overlay") else "SYSTEM_ALERT_WINDOW: allow"
     elif sh.startswith("am start"):

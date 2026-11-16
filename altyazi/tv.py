@@ -27,7 +27,8 @@ log = logging.getLogger(__name__)
 
 PACKAGE = "com.gta6altyazi.tv"
 ADB_PORT = 5555
-ROOT = Path(__file__).resolve().parents[1]
+from .paths import RESOURCES as ROOT  # noqa: E402
+
 APK = ROOT / "tv-android" / "release" / "gta6-altyazi-tv.apk"
 
 

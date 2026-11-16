@@ -45,15 +45,23 @@ class Recognizer:
         import onnxruntime as ort
 
         path = Path(model_path) if model_path else _default_model_path()
+        avail = ort.get_available_providers()
         providers = ["CPUExecutionProvider"]
-        if use_gpu and "CUDAExecutionProvider" in ort.get_available_providers():
-            providers.insert(0, "CUDAExecutionProvider")
+        if use_gpu:
+            # NVIDIA CUDA varsa o, yoksa Windows'ta her ekran kartında çalışan DirectML
+            for gpu in ("DmlExecutionProvider", "CUDAExecutionProvider"):
+                if gpu in avail:
+                    providers.insert(0, gpu)
         so = ort.SessionOptions()
         so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         so.log_severity_level = 3
+        if use_gpu and "DmlExecutionProvider" in avail:
+            so.enable_mem_pattern = False   # DirectML bunu ister
+            so.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
         self.session = ort.InferenceSession(str(path), sess_options=so, providers=providers)
         self.input_name = self.session.get_inputs()[0].name
-        self.device = "GPU" if self.session.get_providers()[0] == "CUDAExecutionProvider" else "CPU"
+        first = self.session.get_providers()[0]
+        self.device = {"CUDAExecutionProvider": "GPU (CUDA)", "DmlExecutionProvider": "GPU (DirectML)"}.get(first, "CPU")
         self.batch = batch
 
         meta = self.session.get_modelmeta().custom_metadata_map

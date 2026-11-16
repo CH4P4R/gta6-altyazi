@@ -93,6 +93,7 @@ class Pipeline:
         self._current: dict[str, tuple[int, str, int]] = {}   # bölge -> (seq, ingilizce, gösterilen kalite)
         self._lock = threading.Lock()
         self.frames = 0
+        self.last_frame: np.ndarray | None = None
         self.paused = False
         self.notice = None                     # arayüze kısa bilgi mesajı: notice(str)
         self._fs_reader = None
@@ -118,6 +119,7 @@ class Pipeline:
 
     def on_frame(self, frame: np.ndarray, t: float) -> None:
         self.frames += 1
+        self.last_frame = frame
         if self.frame_sink is not None:
             self.frame_sink(frame, t)
         with self._cond:
