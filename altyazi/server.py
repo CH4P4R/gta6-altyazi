@@ -1,7 +1,7 @@
 """Yerel web sunucusu: OBS tarayıcı kaynağı veya TV/telefon tarayıcısı için canlı altyazı.
 
 http://localhost:8787/        -> siyah zeminde altyazı (TV/telefon için)
-http://localhost:8787/obs     -> saydam zeminde altyazı (OBS tarayıcı kaynağı)
+http://localhost:8787/obs     -> saydam zeminde altyazı (OBS tarayıcı kaynağı, 1920x1080, oyun görüntüsünün üstüne)
 http://localhost:8787/olaylar -> Server-Sent Events akışı (JSON)
 """
 
@@ -20,24 +20,37 @@ log = logging.getLogger(__name__)
 
 PAGE = """<!doctype html><html lang="tr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>GTA6 Altyazı</title>
-<style>
-html,body{margin:0;height:100%;background:BG;font-family:'Segoe UI',Roboto,sans-serif;overflow:hidden}
-#z{position:absolute;inset:0}
-.i{position:absolute;left:5%;right:5%;text-align:center;color:#fff;font-weight:600;
-   font-size:4.2vh;line-height:1.25;text-shadow:0 0 4px #000,0 0 4px #000,2px 2px 2px #000}
-.i span{background:rgba(0,0,0,.6);padding:.1em .4em;border-radius:.2em;box-decoration-break:clone;
-   -webkit-box-decoration-break:clone}
-</style></head><body><div id="z"></div><script>
-const z=document.getElementById('z'),els={};
-function put(d){let e=els[d.zone];if(!e){e=els[d.zone]=document.createElement('div');e.className='i';z.appendChild(e)}
- const top=d.rect[1]*100,bottom=(1-d.rect[3])*100;
- if(d.anchor==='alt'){e.style.bottom=bottom+'%';e.style.top=''}else{e.style.top=top+'%';e.style.bottom=''}
- e.style.textAlign=d.align==='sol'?'left':d.align==='sag'?'right':'center';
- e.innerHTML='';const s=document.createElement('span');s.textContent=d.text;e.appendChild(s)}
+<style>html,body{margin:0;height:100%;background:BG;overflow:hidden}canvas{display:block}</style>
+</head><body><canvas id="c"></canvas><script>
+// PC ve TV'deki çizimle aynı: İngilizcenin yerini kutuyla kapatır, Türkçeyi aynı boyutta ortasına yazar.
+// OBS: Tarayıcı kaynağı, 1920x1080, oyun görüntüsünün (capture kart) tam üstüne.
+const cv=document.getElementById('c'),ctx=cv.getContext('2d'),items={};
+const FONT='600 {px}px "Segoe UI Semibold","Segoe UI",Roboto,sans-serif';
+function size(){const r=devicePixelRatio||1;cv.width=innerWidth*r;cv.height=innerHeight*r;
+ cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';ctx.setTransform(r,0,0,r,0,0);draw()}
+function wrap(t,maxW){const out=[];let cur='';for(const w of t.trim().split(/\\s+/)){const tr=cur?cur+' '+w:w;
+ if(cur&&ctx.measureText(tr).width>maxW){out.push(cur);cur=w}else cur=tr}if(cur)out.push(cur);return out.length?out:['']}
+function rrect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+ ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();ctx.fill()}
+function item(it,W,H){const [x0,y0,x1,y1]=it.rect,z=it.zone_rect||it.rect;
+ const R={l:x0*W,t:y0*H,r:x1*W,b:y1*H};R.w=R.r-R.l;R.h=R.b-R.t;
+ const zoneW=(z[2]-z[0])*W,line=Math.max(14,(it.line_h||0.035)*H),pad=line*0.28;
+ ctx.font=FONT.replace('{px}',Math.round(line*0.92*(it.font_scale||1)));
+ const maxW=it.align==='orta'?Math.max(R.w,zoneW*0.96):Math.min(zoneW,Math.max(R.w*1.15,line*12));
+ const lines=wrap(it.text,maxW-2*pad),m=ctx.measureText('Ğg'),asc=m.actualBoundingBoxAscent,fh=asc+m.actualBoundingBoxDescent;
+ const sp=fh*1.15,tw=Math.max(...lines.map(s=>ctx.measureText(s).width))+2*pad,th=sp*lines.length+2*pad-(sp-fh);
+ const bx=it.align==='sol'?R.l-pad:it.align==='sag'?R.r+pad-tw:(R.l+R.r)/2-tw/2;
+ const by=th<=R.h+2*pad?(R.t+R.b)/2-th/2:(it.anchor==='alt'?R.b+pad-th:R.t-pad);
+ const cl=Math.min(bx,R.l-pad),ct=Math.min(by,R.t-pad),cr=Math.max(bx+tw,R.r+pad),cb=Math.max(by+th,R.b+pad);
+ ctx.fillStyle='rgba(0,0,0,'+((it.box_opacity??255)/255)+')';rrect(cl,ct,cr-cl,cb-ct,pad*0.8);
+ ctx.lineJoin='round';ctx.lineWidth=Math.max(2,line*0.10);ctx.strokeStyle='#000';ctx.fillStyle='#fff';
+ let y=by+pad+asc;for(const s of lines){const w=ctx.measureText(s).width;
+  const x=it.align==='sol'?bx+pad:it.align==='sag'?bx+tw-pad-w:bx+tw/2-w/2;ctx.strokeText(s,x,y);ctx.fillText(s,x,y);y+=sp}}
+function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);for(const k in items)item(items[k],innerWidth,innerHeight)}
 function go(){const es=new EventSource('/olaylar');
- es.onmessage=m=>{const d=JSON.parse(m.data);if(d.type==='show')put(d);else if(els[d.zone]){els[d.zone].remove();delete els[d.zone]}};
- es.onerror=()=>{es.close();setTimeout(go,1000)}}
-go();
+ es.onmessage=e=>{const d=JSON.parse(e.data);if(d.type==='show')items[d.zone]=d;else delete items[d.zone];draw()};
+ es.onerror=()=>{es.close();for(const k in items)delete items[k];draw();setTimeout(go,1000)}}
+addEventListener('resize',size);size();go();
 </script></body></html>"""
 
 

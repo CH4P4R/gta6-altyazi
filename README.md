@@ -115,6 +115,14 @@ Bir Discord hesabı aynı anda tek sesli kanalda olabiliyor, bu yüzden iki hesa
 
 TV uygulamasının kaynağı `tv-android/` klasöründe. APK, GitHub Actions ile `tv-android/release/` klasörüne otomatik derlenir.
 
+## OBS ile yayın / video çekimi (capture kart kullananlar için)
+
+Program `http://localhost:8787/obs` adresinde saydam bir sayfa açar. Türkçe altyazı bu sayfada, PC ve TV'deki gibi İngilizcenin tam yerine çizilir.
+1. OBS'de **Kaynak ekle › Tarayıcı**: URL `http://localhost:8787/obs`, genişlik 1920, yükseklik 1080.
+2. Bu kaynağı capture kart kaynağının üstüne koy ve tüm sahneye yay.
+
+Bir capture kartı aynı anda genelde tek program açabilir. OBS kartı kullanırken bu programa görüntüyü vermek için OBS'de **Sanal Kamerayı Başlat**'a bas. Sonra `config.yaml`'da `kaynak.tur: capture` yap ve `capture_cihaz` olarak OBS Virtual Camera'nın numarasını yaz (`baslat.bat kameralar` listeler).
+
 ## Komutlar
 
 ```bat
