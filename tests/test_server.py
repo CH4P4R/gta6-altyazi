@@ -40,3 +40,25 @@ def test_tv_stream_delivers_fast_with_all_fields():
     srv.clear("altyazi")
     assert json.loads(f.readline()[6:]) == {"type": "clear", "zone": "altyazi"}
     c.close()
+
+
+def test_remote_command_endpoint_and_page():
+    import urllib.request
+    port = free_port()
+    calls = []
+    srv = EventServer(port, on_command=lambda ad: (calls.append(ad), {"mesaj": "ok", "duraklatildi": True})[1])
+    srv.start()
+    time.sleep(0.2)
+    req = urllib.request.Request(f"http://127.0.0.1:{port}/komut/duraklat", method="POST")
+    with urllib.request.urlopen(req, timeout=3) as r:
+        assert json.loads(r.read()) == {"mesaj": "ok", "duraklatildi": True}
+    assert calls == ["duraklat"]
+    with urllib.request.urlopen(f"http://127.0.0.1:{port}/kumanda", timeout=3) as r:
+        assert "Ekranı çevir" in r.read().decode()
+
+
+def test_hotkey_parse():
+    from altyazi.hotkeys import parse
+    assert parse("ctrl+shift+9") == (0x2 | 0x4, ord("9"))
+    assert parse("num9") == (0, 0x69)
+    assert parse("alt+F10") == (0x1, 0x79)

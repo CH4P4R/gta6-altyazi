@@ -55,7 +55,7 @@ def cmd_run(cfg) -> int:
     painter = Painter(cfg.gosterim.yazi_tipi, cfg.gosterim.gecikme_goster)
     server = None
     if cfg.sunucu.acik:
-        server = EventServer(cfg.sunucu.port, cfg.tv.kalibrasyon)
+        server = EventServer(cfg.sunucu.port, cfg.tv.kalibrasyon, on_command=lambda ad: commands(ad))
         server.start()
         if cfg.tv.ip and cfg.tv.otomatik:
             from .tv import setup_in_background
@@ -79,6 +79,21 @@ def cmd_run(cfg) -> int:
             log.warning("Ses aktarımı başlatılamadı: %s", e)
 
     pipe = Pipeline(cfg, sink, rec, engine, source, frame_sink=frame_sink)
+    if server is not None:
+        pipe.notice = server.notice
+
+    def commands(ad: str) -> dict:
+        if ad == "tam_ekran":
+            pipe.request_fullscreen()
+            return {"mesaj": "Ekran çevriliyor..."}
+        if ad == "duraklat":
+            paused = pipe.toggle_pause()
+            return {"mesaj": "Duraklatıldı" if paused else "Devam ediyor", "duraklatildi": paused}
+        return {"mesaj": f"Bilinmeyen komut: {ad}"}
+
+    from .hotkeys import Hotkeys
+    hotkeys = Hotkeys({cfg.kisayol.tam_ekran: pipe.request_fullscreen, cfg.kisayol.duraklat: pipe.toggle_pause})
+    hotkeys.start()
     pipe.start()
     log.info("Hazır. Çıkmak için bu pencerede Ctrl+C.")
     try:
@@ -86,6 +101,7 @@ def cmd_run(cfg) -> int:
     except KeyboardInterrupt:
         code = 0
     pipe.stop()
+    hotkeys.stop()
     if audio is not None:
         audio.close()
     return code

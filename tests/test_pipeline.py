@@ -87,3 +87,43 @@ def test_cache_persists(tmp_path):
     c.put("Hello there friend", "Merhaba", FAST, "yerel")          # düşük kalite üstüne yazamaz
     c2 = Cache(str(tmp_path / "c.sqlite"), 92)
     assert c2.get("hello there friend!")[0] == "Selam dostum"
+
+
+def test_fullscreen_translate_shows_blocks_and_toggles_off(tmp_path):
+    from altyazi.fullscreen import Block
+    cfg = Config(bolgeler=[BolgeCfg()])
+    sink = Sink()
+    cleared = []
+    sink.clear = cleared.append
+    p = Pipeline(cfg, sink, FakeRec("x"), make_engine(tmp_path, Echo("tr")))
+
+    class Reader:
+        def read(self, frame):
+            return [Block("Where are you?", (0.75, 0.25, 0.93, 0.32), 0.025),
+                    Block("Bring the cash.", (0.75, 0.44, 0.9, 0.51), 0.027)]
+    p._fs_reader = Reader()
+    p.request_fullscreen()
+    p.process(background(1920, 1080, 0), time.perf_counter())
+    deadline = time.time() + 2
+    while len(sink.items) < 2 and time.time() < deadline:
+        time.sleep(0.01)
+    assert sorted(i.text for i in sink.items) == ["tr:Bring the cash.", "tr:Where are you?"]
+    assert all(i.align == "sol" for i in sink.items)
+    p.request_fullscreen()                    # ikinci basış kapatır
+    assert sorted(cleared) == ["tam0", "tam1"]
+
+
+def test_pause_clears_and_skips(tmp_path):
+    cfg = Config(bolgeler=[BolgeCfg()])
+    sink = Sink()
+    cleared = []
+    sink.clear = cleared.append
+    p = Pipeline(cfg, sink, FakeRec("Get in the car."), make_engine(tmp_path, Echo("tr")))
+    p.process(draw_subtitle(background(1920, 1080, 0), ["Get in the car."]), time.perf_counter())
+    sink.ev.wait(2)
+    assert p.toggle_pause() is True and cleared == ["altyazi"]
+    n = len(sink.items)
+    p.process(draw_subtitle(background(1920, 1080, 0), ["Something else entirely now."]), time.perf_counter())
+    time.sleep(0.2)
+    assert len(sink.items) == n
+    assert p.toggle_pause() is False

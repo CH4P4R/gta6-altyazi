@@ -93,6 +93,13 @@ class Pipeline:
         self._current: dict[str, tuple[int, str, int]] = {}   # bölge -> (seq, ingilizce, gösterilen kalite)
         self._lock = threading.Lock()
         self.frames = 0
+        self.paused = False
+        self.notice = None                     # arayüze kısa bilgi mesajı: notice(str)
+        self._fs_reader = None
+        self._fs_request = False
+        self._fs_zones: list[str] = []
+        self._fs_until = 0.0
+        self._fs_busy = False
 
     # ------------------------------------------------------------------ yaşam döngüsü
     def start(self) -> None:
@@ -129,8 +136,88 @@ class Pipeline:
                 except Exception:  # noqa: BLE001
                     log.exception("Kare işlenirken hata")
 
+    # ------------------------------------------------------------- komutlar
+    def _say(self, msg: str) -> None:
+        log.info(msg)
+        if self.notice:
+            self.notice(msg)
+
+    def toggle_pause(self) -> bool:
+        self.paused = not self.paused
+        if self.paused:
+            self._clear_all()
+            self._say("Çeviri duraklatıldı")
+        else:
+            for _, det in self.zones:
+                det.reject()
+            self._say("Çeviri devam ediyor")
+        return self.paused
+
+    def request_fullscreen(self) -> None:
+        """Ekrandaki her şeyi çevir. Zaten açıksa kapatır."""
+        if self._fs_zones:
+            self._clear_fullscreen()
+            self._say("Tam ekran çeviri kapatıldı")
+        elif not self._fs_busy:
+            self._fs_request = True
+
+    def _clear_all(self) -> None:
+        with self._lock:
+            zones = list(self._current)
+            self._current.clear()
+            self._seq += 1
+        for z in zones:
+            self.sink.clear(z)
+        self._fs_zones = []
+
+    def _clear_fullscreen(self) -> None:
+        with self._lock:
+            zones, self._fs_zones = self._fs_zones, []
+            for z in zones:
+                self._current.pop(z, None)
+            self._seq += 1
+        for z in zones:
+            self.sink.clear(z)
+
+    def _run_fullscreen(self, frame: np.ndarray, t: float) -> None:
+        self._fs_busy = True
+        try:
+            self._say("Ekran çevriliyor...")
+            if self._fs_reader is None:
+                from .fullscreen import FullScreenReader
+                self._fs_reader = FullScreenReader()
+            blocks = self._fs_reader.read(frame)
+            if not blocks:
+                self._say("Ekranda çevrilecek yazı bulunamadı")
+                return
+            zones = []
+            for i, b in enumerate(blocks):
+                name = f"tam{i}"
+                zones.append(name)
+                with self._lock:
+                    self._seq += 1
+                    seq = self._seq
+                    self._current[name] = (seq, b.text, 0)
+                base = DisplayItem(zone=name, rect=b.rect, zone_rect=b.rect, line_h=b.line_h, english=b.text,
+                                   text="", align="sol", anchor="ust", box_opacity=255, font_scale=1.0, seq=seq)
+                self.engine.submit(b.text, "arayuz", lambda r, bb=base, t0=t: self._on_translation(bb, t0, r))
+            self._fs_zones = zones
+            self._fs_until = time.time() + self.cfg.kisayol.tam_ekran_sure
+            self._say(f"Ekrandaki {len(blocks)} yazı çevrildi")
+        except Exception:  # noqa: BLE001
+            log.exception("Tam ekran çeviri hatası")
+        finally:
+            self._fs_busy = False
+
     # -------------------------------------------------------------------- iş
     def process(self, frame: np.ndarray, t: float) -> None:
+        if self._fs_request:
+            self._fs_request = False
+            threading.Thread(target=self._run_fullscreen, args=(frame.copy(), t), daemon=True).start()
+        if self._fs_zones and time.time() > self._fs_until:
+            self._clear_fullscreen()
+        if self.paused:
+            return
         h, w = frame.shape[:2]
         for zcfg, det in self.zones:
             x0, y0, x1, y1 = zone_rect(zcfg, w, h)

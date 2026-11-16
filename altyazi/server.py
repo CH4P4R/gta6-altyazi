@@ -2,6 +2,7 @@
 
 http://localhost:8787/        -> siyah zeminde altyazı (TV/telefon için)
 http://localhost:8787/obs     -> saydam zeminde altyazı (OBS tarayıcı kaynağı, 1920x1080, oyun görüntüsünün üstüne)
+http://localhost:8787/kumanda -> telefondan "Ekranı çevir" / "Duraklat" düğmeleri + son altyazılar
 http://localhost:8787/olaylar -> Server-Sent Events akışı (JSON)
 """
 
@@ -54,9 +55,50 @@ addEventListener('resize',size);size();go();
 </script></body></html>"""
 
 
+REMOTE = """<!doctype html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>GTA6 Altyazı Kumanda</title>
+<meta name="theme-color" content="#0d0b14">
+<style>
+:root{--bg:#0d0b14;--card:#17131f;--line:#2a2335;--txt:#f4f1fa;--mut:#9a90ad;--a1:#ff4fa3;--a2:#ff9f43}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+ padding:16px;max-width:640px;margin:auto}
+h1{font-size:18px;margin:4px 0 14px;display:flex;align-items:center;gap:8px}
+h1 b{background:linear-gradient(90deg,var(--a1),var(--a2));-webkit-background-clip:text;color:transparent}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button{border:0;border-radius:18px;padding:22px 10px;font-size:17px;font-weight:700;color:#fff;cursor:pointer;
+ background:var(--card);border:1px solid var(--line);transition:transform .08s}
+button:active{transform:scale(.97)}
+#fs{background:linear-gradient(135deg,var(--a1),var(--a2));border:0}
+#st{color:var(--mut);font-size:13px;min-height:18px;margin:10px 2px}
+.sub{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-top:10px}
+.sub .tr{font-size:20px;font-weight:600;line-height:1.35}.sub .en{color:var(--mut);font-size:13px;margin-top:6px}
+.sub .z{font-size:11px;color:var(--a2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+</style></head><body>
+<h1>🎮 <b>GTA6 Altyazı</b> kumanda</h1>
+<div class="row"><button id="fs">📖 Ekranı çevir</button><button id="pz">⏸ Duraklat</button></div>
+<div id="st">Bağlanıyor...</div><div id="list"></div>
+<script>
+const st=document.getElementById('st'),list=document.getElementById('list'),subs={};
+async function cmd(n){st.textContent='Gönderildi...';try{const r=await fetch('/komut/'+n,{method:'POST'});
+ const j=await r.json();st.textContent=j.mesaj||'Tamam';if(n==='duraklat')pz.textContent=j.duraklatildi?'▶ Devam':'⏸ Duraklat'}
+ catch(e){st.textContent='Bilgisayara ulaşılamadı'}}
+fs.onclick=()=>cmd('tam_ekran');pz.onclick=()=>cmd('duraklat');
+function render(){list.innerHTML='';Object.values(subs).sort((a,b)=>b.t-a.t).slice(0,6).forEach(d=>{
+ const e=document.createElement('div');e.className='sub';const z=document.createElement('div');z.className='z';
+ z.textContent=d.zone.startsWith('tam')?'ekran':d.zone;const tr=document.createElement('div');tr.className='tr';tr.textContent=d.text;
+ const en=document.createElement('div');en.className='en';en.textContent=d.english||'';e.append(z,tr,en);list.appendChild(e)})}
+function go(){const es=new EventSource('/olaylar');es.onopen=()=>{st.textContent='Bağlı'};
+ es.onmessage=m=>{const d=JSON.parse(m.data);if(d.type==='show'){d.t=Date.now();subs[d.zone]=d}
+  else if(d.type==='notice'){st.textContent=d.mesaj}else delete subs[d.zone];render()};
+ es.onerror=()=>{st.textContent='Bağlantı koptu, tekrar deneniyor...';es.close();setTimeout(go,1500)}}
+go();
+</script></body></html>"""
+
+
 class EventServer:
-    def __init__(self, port: int, tv_calibration: list[float] | None = None):
+    def __init__(self, port: int, tv_calibration: list[float] | None = None, on_command=None):  # noqa: ANN001
         self.port = port
+        self.on_command = on_command   # on_command(ad) -> dict (kumanda sayfasındaki düğmeler)
         x, y, w, h = tv_calibration or [0.0, 0.0, 1.0, 1.0]
         self.tv = {"x": x, "y": y, "w": w, "h": h}
         self.clients: list[queue.Queue] = []
@@ -76,6 +118,9 @@ class EventServer:
         self.state.pop(zone, None)
         self._broadcast({"type": "clear", "zone": zone})
 
+    def notice(self, text: str) -> None:
+        self._broadcast({"type": "notice", "mesaj": text})
+
     def _broadcast(self, msg: dict) -> None:
         data = json.dumps(msg, ensure_ascii=False)
         with self.lock:
@@ -89,9 +134,34 @@ class EventServer:
             def log_message(self, *a):  # noqa: ANN002
                 pass
 
+            def _json(self, code: int, obj: dict) -> None:
+                body = json.dumps(obj, ensure_ascii=False).encode()
+                self.send_response(code)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_POST(self):  # noqa: N802
+                path = self.path.split("?")[0]
+                if path.startswith("/komut/") and srv.on_command:
+                    try:
+                        self._json(200, srv.on_command(path[len("/komut/"):]) or {})
+                    except Exception as e:  # noqa: BLE001
+                        self._json(500, {"mesaj": f"Hata: {e}"})
+                else:
+                    self.send_error(404)
+
             def do_GET(self):  # noqa: N802
                 path = self.path.split("?")[0]
-                if path in ("/", "/obs"):
+                if path in ("/kumanda", "/ekran"):
+                    body = REMOTE.encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                elif path in ("/", "/obs"):
                     body = PAGE.replace("BG", "transparent" if path == "/obs" else "#000").encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "text/html; charset=utf-8")

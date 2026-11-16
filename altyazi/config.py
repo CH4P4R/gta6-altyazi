@@ -100,6 +100,13 @@ class SunucuCfg:
 
 
 @dataclass
+class KisayolCfg:
+    tam_ekran: str = "ctrl+shift+9"   # ekrandaki her şeyi çevir (telefon, menü, harita)
+    duraklat: str = "ctrl+shift+0"    # çeviriyi duraklat / devam ettir
+    tam_ekran_sure: int = 20          # tam ekran çeviri kaç saniye ekranda kalsın
+
+
+@dataclass
 class TvCfg:
     ip: str = ""                  # Google/Android TV'nin adresi ("python -m altyazi tv bul")
     otomatik: bool = True         # program açılınca TV uygulamasını kendiliğinden başlat
@@ -118,6 +125,7 @@ class Config:
     gosterim: GosterimCfg = field(default_factory=GosterimCfg)
     sunucu: SunucuCfg = field(default_factory=SunucuCfg)
     tv: TvCfg = field(default_factory=TvCfg)
+    kisayol: KisayolCfg = field(default_factory=KisayolCfg)
 
 
 def _build(cls, data: Any, path: str):
