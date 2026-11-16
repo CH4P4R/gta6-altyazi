@@ -50,7 +50,8 @@ def test_classic_first_time_install_waits_for_approval(fake, adb_port):
     assert ["-s", serial, "shell", "appops set com.gta6altyazi.tv SYSTEM_ALERT_WINDOW allow"] in st["calls"]
     params = '{"server":"http://' + server + '"}'
     assert ["-s", serial, "shell",
-            f"am start -n com.gta6altyazi.tv/.MainActivity --es params '{params}' --es displayMode inApp"] in st["calls"]
+            f"am start -n com.gta6altyazi.tv/.MainActivity --es params '{params}' --es displayMode inApp "
+            f"--es host {server} --es mod katman"] in st["calls"]
     assert server.endswith(":8787")
 
 
@@ -95,7 +96,8 @@ def test_no_overlay_permission_falls_back_to_hdmi_mode(fake, adb_port):
     set_state, get_state = fake
     set_state(installed=True, no_overlay=True)
     tv.setup("127.0.0.1", 8787)
-    assert any(c[-1].endswith("--es displayMode inApp") for c in get_state()["calls"] if "shell" in c)
+    assert any("--es displayMode inApp" in c[-1] and c[-1].endswith("--es mod hdmi")
+               for c in get_state()["calls"] if "shell" in c)
 
 
 def test_older_tv_app_gets_updated(fake, adb_port):

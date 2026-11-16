@@ -210,7 +210,10 @@ class AndroidTv:
         """
         params = json.dumps({"server": f"http://{server}"}, separators=(",", ":"))
         display = "overlay" if mode == "katman" else "inApp"
-        self.sh(f"am start -n {PACKAGE}/.MainActivity --es params '{params}' --es displayMode {display}")
+        # host/mod: eski (0.3.x) TV uygulaması için; yeni APK derlenene kadar o da çalışsın
+        old = "katman" if mode in ("katman", "otomatik") else "hdmi"
+        self.sh(f"am start -n {PACKAGE}/.MainActivity --es params '{params}' --es displayMode {display} "
+                f"--es host {server} --es mod {old}")
 
 
 def setup(host: str, server_port: int, force_install: bool = False, on_prompt=None, adb: Adb | None = None,  # noqa: ANN001
@@ -227,7 +230,7 @@ def setup(host: str, server_port: int, force_install: bool = False, on_prompt=No
         log.info("TV uygulaması kuruluyor (TV'deki: %s, yeni: %s)...", have, want)
         tv.install()
     overlay_ok = tv.grant_overlay()
-    if mode == "katman" and not overlay_ok:
+    if not overlay_ok and mode in ("katman", "otomatik"):
         mode = "hdmi"
     server = f"{local_ip(host)}:{server_port}"
     tv.launch(server, mode)
