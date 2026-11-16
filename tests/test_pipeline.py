@@ -37,8 +37,9 @@ class Echo:
         return f"{self.name}:{text}"
 
 
-def make_engine(tmp_path, fast=None, refine=None):
-    e = TranslationEngine(CeviriCfg(hizli="yok", kalite="yok", onbellek=str(tmp_path / "c.sqlite")))
+def make_engine(tmp_path, fast=None, refine=None, wait_ms=0):
+    e = TranslationEngine(CeviriCfg(hizli="yok", kalite="yok", onbellek=str(tmp_path / "c.sqlite"),
+                                    kalite_bekleme_ms=wait_ms))
     e.fast, e.refine = fast, refine
     return e
 
@@ -160,3 +161,57 @@ def test_fullscreen_with_claude_vision_uses_ocr_boxes_and_adds_missed_text(tmp_p
     assert by_text["Neredesin? İş gece yarısı başlıyor."].rect == (0.75, 0.25, 0.93, 0.32)   # OCR'ın kesin konumu
     assert by_text["GÖREV TAMAMLANDI"].rect == (0.3, 0.4, 0.7, 0.46)                     # OCR'ın kaçırdığı yazı
     assert eng.cache.get("MISSION PASSED")[0] == "GÖREV TAMAMLANDI"
+
+
+class Fails:
+    name = "claude"
+
+    def translate(self, text, kind="", context=None):
+        raise RuntimeError("ağ hatası")
+
+
+def collect(eng, text, timeout=2.0, n=None):
+    got = []
+    eng.submit(text, "altyazi", got.append)
+    deadline = time.time() + timeout
+    while time.time() < deadline and (n is None or len(got) < n):
+        time.sleep(0.01)
+    return got
+
+
+def test_quality_first_hides_fast_when_refined_is_quick(tmp_path):
+    eng = make_engine(tmp_path, Echo("yerel"), Echo("claude", 0.05), wait_ms=300)
+    got = collect(eng, "We gonna hit the bank.", timeout=0.6)
+    assert [r.text for r in got] == ["claude:We gonna hit the bank."]
+
+
+def test_quality_first_shows_fast_when_refined_is_slow(tmp_path):
+    eng = make_engine(tmp_path, Echo("yerel"), Echo("claude", 0.6), wait_ms=150)
+    t = time.perf_counter()
+    got = collect(eng, "Get in the car.", n=2)
+    assert [r.source for r in got] == ["yerel", "claude"]
+    assert got[0].text == "yerel:Get in the car."
+    assert time.perf_counter() - t < 1.5
+
+
+def test_quality_first_shows_fast_immediately_when_refined_fails(tmp_path):
+    eng = make_engine(tmp_path, Echo("yerel"), Fails(), wait_ms=2000)
+    t = time.perf_counter()
+    got = collect(eng, "Hold on.", n=1)
+    assert [r.source for r in got] == ["yerel"] and time.perf_counter() - t < 1.0
+
+
+def test_local_model_gets_standard_english(tmp_path):
+    eng = make_engine(tmp_path, Echo("yerel"))
+    got = collect(eng, "Ain't nobody tellin' the cops nothin'.", n=1)
+    assert got[0].text == "yerel:Nobody is telling the police nothing."
+
+
+def test_slang_rules():
+    from altyazi.slang import normalize as n
+    assert n("Yo homie, we gonna hit the bank or what?") == "Yo friend, we are going to hit the bank or what?"
+    assert n("I ain't goin' back to jail.") == "I am not going back to jail."
+    assert n("Five-O! Get in the whip, Lucia!") == "Police! Get in the car, Lucia!"
+    assert n("Bet.") == "Okay."
+    assert n("GTA stands for Grand Theft Auto.") == "GTA stands for Grand Theft Auto."   # dokunulmaz
+    assert n("That ain't right.") == "That is not right."

@@ -80,6 +80,8 @@ class CeviriCfg:
     gemini_anahtar: str = ""
     deepl_anahtar: str = ""
     baglam_satir: int = 6         # yapay zekaya verilen önceki diyalog satırı sayısı
+    argo_duzelt: bool = True      # yerel modele vermeden önce sokak dilini düzgün İngilizceye çevir
+    kalite_bekleme_ms: int = 350  # kaliteli çeviri bu süre içinde gelirse yerel çeviri hiç gösterilmez (0 = kapalı)
     onbellek: str = "cache.sqlite"
     benzerlik: int = 92           # OCR küçük hata yapsa da önbellekten bulmak için (0-100)
     sozluk: dict[str, str] = field(default_factory=dict)  # zorunlu terimler: "Vice City": "Vice City"

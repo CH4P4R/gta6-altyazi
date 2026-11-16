@@ -19,11 +19,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from . import slang
 from .config import CeviriCfg
 
 log = logging.getLogger(__name__)
 
 FAST, REFINED = 1, 2
+
+
+class _Race:
+    """Kalite öncelikli mod: hızlı çeviri, kaliteli çeviri için kısa bir süre bekler."""
+
+    def __init__(self, deadline: float):
+        self.deadline = deadline
+        self.done = threading.Event()
+        self.refined_ok = False
 
 
 @dataclass
@@ -337,7 +347,7 @@ class TranslationEngine:
                            cfg.benzerlik)
         self.fast = self._make_fast(cfg)
         self.refine = self._make_refine(cfg)
-        self.fast_pool = ThreadPoolExecutor(2, thread_name_prefix="hizli")
+        self.fast_pool = ThreadPoolExecutor(4, thread_name_prefix="hizli")
         self.refine_pool = ThreadPoolExecutor(4, thread_name_prefix="kalite")
         self.context: deque[tuple[str, str]] = deque(maxlen=max(0, cfg.baglam_satir))
         self.ctx_lock = threading.Lock()
@@ -402,41 +412,59 @@ class TranslationEngine:
             self._remember(kind, text, tr)
             if q >= REFINED or not self.refine or not refine:
                 return
-        elif self.fast:
-            self.fast_pool.submit(self._run_fast, text, kind, on_result)
+            if refine:
+                self._schedule_refine(text, kind, on_result)
+            return
+        race = None
+        if self.fast and self.refine and refine and self.cfg.kalite_bekleme_ms > 0:
+            race = _Race(t0 + self.cfg.kalite_bekleme_ms / 1000)
+        if self.fast:
+            self.fast_pool.submit(self._run_fast, text, kind, on_result, race)
         if refine:
-            self._schedule_refine(text, kind, on_result)
+            self._schedule_refine(text, kind, on_result, race)
 
-    def _run_fast(self, text: str, kind: str, on_result) -> None:
+    def _run_fast(self, text: str, kind: str, on_result, race: _Race | None = None) -> None:
         t = time.perf_counter()
         try:
-            tr = self._post(self.fast.translate(text))
+            src = slang.normalize(text) if self.cfg.argo_duzelt else text
+            tr = self._post(self.fast.translate(src))
         except Exception as e:  # noqa: BLE001
             log.warning("Hızlı çeviri hatası: %s", e)
             return
         ms = (time.perf_counter() - t) * 1000
         self.cache.put(text, tr, FAST, self.fast.name)
         self._remember(kind, text, tr)
+        if race is not None:
+            remaining = race.deadline - time.perf_counter()
+            if remaining > 0:
+                race.done.wait(remaining)
+            if race.refined_ok:
+                return                      # kaliteli çeviri zamanında geldi, hızlıyı hiç gösterme
         on_result(Result(tr, self.fast.name, ms, FAST))
 
-    def _schedule_refine(self, text: str, kind: str, on_result) -> None:
+    def _schedule_refine(self, text: str, kind: str, on_result, race: _Race | None = None) -> None:
         if not self.refine:
             return
         with self.ctx_lock:
             ctx = [c for c in self.context if c[0] != text] if kind == "altyazi" else []
-        self.refine_pool.submit(self._run_refine, text, kind, ctx, on_result)
+        self.refine_pool.submit(self._run_refine, text, kind, ctx, on_result, race)
 
-    def _run_refine(self, text: str, kind: str, ctx, on_result) -> None:
+    def _run_refine(self, text: str, kind: str, ctx, on_result, race: _Race | None = None) -> None:
         t = time.perf_counter()
+        tr = None
         try:
             tr = self.refine.translate(text, kind, ctx)
         except Exception as e:  # noqa: BLE001
             log.warning("%s çeviri hatası: %s", self.refine.name, e)
-            return
         if not tr:
+            if race is not None:
+                race.done.set()             # kaliteli çeviri yok: hızlı olan hemen gösterilsin
             return
         tr = self._post(tr)
         ms = (time.perf_counter() - t) * 1000
         self.cache.put(text, tr, REFINED, self.refine.name)
         self._remember(kind, text, tr)
+        if race is not None:
+            race.refined_ok = True
+            race.done.set()
         on_result(Result(tr, self.refine.name, ms, REFINED))

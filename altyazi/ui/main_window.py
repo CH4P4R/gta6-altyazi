@@ -525,6 +525,17 @@ class TranslationPage(QWidget):
                            ("yok", "Kapalı")], c.hizli)
         fast.add(self.fast)
         fast.add(label("Yerel model ekranda ~20-50 ms'de bir çeviri gösterir.", "faint", wrap=True))
+        self.slang = QCheckBox("Argo düzeltme: \"gonna, ain't, homie\" gibi ifadeleri yerel modele düzgün İngilizce ver")
+        self.slang.setChecked(c.argo_duzelt)
+        fast.add(self.slang)
+        self.wait = QSpinBox()
+        self.wait.setRange(0, 1500)
+        self.wait.setSingleStep(50)
+        self.wait.setSuffix(" ms")
+        self.wait.setValue(c.kalite_bekleme_ms)
+        fast.add(field("Kalite öncelikli bekleme", self.wait,
+                       "Yapay zekanın çevirisi bu süre içinde gelirse yerel çeviri hiç gösterilmez; gelmezse önce yerel "
+                       "çeviri çıkar, sonra güncellenir. 0 = her zaman önce yerel."))
         fast.lay.addStretch(1)
         row.addWidget(fast, 1)
         q = Card()
@@ -612,6 +623,8 @@ class TranslationPage(QWidget):
         cfg = self.ctl.edit_config()
         c = cfg.ceviri
         c.hizli = self.fast.currentData()
+        c.argo_duzelt = self.slang.isChecked()
+        c.kalite_bekleme_ms = self.wait.value()
         c.kalite = self.qual.currentData()
         c.claude_anahtar = self.key.text().strip()
         c.claude_model = self.model.currentData()
