@@ -39,6 +39,9 @@ class WindowSource(Source):
                                "Açık pencereleri görmek için: python -m altyazi pencereler")
         self.hwnd, self.title = found
         self._control = None
+        self._crop: tuple[int, int, int, int] | None = None
+        self._crop_at = 0.0
+        self._crop_size = (0, 0)
 
     def start(self, on_frame: FrameCallback) -> None:
         from windows_capture import WindowsCapture
@@ -48,8 +51,13 @@ class WindowSource(Source):
 
             @cap.event
             def on_frame_arrived(frame, control):  # noqa: ANN001
+                buf = frame.frame_buffer
+                box = self._crop_box(buf.shape[1], buf.shape[0])
+                if box:
+                    x0, y0, x1, y1 = box
+                    buf = buf[y0:y1, x0:x1]
                 # Kütüphane tamponu yeniden kullanır, bu yüzden kopyalıyoruz (~1 ms)
-                on_frame(np.array(frame.frame_buffer, copy=True), time.perf_counter())
+                on_frame(np.array(buf, copy=True), time.perf_counter())
 
             @cap.event
             def on_closed():
@@ -72,6 +80,29 @@ class WindowSource(Source):
                 except Exception as e:  # noqa: BLE001
                     last_error = e
         raise RuntimeError(f"Pencere yakalanamadı: {last_error}")
+
+    def _crop_box(self, fw: int, fh: int) -> tuple[int, int, int, int] | None:
+        """chiaki pencere modundaysa karede başlık çubuğu ve siyah bantlar da olur. Okuma alanları ve TV'deki yazının
+        yeri oyun görüntüsüne göre hesaplandığı için kare yalnız oyun görüntüsüne kırpılır (yarım saniyede bir hesap)."""
+        from . import winutil
+
+        now = time.perf_counter()
+        if now - self._crop_at < 0.5 and self._crop_size == (fw, fh):
+            return self._crop
+        self._crop_at, self._crop_size = now, (fw, fh)
+        fb, cb = winutil.frame_bounds(self.hwnd), winutil.client_bounds(self.hwnd)
+        if not fb:
+            self._crop = None
+            return None
+        # Kare pencerenin tamamını mı (başlık çubuğu dahil) yoksa yalnız iç alanı mı kapsıyor? Orana bakarak seç.
+        captured = fb
+        if cb and cb[3] > cb[1] and fb[3] > fb[1]:
+            ar = fw / fh
+            if abs(ar - (cb[2] - cb[0]) / (cb[3] - cb[1])) < abs(ar - (fb[2] - fb[0]) / (fb[3] - fb[1])):
+                captured = cb
+        inner = winutil.video_bounds(self.hwnd)
+        self._crop = winutil.crop_in_frame(fw, fh, captured, inner) if inner else None
+        return self._crop
 
     def stop(self) -> None:
         if self._control is not None:

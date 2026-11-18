@@ -63,6 +63,57 @@ def frame_bounds(hwnd: int) -> tuple[int, int, int, int] | None:
     return rect.left, rect.top, rect.right, rect.bottom
 
 
+def client_bounds(hwnd: int) -> tuple[int, int, int, int] | None:
+    """Pencerenin iç alanı (başlık çubuğu ve kenarlıklar hariç), ekran koordinatlarında."""
+    if not IS_WIN:
+        return None
+    rect = wintypes.RECT()
+    if not ctypes.windll.user32.GetClientRect(wintypes.HWND(hwnd), ctypes.byref(rect)):
+        return None
+    pt = wintypes.POINT(0, 0)
+    ctypes.windll.user32.ClientToScreen(wintypes.HWND(hwnd), ctypes.byref(pt))
+    return pt.x, pt.y, pt.x + rect.right, pt.y + rect.bottom
+
+
+def fit_aspect(box: tuple[int, int, int, int], aspect: float = 16 / 9) -> tuple[int, int, int, int]:
+    """Kutunun ortasına sığan en büyük 16:9 alan (chiaki görüntüyü pencereye oranı bozmadan, siyah bantla sığdırır)."""
+    l, t, r, b = box
+    w, h = r - l, b - t
+    if w <= 0 or h <= 0:
+        return box
+    if w / h > aspect:                      # pencere daha geniş: sağda solda bant
+        vw = round(h * aspect)
+        x = l + (w - vw) // 2
+        return x, t, x + vw, b
+    vh = round(w / aspect)                  # pencere daha uzun: üstte altta bant
+    y = t + (h - vh) // 2
+    return l, y, r, y + vh
+
+
+def video_bounds(hwnd: int) -> tuple[int, int, int, int] | None:
+    """chiaki penceresinde oyun görüntüsünün ekrandaki yeri (başlık çubuğu ve siyah bantlar hariç)."""
+    c = client_bounds(hwnd)
+    return fit_aspect(c) if c and c[2] > c[0] and c[3] > c[1] else frame_bounds(hwnd)
+
+
+def crop_in_frame(frame_w: int, frame_h: int, captured: tuple[int, int, int, int],
+                  inner: tuple[int, int, int, int]) -> tuple[int, int, int, int] | None:
+    """Yakalanan karede (ekranda 'captured' alanını kaplar) 'inner' alanının piksel kutusu. Kırpmaya gerek yoksa None."""
+    cl, ct, cr, cb = captured
+    if cr <= cl or cb <= ct:
+        return None
+    sx, sy = frame_w / (cr - cl), frame_h / (cb - ct)
+    x0 = max(0, round((inner[0] - cl) * sx))
+    y0 = max(0, round((inner[1] - ct) * sy))
+    x1 = min(frame_w, round((inner[2] - cl) * sx))
+    y1 = min(frame_h, round((inner[3] - ct) * sy))
+    if x1 - x0 < frame_w * 0.3 or y1 - y0 < frame_h * 0.3:
+        return None                          # anlamsız sonuç: kırpma
+    if x0 <= 1 and y0 <= 1 and x1 >= frame_w - 1 and y1 >= frame_h - 1:
+        return None
+    return x0, y0, x1, y1
+
+
 def is_minimized(hwnd: int) -> bool:
     return bool(IS_WIN and ctypes.windll.user32.IsIconic(wintypes.HWND(hwnd)))
 

@@ -106,3 +106,18 @@ def test_remote_commands(ctl):
     assert ctl.command("baglan")["mesaj"].startswith("chiaki")
     QApplication.processEvents()
     assert got == ["toggle", "baglan"]
+
+
+def test_chiaki_window_crop_to_game_image():
+    """chiaki pencere modunda: başlık çubuğu ve siyah bantlar kırpılır, TV'deki yazı kaymasın."""
+    from altyazi.winutil import crop_in_frame, fit_aspect
+    # 1280x800 iç alan (16:10): üstte/altta 40 px bant, oyun 1280x720
+    assert fit_aspect((100, 131, 1380, 931)) == (100, 171, 1380, 891)
+    # 21:9 pencere: sağda solda bant
+    assert fit_aspect((0, 0, 2560, 1080)) == (320, 0, 2240, 1080)
+    # kare pencerenin tamamı (31 px başlık çubuğu dahil), ekran ölçeği 1:1
+    captured = (100, 100, 1380, 931)
+    inner = fit_aspect((100, 131, 1380, 931))
+    assert crop_in_frame(1280, 831, captured, inner) == (0, 71, 1280, 791)
+    # tam ekran 16:9: kırpma yok
+    assert crop_in_frame(1920, 1080, (0, 0, 1920, 1080), fit_aspect((0, 0, 1920, 1080))) is None

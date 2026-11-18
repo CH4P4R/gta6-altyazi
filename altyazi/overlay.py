@@ -172,7 +172,7 @@ class OverlayWindow(QWidget):
         if winutil.is_minimized(self.hwnd):
             self.hide()
             return
-        b = winutil.frame_bounds(self.hwnd)
+        b = winutil.video_bounds(self.hwnd)       # oyun görüntüsü (başlık çubuğu/siyah bant hariç): kareyle aynı alan
         if b:
             l, t, r, btm = b
             if (self.x(), self.y(), self.width(), self.height()) != (l, t, r - l, btm - t):
