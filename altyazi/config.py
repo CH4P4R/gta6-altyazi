@@ -36,6 +36,9 @@ class BolgeCfg:
     degisim_esigi: float = 0.15   # maske ne kadar değişirse "yeni metin" sayılır
     sabit_kare: int = 0           # 0 = metin değiştiği kare OCR'a gider (en hızlı)
     silme_ms: int = 200           # metin kaybolduktan sonra çeviriyi bu kadar ms sonra kaldır
+    # Aynı bölgedeki ayrı yazılar (ör. altta "Arabaya git" görev yazısı, üstünde diyalog): satırlar arası boşluk
+    # satır yüksekliğinin bu katından büyükse ayrı paragraf sayılır, ayrı çevrilir ve kendi yerine basılır
+    paragraf_boslugu: float = 0.45
     min_skor: float = 0.55        # OCR güveni bunun altındaysa gösterme
     min_satir_yuksekligi: int = 10
     kutu_opaklik: int = 255       # İngilizceyi kapatan kutunun opaklığı (0-255)

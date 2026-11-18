@@ -229,3 +229,61 @@ def test_game_idioms_normalized():
     from altyazi.slang import normalize
     assert normalize("Heads up, we got company!") == "Watch out, enemies are coming!"
     assert normalize("Shake the cops and lay low.") == "Lose the police and hide for a while."
+
+
+def test_objective_and_dialogue_are_separate_paragraphs():
+    """Altta görev yazısı, üstünde diyalog: ayrı çevrilir, ikisi tek cümle olmaz."""
+    from altyazi.pipeline import group_blocks
+    lh = 30
+    pad = lh // 4
+    def box(y, x0=300, x1=900):      # detector kutuları: satır + lh/4 pay
+        return (x0 - pad, y - pad, x1 + pad, y + lh + pad)
+    # iki satırlık diyalog (satır arası küçük), altında bir satır boşluk ve görev yazısı
+    boxes = [box(100), box(100 + lh + 8), box(100 + 2 * lh + 8 + lh)]
+    texts = ["Hurry up, they are right", "behind us!", "Go to the car."]
+    blocks = group_blocks(boxes, texts, lh)
+    assert [t for t, _ in blocks] == ["Hurry up, they are right behind us!", "Go to the car."]
+    # aynı satırdaki iki parça tek satır
+    same_row = group_blocks([box(100, 100, 300), box(102, 400, 700)], ["Press", "to enter"], lh)
+    assert [t for t, _ in same_row] == ["Press to enter"]
+
+
+def test_paragraph_keys_stay_stable():
+    from altyazi.pipeline import match_keys
+    # önce yalnız görev yazısı (altta)
+    k1 = match_keys("altyazi", {}, [(200, 240)])
+    assert k1 == ["altyazi"]
+    # diyalog üstüne çıktı: görev yazısı adını korur, diyalog yeni ad alır
+    k2 = match_keys("altyazi", {"altyazi": (200, 240)}, [(120, 190), (200, 240)])
+    assert k2 == ["altyazi.2", "altyazi"]
+    # görev yazısı kalktı, diyalog kaldı
+    k3 = match_keys("altyazi", {"altyazi.2": (120, 190), "altyazi": (200, 240)}, [(120, 190)])
+    assert k3 == ["altyazi.2"]
+
+
+def test_objective_under_dialogue_real_detector_and_ocr():
+    """Gerçek bölge tespiti ve OCR ile: diyalog (2 satır) ve altındaki görev yazısı iki ayrı paragraf."""
+    from altyazi.detector import ZoneDetector, zone_rect
+    from altyazi.ocr import Recognizer
+    from altyazi.pipeline import group_blocks
+
+    f = background(1920, 1080)
+    f = draw_subtitle(f, ["Hurry up, they are right behind us!", "Lose the cops first."], y_bottom=0.875)
+    f = draw_subtitle(f, ["Go to the car."], y_bottom=0.95, highlight="car")
+    z = BolgeCfg(ad="altyazi", alan=[0.10, 0.74, 0.90, 0.97])
+    det = ZoneDetector(z)
+    x0, y0, x1, y1 = zone_rect(z, 1920, 1080)
+    ev = None
+    for i in range(5):
+        e = det.process(f[y0:y1, x0:x1], i * 0.033)
+        if e and e.kind == "text":
+            ev = e
+            break
+    assert ev is not None
+    res = Recognizer().recognize([ln.image for ln in ev.lines])
+    texts = [r.text if r.score >= z.min_skor else "" for r in res]
+    blocks = [clean_ocr(t) for t, _ in group_blocks([ln.box for ln in ev.lines], texts, ev.line_height,
+                                                     z.paragraf_boslugu)]
+    assert len(blocks) == 2
+    assert "behind us" in blocks[0] and "Lose the cops" in blocks[0]
+    assert blocks[1] == "Go to the car."

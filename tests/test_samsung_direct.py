@@ -784,6 +784,9 @@ def test_app_dispatches_samsung_direct_or_tizen_studio(tmp_path, monkeypatch):
                 QApplication.processEvents()
                 time.sleep(0.02)
             assert c.tv_state[0] == "bagli", c.tv_state
+            for _ in range(10):                 # iş parçacığından gelen sinyaller kuyruktan teslim edilsin
+                QApplication.processEvents()
+                time.sleep(0.01)
         assert calls == [("direct", "192.168.1.50", True), ("studio", "192.168.1.50", r"C:\tizen-studio")]
         assert any(s == "onay" and "Samsung" in m for s, m in states)
     finally:

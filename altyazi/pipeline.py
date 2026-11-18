@@ -99,6 +99,62 @@ def worse_reread(old: str, new: str) -> bool:
     return _real_words(new) < _real_words(old)
 
 
+def group_blocks(boxes: list[tuple[int, int, int, int]], texts: list[str], line_h: float,
+                 gap_ratio: float = 0.45) -> list[tuple[str, tuple[int, int, int, int]]]:
+    """Satırları paragraflara ayır: [(metin, kutu)], yukarıdan aşağı.
+
+    GTA'da görev yazısı ("Arabaya git") altta dururken diyalog altyazısı onun üstüne çıkar. İkisi tek metin gibi
+    çevrilirse anlamsız bir cümle çıkıyordu. Satırlar arası boşluk büyükse ayrı paragraf sayılır.
+    Kutular OCR için yazının çevresine lh/4 pay eklenmiş hâldedir; boşluk bu payla birlikte ölçülür.
+    """
+    items = [(b, t) for b, t in zip(boxes, texts) if t]
+    items.sort(key=lambda bt: (bt[0][1], bt[0][0]))
+    # aynı satırdaki parçalar (dikeyde örtüşen) tek satır
+    rows: list[list] = []
+    for b, t in items:
+        if rows:
+            rb = rows[-1][0]
+            overlap = min(rb[3], b[3]) - max(rb[1], b[1])
+            if overlap > 0.5 * min(rb[3] - rb[1], b[3] - b[1]):
+                rows[-1][0] = (min(rb[0], b[0]), min(rb[1], b[1]), max(rb[2], b[2]), max(rb[3], b[3]))
+                rows[-1][1].append((b[0], t))
+                continue
+        rows.append([b, [(b[0], t)]])
+    blocks: list[list] = []
+    for rb, parts in rows:
+        text = " ".join(t for _, t in sorted(parts))
+        if blocks and rb[1] - blocks[-1][1][3] <= gap_ratio * line_h:
+            bb = blocks[-1][1]
+            blocks[-1][0] += " " + text
+            blocks[-1][1] = (min(bb[0], rb[0]), bb[1], max(bb[2], rb[2]), max(bb[3], rb[3]))
+        else:
+            blocks.append([text, rb])
+    return [(t, b) for t, b in blocks]
+
+
+def match_keys(zone: str, prev: dict[str, tuple[int, int]], spans: list[tuple[int, int]]) -> list[str]:
+    """Her paragrafa bölge içinde kalıcı bir ad ver: önceki karede dikeyde örtüştüğü paragrafın adı, yoksa yeni ad
+    (ilk paragraf bölgenin adını alır, sonrakiler "altyazi.2", "altyazi.3"...)."""
+    keys: list[str] = []
+    free = dict(prev)
+    for y0, y1 in spans:
+        best, best_ov = None, 0.0
+        for k, (p0, p1) in free.items():
+            ov = (min(y1, p1) - max(y0, p0)) / max(1, min(y1 - y0, p1 - p0))
+            if ov > best_ov:
+                best, best_ov = k, ov
+        if best is not None and best_ov >= 0.5:
+            keys.append(best)
+            free.pop(best)
+            continue
+        used = set(keys) | set(free)
+        name, n = zone, 2
+        while name in used:
+            name, n = f"{zone}.{n}", n + 1
+        keys.append(name)
+    return keys
+
+
 class Pipeline:
     def __init__(self, cfg: Config, sink: Sink, recognizer, engine: TranslationEngine, source=None,
                  frame_sink=None):
@@ -114,6 +170,7 @@ class Pipeline:
         self._running = False
         self._seq = 0
         self._current: dict[str, tuple[int, str, int]] = {}   # bölge -> (seq, ingilizce, gösterilen kalite)
+        self._blocks: dict[str, dict[str, tuple[int, int]]] = {}   # bölge -> {paragraf adı: (y0, y1)}
         self._lock = threading.Lock()
         self.frames = 0
         self.last_frame: np.ndarray | None = None
@@ -187,6 +244,7 @@ class Pipeline:
             self._fs_request = True
 
     def _clear_all(self) -> None:
+        self._blocks.clear()
         with self._lock:
             zones = list(self._current)
             self._current.clear()
@@ -322,38 +380,50 @@ class Pipeline:
             if ev is None:
                 continue
             if ev.kind == "clear":
-                with self._lock:
-                    self._seq += 1
-                    self._current.pop(zcfg.ad, None)
-                self.sink.clear(zcfg.ad)
+                self._drop_keys(list(self._blocks.pop(zcfg.ad, {}) or [zcfg.ad]))
                 continue
 
             t_ocr = time.perf_counter()
             results = self.rec.recognize([ln.image for ln in ev.lines])
             ocr_ms = (time.perf_counter() - t_ocr) * 1000
-            good = [r.text for r in results if r.score >= zcfg.min_skor and r.text]
-            text = clean_ocr(" ".join(good))
-            if not text or not looks_like_text(text):
+            texts = [r.text if (r.score >= zcfg.min_skor and r.text) else "" for r in results]
+            blocks = [(clean_ocr(tx), b) for tx, b in group_blocks([ln.box for ln in ev.lines], texts,
+                                                                    ev.line_height, zcfg.paragraf_boslugu)]
+            blocks = [(tx, b) for tx, b in blocks if tx and looks_like_text(tx)]
+            if not blocks:
                 det.reject()
                 continue
-            with self._lock:
-                cur = self._current.get(zcfg.ad)
-                if cur and (cur[1] == text or worse_reread(cur[1], text)):
-                    continue                      # aynı metin ya da aynı satırın daha kötü okunuşu
-                self._seq += 1
-                seq = self._seq
-                self._current[zcfg.ad] = (seq, text, 0)
+            prev = self._blocks.get(zcfg.ad, {})
+            keys = match_keys(zcfg.ad, prev, [(b[1], b[3]) for _, b in blocks])
+            self._blocks[zcfg.ad] = {k: (b[1], b[3]) for k, (_, b) in zip(keys, blocks)}
+            self._drop_keys([k for k in prev if k not in keys])
+            for key, (text, (bx0, by0, bx1, by1)) in zip(keys, blocks):
+                with self._lock:
+                    cur = self._current.get(key)
+                    if cur and (cur[1] == text or worse_reread(cur[1], text)):
+                        continue                  # aynı metin ya da aynı satırın daha kötü okunuşu
+                    self._seq += 1
+                    seq = self._seq
+                    self._current[key] = (seq, text, 0)
+                base = DisplayItem(
+                    zone=key,
+                    rect=((x0 + bx0) / w, (y0 + by0) / h, (x0 + bx1) / w, (y0 + by1) / h),
+                    zone_rect=(x0 / w, y0 / h, x1 / w, y1 / h),
+                    line_h=ev.line_height / h,
+                    english=text, text="", align=zcfg.hizalama, anchor=zcfg.capa,
+                    box_opacity=zcfg.kutu_opaklik, font_scale=zcfg.yazi_olcek, ocr_ms=ocr_ms, seq=seq,
+                )
+                self.engine.submit(text, zcfg.tur, lambda r, b=base, t0=t: self._on_translation(b, t0, r))
 
-            bx0, by0, bx1, by1 = ev.bbox
-            base = DisplayItem(
-                zone=zcfg.ad,
-                rect=((x0 + bx0) / w, (y0 + by0) / h, (x0 + bx1) / w, (y0 + by1) / h),
-                zone_rect=(x0 / w, y0 / h, x1 / w, y1 / h),
-                line_h=ev.line_height / h,
-                english=text, text="", align=zcfg.hizalama, anchor=zcfg.capa,
-                box_opacity=zcfg.kutu_opaklik, font_scale=zcfg.yazi_olcek, ocr_ms=ocr_ms, seq=seq,
-            )
-            self.engine.submit(text, zcfg.tur, lambda r, b=base, t0=t: self._on_translation(b, t0, r))
+    def _drop_keys(self, keys: list[str]) -> None:
+        if not keys:
+            return
+        with self._lock:
+            self._seq += 1
+            for k in keys:
+                self._current.pop(k, None)
+        for k in keys:
+            self.sink.clear(k)
 
     def _on_translation(self, base: DisplayItem, t_frame: float, r: Result) -> None:
         with self._lock:
