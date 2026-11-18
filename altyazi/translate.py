@@ -51,6 +51,49 @@ def normalize(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------- önbellek
+# OCR'ın birbirine karıştırdığı harfler: benzer satırı önbellekten alırken farkın bunlardan ibaret olması şartı
+_OCR_FOLD = [("rn", "m"), ("vv", "w"), ("cl", "d"), ("1", "i"), ("l", "i"), ("|", "i"), ("j", "i"), ("ı", "i"),
+             ("0", "o"), ("5", "s"), ("8", "b")]
+_NUMBER = re.compile(r"\d+(st|nd|rd|th|k|m|s)?")
+_NEGATIONS = {"not", "no", "never", "nothing", "nobody", "none", "nowhere", "neither", "nor", "without"}
+
+
+def _fold(word: str) -> str:
+    w = word.replace("'", "")
+    for a, b in _OCR_FOLD:
+        w = w.replace(a, b)
+    return w
+
+
+def _meaning(words: list[str]) -> tuple:
+    """Bir harfi farklı olsa da anlamı değiştiren şeyler: sayılar ve olumsuzluklar."""
+    nums = tuple(w for w in words if _NUMBER.fullmatch(w))
+    neg = tuple(sorted(w for w in words if w in _NEGATIONS or w.endswith("n't")))
+    return nums, neg
+
+
+def ocr_variant(a: str, b: str) -> bool:
+    """b, a'nın OCR hatalı okunmuş hali olabilir mi? (normalize edilmiş metinler)
+
+    "Go to the car" ile "Go to the bar" %92 benziyor ama başka cümle; "Frank1in" ile "Franklin" aynı cümle.
+    Kelime sayısı aynı olmalı, sayılar ve olumsuzluklar birebir aynı olmalı, farklı her kelime OCR'ın karıştırdığı
+    harflerle aynı hale gelmeli ya da (5+ harfli kelimede) tek harf eksik/fazla olmalı.
+    """
+    wa, wb = a.split(), b.split()
+    if len(wa) != len(wb) or _meaning(wa) != _meaning(wb):
+        return False
+    for x, y in zip(wa, wb):
+        if x == y or _fold(x) == _fold(y):
+            continue
+        fx, fy = _fold(x), _fold(y)
+        if min(len(fx), len(fy)) >= 5 and abs(len(fx) - len(fy)) == 1:
+            short, long_ = sorted((fx, fy), key=len)
+            if any(long_[:i] + long_[i + 1:] == short for i in range(len(long_))):
+                continue
+        return False
+    return True
+
+
 class Cache:  # noqa: D101
     def __init__(self, path: str, similarity: int):
         self.similarity = similarity
@@ -72,8 +115,11 @@ class Cache:  # noqa: D101
             return hit
         from rapidfuzz import fuzz, process
         with self.lock:
-            m = process.extractOne(key, self.keys, scorer=fuzz.ratio, score_cutoff=self.similarity)
-        return self.mem[m[0]] if m else None
+            cands = process.extract(key, self.keys, scorer=fuzz.ratio, score_cutoff=self.similarity, limit=5)
+        for cand, _score, _i in cands:
+            if ocr_variant(cand, key):
+                return self.mem[cand]
+        return None
 
     def rows(self, min_quality: int = REFINED) -> list[tuple[str, str]]:
         """(İngilizce, Türkçe) satırları (paket olarak dışa aktarmak için)."""

@@ -468,6 +468,18 @@
     el.style.minWidth = Math.round(boxWidth) + 'px';
     el.style.maxWidth = Math.round(Math.max(boxWidth, width * 0.3)) + 'px';
     var line = typeof data.line === 'number' && data.line > 0 ? data.line * height : 30;
+    // GTA6 Altyazı: 'main' altyazı alanından ayrılan paragraftır (görev yazısının üstündeki diyalog gibi). Altyazıyla
+    // aynı boyda ve İngilizceyi tam örtecek şekilde çizilir: ortalı, yazı satırın lineScale katı, kutu en az o yükseklikte.
+    if (data.main === true) {
+      el.className = 'region main';
+      el.style.fontSize = lineFont(data.line) + 'px';
+      el.style.minHeight = Math.round((box.bottom - box.top + 2 * REGION_PAD) * height) + 'px';
+      el.style.background = textBackground;
+      return;
+    }
+    el.className = 'region';
+    el.style.minHeight = '';
+    el.style.background = '';
     el.style.fontSize = Math.max(REGION_MIN_FONT, Math.min(REGION_MAX_FONT, Math.round(line * 0.9))) + 'px';
   }
 

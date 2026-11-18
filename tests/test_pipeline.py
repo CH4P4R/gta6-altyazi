@@ -56,9 +56,9 @@ def test_fast_then_refined_and_cache(tmp_path):
     assert [i.text for i in sink.items] == ["hizli:Get in the car.", "claude:Get in the car."]
     assert sink.items[0].quality == FAST and sink.items[1].quality == REFINED
     assert eng.cache.get("Get in the car") == ("claude:Get in the car.", REFINED, "claude")
-    # bir dahaki sefere OCR bir harf yanlış okusa da önbellekten kaliteli hali gelir
+    # bir dahaki sefere OCR i/l harfini karıştırsa da önbellekten kaliteli hali gelir
     got = []
-    eng.submit("Get in the cor.", "altyazi", got.append)
+    eng.submit("Get ln the car.", "altyazi", got.append)
     assert got and got[0].text == "claude:Get in the car."
 
 
@@ -287,3 +287,26 @@ def test_objective_under_dialogue_real_detector_and_ocr():
     assert len(blocks) == 2
     assert "behind us" in blocks[0] and "Lose the cops" in blocks[0]
     assert blocks[1] == "Go to the car."
+
+
+def test_wide_line_spacing_unfinished_sentence_stays_together():
+    from altyazi.pipeline import group_blocks
+    lh, pad = 30, 7
+    def box(y):
+        return (300 - pad, y - pad, 900 + pad, y + lh + pad)
+    # satır arası geniş (0.9 lh) ama ilk satırın cümlesi bitmemiş: tek paragraf
+    wide = [box(100), box(100 + lh + int(0.9 * lh) + 2 * pad)]
+    assert [t for t, _ in group_blocks(wide, ["Hurry up, they are right", "behind us!"], lh)] == \
+        ["Hurry up, they are right behind us!"]
+    # aynı boşluk, ilk cümle bitmiş: iki paragraf (diyalog + görev yazısı)
+    assert len(group_blocks(wide, ["They are behind us!", "Go to the car."], lh)) == 2
+
+
+def test_fuzzy_cache_does_not_mix_different_sentences(tmp_path):
+    c = Cache(str(tmp_path / "c.db"), 92)
+    c.put("Go to the car.", "Arabaya git.", REFINED, "t")
+    c.put("You have $500.", "500 doların var.", REFINED, "t")
+    c.put("Get in the car, Franklin.", "Arabaya bin Franklin.", REFINED, "t")
+    assert c.get("Go to the bar.") is None
+    assert c.get("You have $5000.") is None
+    assert c.get("Get in the car, Frank1in.")[0] == "Arabaya bin Franklin."

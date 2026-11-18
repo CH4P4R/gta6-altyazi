@@ -99,6 +99,9 @@ def worse_reread(old: str, new: str) -> bool:
     return _real_words(new) < _real_words(old)
 
 
+_SENT_END = re.compile(r"[.!?…:\"')\]]\s*$")
+
+
 def group_blocks(boxes: list[tuple[int, int, int, int]], texts: list[str], line_h: float,
                  gap_ratio: float = 0.45) -> list[tuple[str, tuple[int, int, int, int]]]:
     """Satırları paragraflara ayır: [(metin, kutu)], yukarıdan aşağı.
@@ -123,7 +126,11 @@ def group_blocks(boxes: list[tuple[int, int, int, int]], texts: list[str], line_
     blocks: list[list] = []
     for rb, parts in rows:
         text = " ".join(t for _, t in sorted(parts))
-        if blocks and rb[1] - blocks[-1][1][3] <= gap_ratio * line_h:
+        gap = rb[1] - blocks[-1][1][3] if blocks else 0
+        # Cümle bitmeden satır kırıldıysa ("Hurry up, they are right" / "behind us!") boşluk biraz geniş olsa da
+        # aynı paragraftır; görev yazısı hep bitmiş bir cümlenin altında durur
+        unfinished = bool(blocks) and not _SENT_END.search(blocks[-1][0])
+        if blocks and (gap <= gap_ratio * line_h or (unfinished and gap <= 1.2 * line_h)):
             bb = blocks[-1][1]
             blocks[-1][0] += " " + text
             blocks[-1][1] = (min(bb[0], rb[0]), bb[1], max(bb[2], rb[2]), max(bb[3], rb[3]))

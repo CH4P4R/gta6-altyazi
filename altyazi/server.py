@@ -176,7 +176,10 @@ class EventServer:
             f = frame("screen", {"duration": 20000, "items": [self._screen[k] for k in sorted(self._screen)]})
             self._tv_state["tam"] = f
         else:
-            f = frame("region", {"id": it.zone, "text": it.text, "box": _box(it.rect), "line": round(it.line_h, 4)})
+            data = {"id": it.zone, "text": it.text, "box": _box(it.rect), "line": round(it.line_h, 4)}
+            if it.zone.startswith(MAIN_ZONE + "."):   # altyazı alanından ayrılan paragraf: altyazı gibi büyük ve örten
+                data["main"] = True
+            f = frame("region", data)
             self._tv_state[it.zone] = f
         self._tv_send(f)
 

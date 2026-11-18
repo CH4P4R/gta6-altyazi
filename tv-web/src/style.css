@@ -81,6 +81,7 @@ html, body {
   pointer-events: none;
 }
 #regions.hidden { display: none; }
+#regions .region.main { text-align: center; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 #regions .region {
   position: absolute;
   box-sizing: border-box;

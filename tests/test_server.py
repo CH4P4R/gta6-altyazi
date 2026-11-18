@@ -154,6 +154,9 @@ def test_tv_protocol_events():
     assert name == "region" and data["id"] == "yardim"
     srv.clear("yardim")
     assert read_event() == ("region", {"id": "yardim", "text": ""})
+    srv.show(DisplayItem(zone="altyazi.2", text="Arabaya git.", seq=8, **base))
+    name, data = read_event()
+    assert name == "region" and data["main"] is True        # ayrılan paragraf TV'de altyazı boyunda
     srv.show(DisplayItem(zone="tam0", text="Harita", seq=7, **base))
     name, data = read_event()
     assert name == "screen" and data["items"][0]["text"] == "Harita"
