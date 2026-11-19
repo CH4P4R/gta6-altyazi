@@ -347,3 +347,13 @@ def test_gta6_sticky_objective_row_gets_its_own_paragraph():
     st2 = StickyRows()
     st2.update(["Hurry up, they are right", "behind us!"], 0.0)
     assert st2.update(["Hurry up, they are right", "behind us!"], 8.0) == set()
+
+
+def test_license_plates_and_bare_names_are_not_translated():
+    from altyazi.pipeline import is_plate_or_name
+    names = {"Vice City", "Jason", "Lucia"}
+    for t in ["46EEK572", "5ABC 123", "LEONIDA", "Leonida", "LUCIA1", "Vice City", "jason"]:
+        assert is_plate_or_name(t, names), t
+    for t in ["Get in the car.", "GO", "OKAY.", "Follow Lucia.", "Wanted level 2", "STOP", "I'm in Vice City.",
+              "WASTED", "BUSTED", "MISSION PASSED"]:
+        assert not is_plate_or_name(t, names), t

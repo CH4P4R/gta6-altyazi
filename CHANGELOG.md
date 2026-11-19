@@ -3,6 +3,10 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.11
+- Araç plakaları ("46EEK572", "5ABC 123") ve plakadaki eyalet yazısı ("LEONIDA") çevrilmiyor; yalnız özel addan oluşan
+  yazılar (ör. tek başına "Vice City") da çevrilmeden bırakılıyor. "Ekranı çevir"de de geçerli.
+
 ## 0.4.10
 - **Telefon mesajları için 4. okuma alanı:** sağ ortada açılan telefon/mesaj ekranı ayrıca okunup konuşma dilinde
   çevriliyor. Artık aynı anda dört yer çevriliyor: alttaki diyalog ve görev yazısı, sol üstteki yardım kutusu, sağ

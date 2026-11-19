@@ -212,6 +212,31 @@ def is_short_hud(text: str) -> bool:
     return sum(1 for w in t.split() if any(ch.isalpha() for ch in w)) <= 3
 
 
+_PLATE_TOKEN = re.compile(r"[A-Z0-9]{2,8}")
+_PLATE_WORDS = {"LEONIDA", "SAN ANDREAS", "VICE CITY", "LIBERTY CITY", "LOS SANTOS", "SUNSHINE STATE"}
+
+
+def is_plate_or_name(text: str, names: set[str] | None = None) -> bool:
+    """Araç plakası ("46EEK572", "5ABC 123", "LUCIA1") ya da plakadaki eyalet yazısı ("LEONIDA") gibi çevrilmemesi
+    gereken yazı mı? Yalnız özel adlardan oluşan satır ("Vice City", "Jason") da çevrilmez: çevirisi kendisiyle aynı."""
+    t = text.strip().strip(".,·-")
+    if not t:
+        return False
+    up = re.sub(r"\s+", " ", t.upper())
+    if up in _PLATE_WORDS:
+        return True
+    toks = t.split()
+    if 1 <= len(toks) <= 2 and all(_PLATE_TOKEN.fullmatch(x) for x in toks):
+        alnum = sum(len(x) for x in toks)
+        if 4 <= alnum <= 10 and any(ch.isdigit() for ch in t) and any(ch.isalpha() for ch in t):
+            return True                          # plaka: büyük harf + rakam, 1-2 parça, kısa ("WASTED" plaka değil)
+    if names:
+        low = {n.lower() for n in names}
+        if t.lower() in low:
+            return True
+    return False
+
+
 _SENT_END_STRICT = re.compile(r"[.!?…]\W*$")
 
 
@@ -421,6 +446,8 @@ class Pipeline:
                 from .fullscreen import FullScreenReader
                 self._fs_reader = FullScreenReader()
             blocks = self._fs_reader.read(frame)
+            names = set(self.cfg.ceviri.sozluk)
+            blocks = [b for b in blocks if not is_plate_or_name(b.text, names)]   # plakalar, yalnız özel adlar
             vision = getattr(self.engine, "can_read_screen", False) and self.cfg.kisayol.tam_ekran_gorsel
             if blocks:
                 self._show_fullscreen(blocks, t, quick=vision)
@@ -523,7 +550,9 @@ class Pipeline:
             ocr_ms = (time.perf_counter() - t_ocr) * 1000
             texts = [r.text if (r.score >= zcfg.min_skor and r.text) else "" for r in results]
             rows = [(clean_ocr(tx), b) for tx, b in rows_of([ln.box for ln in ev.lines], texts)]
-            rows = [(tx, b) for tx, b in rows if tx and not is_button_prompt(tx)]
+            names = set(self.cfg.ceviri.sozluk)
+            rows = [(tx, b) for tx, b in rows
+                    if tx and not is_button_prompt(tx) and not is_plate_or_name(tx, names)]
             sticky = self._sticky.setdefault(zcfg.ad, StickyRows()).update([tx for tx, _ in rows], t)
             blocks = [(tx, b) for tx, b, n in blocks_of(rows, ev.line_height, zcfg.paragraf_boslugu, sticky)
                       if tx and looks_like_text(tx) and not (zcfg.tur == "altyazi" and n == 1 and is_short_hud(tx))]

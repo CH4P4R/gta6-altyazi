@@ -214,7 +214,7 @@ Numbered boxes drawn on the image mark text regions an OCR engine found; each nu
 - Text inside a numbered box: use that number as id and box [0, 0, 0, 0].
 - Text with no box (stylized titles, small print the OCR missed): id -1 and its box as [x0, y0, x1, y1] in 0-1000 coordinates of the whole image.
 - Merge lines that belong to the same message, menu entry or sentence into one item; if one item spans several numbered boxes, use the first box's id.
-- Skip HUD numbers, money, ammo, clock, map place names, button glyphs, logos and text that is not English.
+- Skip HUD numbers, money, ammo, clock, map place names, vehicle license plates (and the state name on them), button glyphs, logos and text that is not English.
 
 Translation style: dialogue and messages in natural spoken Turkish (keep slang and tone, "sen" between characters); menus, objectives and notifications in concise standard Turkish game UI style, objectives in the imperative. Keep button names (X, O, L2, R1, Options) and proper names (Jason, Lucia, Vice City, Leonida...) unchanged; add Turkish suffixes with an apostrophe.{glossary}"""
 
