@@ -147,7 +147,8 @@ LG_TV = [
 SAMSUNG_TV = [
     step("TV'de Developer mode'u aç",
          ["TV'de **Uygulamalar** ekranını aç.",
-          "Kumandayla **1 2 3 4 5** yaz; Developer mode penceresi açılır.",
+          "Kumandayla **1 2 3 4 5** yaz; Developer mode penceresi açılır. Kumandanda rakam tuşu yoksa (2021 ve "
+          "sonrası ince akıllı kumanda) **123** tuşuna bas, ekranda çıkan rakamlarla yaz.",
           "**Developer mode**'u **On** yap, **Host PC IP**'ye bu bilgisayarın IP'sini yaz (program Televizyon "
           "sayfasında gösterir), **OK**'a bas.",
           "TV'yi güç tuşuna yaklaşık 2 saniye basılı tutarak yeniden başlat."],

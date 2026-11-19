@@ -472,7 +472,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 <img src="altyazi/ui/rehber/samsung-devmode.png" alt="TV'de Developer mode'u aç" width="640">
 
 1. TV'de **Uygulamalar** ekranını aç.
-2. Kumandayla **1 2 3 4 5** yaz; Developer mode penceresi açılır.
+2. Kumandayla **1 2 3 4 5** yaz; Developer mode penceresi açılır. Kumandanda rakam tuşu yoksa (2021 ve sonrası ince akıllı kumanda) **123** tuşuna bas, ekranda çıkan rakamlarla yaz.
 3. **Developer mode**'u **On** yap, **Host PC IP**'ye bu bilgisayarın IP'sini yaz (program Televizyon sayfasında gösterir), **OK**'a bas.
 4. TV'yi güç tuşuna yaklaşık 2 saniye basılı tutarak yeniden başlat.
 
