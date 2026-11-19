@@ -121,3 +121,18 @@ def test_chiaki_window_crop_to_game_image():
     assert crop_in_frame(1280, 831, captured, inner) == (0, 71, 1280, 791)
     # tam ekran 16:9: kırpma yok
     assert crop_in_frame(1920, 1080, (0, 0, 1920, 1080), fit_aspect((0, 0, 1920, 1080))) is None
+
+
+def test_old_user_config_gets_phone_zone_once(tmp_path, monkeypatch):
+    """Ayarlarını kaydetmiş kullanıcıya yeni telefon alanı bir kez eklenir; silerse geri gelmez."""
+    monkeypatch.setenv("ALTYAZI_DATA", str(tmp_path))
+    from altyazi import config
+    cfg = config.load()
+    cfg.bolgeler = [b for b in cfg.bolgeler if b.ad != "telefon"]
+    cfg.gocler = []
+    config.save(cfg)
+    again = config.load()
+    assert [b.ad for b in again.bolgeler].count("telefon") == 1 and "telefon-alani" in again.gocler
+    again.bolgeler = [b for b in again.bolgeler if b.ad != "telefon"]        # kullanıcı sildi
+    config.save(again)
+    assert "telefon" not in [b.ad for b in config.load().bolgeler]

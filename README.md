@@ -12,7 +12,7 @@
 
 <p align="center">
   <b>GTA 6'daki İngilizce yazıları canlı okuyup Türkçesini İngilizcenin tam üstüne, daha büyük yazıyla basan Windows uygulaması.</b><br>
-  Diyaloglar, sol üstteki yardım kutusu ve sağ üstteki bildirimler kendiliğinden çevrilir; menü, harita ve telefon ekranı tek tuşla.
+  Diyaloglar ve görev yazısı, sol üstteki yardım kutusu, sağ üstteki bildirimler ve sağdaki telefon mesajları aynı anda kendiliğinden çevrilir; menü ve harita tek tuşla.
 </p>
 
 <p align="center">
@@ -544,7 +544,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 
 <img src="altyazi/ui/rehber/alan-ayar.png" alt="Kutuları yazıların üstüne çek" width="640">
 
-1. **altyazi** kutusunu alttaki diyalog ve görev yazısının üstüne, **yardim**'ı sol üstteki yardım kutusuna, **bildirim**'i sağ üstteki bildirimlere oturt.
+1. **altyazi** kutusunu alttaki diyalog ve görev yazısının üstüne, **yardim**'ı sol üstteki yardım kutusuna, **bildirim**'i sağ üstteki bildirimlere, **telefon**'u sağda açılan telefon/mesaj ekranına oturt.
 2. **Algılanan yazıyı kırmızı göster** açıkken kırmızı noktalar yazının üstünde toplanıyorsa ayar doğrudur.
 3. **Kaydet**'e bas.
 

@@ -191,7 +191,7 @@ GTA6_ALAN = [
          img="alan-ayar"),
     step("Kutuları yazıların üstüne çek",
          ["**altyazi** kutusunu alttaki diyalog ve görev yazısının üstüne, **yardim**'ı sol üstteki yardım kutusuna, "
-          "**bildirim**'i sağ üstteki bildirimlere oturt.",
+          "**bildirim**'i sağ üstteki bildirimlere, **telefon**'u sağda açılan telefon/mesaj ekranına oturt.",
           "**Algılanan yazıyı kırmızı göster** açıkken kırmızı noktalar yazının üstünde toplanıyorsa ayar doğrudur.",
           "**Kaydet**'e bas."],
          img="alan-ayar"),

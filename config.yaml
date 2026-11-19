@@ -45,6 +45,13 @@ bolgeler:
     capa: ust
     silme_ms: 300
 
+  - ad: telefon                  # sağ ortada açılan telefon / mesaj ekranı
+    alan: [0.66, 0.33, 1.00, 0.78]
+    tur: altyazi                 # mesajlar konuşma dilinde çevrilir
+    hizalama: sag
+    capa: ust
+    silme_ms: 400
+
 ocr:
   gpu: true
 

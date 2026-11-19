@@ -157,6 +157,7 @@ class Config:
     tv: TvCfg = field(default_factory=TvCfg)
     kisayol: KisayolCfg = field(default_factory=KisayolCfg)
     otomatik: OtomatikCfg = field(default_factory=OtomatikCfg)
+    gocler: list[str] = field(default_factory=list)   # uygulanmış ayar göçleri (yeni sürümün getirdiği varsayılanlar)
 
 
 def _build(cls, data: Any, path: str):
@@ -204,7 +205,18 @@ def load(path: str | Path | None = None) -> Config:
     local = Path(layers[-1]).with_name("config.local.yaml")
     if local.exists():
         _merge(data, yaml.safe_load(local.read_text(encoding="utf-8")) or {})
-    return _build(Config, data, "config")
+    cfg = _build(Config, data, "config")
+    _migrate(cfg)
+    return cfg
+
+
+def _migrate(cfg: Config) -> None:
+    """Kaydedilmiş ayarları olan kullanıcıya yeni sürümün getirdiği varsayılanları bir kez ekle."""
+    if "telefon-alani" not in cfg.gocler:
+        cfg.gocler.append("telefon-alani")
+        if not any(b.ad == "telefon" for b in cfg.bolgeler) and any(b.ad == "bildirim" for b in cfg.bolgeler):
+            cfg.bolgeler.append(BolgeCfg(ad="telefon", alan=[0.66, 0.33, 1.0, 0.78], tur="altyazi", hizalama="sag",
+                                         capa="ust", silme_ms=400))
 
 
 def to_dict(cfg) -> dict:  # noqa: ANN001

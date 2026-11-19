@@ -3,6 +3,12 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.10
+- **Telefon mesajları için 4. okuma alanı:** sağ ortada açılan telefon/mesaj ekranı ayrıca okunup konuşma dilinde
+  çevriliyor. Artık aynı anda dört yer çevriliyor: alttaki diyalog ve görev yazısı, sol üstteki yardım kutusu, sağ
+  üstteki bildirimler ve sağdaki telefon mesajları. Okuma alanlarında "Sağ orta (telefon mesajları)" hazır konumu da var.
+- Bu sürüm, uygulama içi güncellemenin ilk denemesi: 0.4.9'dan ana ekrandaki Güncelle düğmesiyle gelir.
+
 ## 0.4.9 · Paketler bizde, güncellemeler otomatik
 - **Uygulama kendini güncelliyor:** yeni sürüm çıkınca ana ekranda "Yeni sürüm hazır" kartı; Güncelle'ye basınca iner,
   kendiliğinden kurulur ve program yeniden açılır. Ayarlar, anahtarlar ve paketler korunur. Bundan sonraki
