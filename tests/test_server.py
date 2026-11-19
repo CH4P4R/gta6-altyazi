@@ -95,7 +95,9 @@ def test_claude_read_screen_request_shape(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "127.0.0.1")
     from altyazi.config import CeviriCfg
     from altyazi.translate import ClaudeMT
+    from altyazi.harcama import tracker
     m = ClaudeMT(CeviriCfg(claude_anahtar="test"))
+    before = tracker.requests
     items = m.read_screen(b"\xff\xd8fakejpeg", [(0, "Go to the cor.")])
     assert items == [{"id": 0, "english": "Go to the car.", "turkish": "Arabaya git.", "box": [0, 0, 0, 0]}]
     b = seen["body"]
@@ -105,6 +107,7 @@ def test_claude_read_screen_request_shape(monkeypatch):
     assert b["output_config"]["format"]["type"] == "json_schema"
     assert b["output_config"]["format"]["schema"]["required"] == ["items"]
     assert b["speed"] == "fast" and b["fallbacks"] == "default"
+    assert tracker.requests == before + 1                    # yanıtın token sayısı harcama sayacına yazıldı
     srv.shutdown()
 
 

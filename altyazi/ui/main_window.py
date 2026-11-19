@@ -85,7 +85,16 @@ class HomePage(QWidget):
         self.lat_sub = label("ortalama gecikme", "faint")
         self.spark = Sparkline()
         self.spark.setFixedWidth(210)
-        right = vbox(hbox(self.lat, label("ms", "muted"), None, spacing=4), self.lat_sub, self.spark, spacing=2)
+        # Claude harcama sayacı (kalite katmanı Claude ise görünür)
+        self.spend = label("", "muted")
+        self.spend_sub = label("", "faint")
+        tip = ("Claude'un her yanıtta bildirdiği token sayısı × Anthropic liste fiyatı. Önbellekten ve hazır paketten\n"
+               "gelen çeviriler ücretsizdir. Kesin fatura: console.anthropic.com › Billing.")
+        self.spend.setToolTip(tip)
+        self.spend_sub.setToolTip(tip)
+        self.spend_box = vbox(8, self.spend, self.spend_sub, spacing=0)
+        right = vbox(hbox(self.lat, label("ms", "muted"), None, spacing=4), self.lat_sub, self.spark,
+                     self.spend_box, spacing=2)
         hero.add(hbox(self.start, 18, left, None, right, spacing=10))
         root.addWidget(hero)
 
@@ -130,6 +139,11 @@ class HomePage(QWidget):
         ctl.sourceStatus.connect(self.on_source)
         ctl.tvStatus.connect(self.on_tv)
         ctl.enginesReady.connect(self.on_engines)
+        ctl.spendChanged.connect(self.on_spend)
+        self._spend_timer = QTimer(self)               # saatlik ortalama zamanla değişir
+        self._spend_timer.timeout.connect(self.on_spend)
+        self._spend_timer.start(30000)
+        self.on_spend()
         self.on_state(ctl.state)
         self.on_tv(*ctl.tv_state)
         if ctl.engine_info:
@@ -224,6 +238,19 @@ class HomePage(QWidget):
         parts.append(f"Kalite: {info['kalite']}" if info.get("kalite") else "Kalite katmanı kapalı")
         ok = bool(info.get("hizli") or info.get("kalite"))
         self.c_eng.set("ok" if ok else "bad", "\n".join(parts))
+        self.on_spend()
+
+    def on_spend(self) -> None:
+        from ..harcama import money, tracker
+        claude = (self.ctl.engine_info.get("kalite") == "claude") or tracker.total > 0
+        for w in (self.spend, self.spend_sub):
+            w.setVisible(claude)
+        if not claude:
+            return
+        rate = tracker.hourly()
+        self.spend.setText(f"Claude: bu oturum {money(tracker.session)}"
+                           + (f" · saatte ~{money(rate)}" if rate is not None else ""))
+        self.spend_sub.setText(f"Bu ay {money(tracker.month())} · toplam {money(tracker.total)}")
 
 
 # ============================================================================ Alanlar

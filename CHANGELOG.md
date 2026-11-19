@@ -3,6 +3,12 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.13
+- **Claude harcama sayacı:** ana ekranda gecikmenin altında "Claude: bu oturum 0,37 $ · saatte ~0,90 $" ve
+  "Bu ay … · toplam …". Claude'un her yanıtta bildirdiği token sayısıyla Anthropic liste fiyatından hesaplanır
+  (hızlı mod, önbellek ve "Ekranı çevir" dahil); hazır paketten ve önbellekten gelen çeviriler ücretsiz sayılır.
+  Toplam bu bilgisayarda saklanır; kesin fatura console.anthropic.com'dadır.
+
 ## 0.4.12
 - **Yardım kutusu alanı aşağı uzatıldı:** GTA 6'da sol üstteki yardım kutusu köşede değil biraz aşağıda çıkıyor; eski
   alan uzun kutuların son satırını kesiyordu. Alan artık ekranın ortasına kadar iniyor. Okuma alanlarını elle

@@ -60,6 +60,7 @@ class AppController(QObject):
     packCatalog = Signal(list)            # CouchSubs paket sunucusundaki paketler [{id, title, entries, ...}]
     updateAvailable = Signal(dict)        # uygulamanın yeni sürümü: {version, url, size, notes}
     updateProgress = Signal(float)        # güncelleme indirme ilerlemesi (0..1; -1 hata)
+    spendChanged = Signal()               # Claude harcama sayacı değişti (harcama.tracker)
     _uiCommand = Signal(str)              # başka iş parçacıklarından gelen ve ana iş parçacığında yapılması gereken işler
 
     def __init__(self, cfg: config_mod.Config):
@@ -83,6 +84,9 @@ class AppController(QObject):
         self._ps5_busy = False
         self.ps5_state: str = ""          # "acik" | "uykuda" | "" (bilinmiyor)
         self._uiCommand.connect(self._run_ui_command, Qt.QueuedConnection)
+        from . import harcama, paths
+        harcama.tracker.load(paths.data("harcama.json"))
+        harcama.tracker.listener = self.spendChanged.emit
         self._start_server()
         self._start_hotkeys()
         self._src_timer = QTimer(self)
@@ -669,6 +673,8 @@ class AppController(QObject):
         return packs.export_cache(self.engine.cache.rows(), Path(dest))
 
     def shutdown(self) -> None:
+        from .harcama import tracker
+        tracker.save()
         self.stop()
         if self.hotkeys:
             self.hotkeys.stop()

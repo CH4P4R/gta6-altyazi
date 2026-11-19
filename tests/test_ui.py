@@ -32,6 +32,12 @@ def test_main_window_and_wizard_build(tmp_path, monkeypatch):
     ctl.show(it)
     app.processEvents()
     assert 1 in win.pages["home"].items
+    from altyazi.harcama import tracker
+    tracker.add("claude-opus-5-5", {"input_tokens": 300, "output_tokens": 60, "speed": "fast"})
+    app.processEvents()
+    home = win.pages["home"]
+    assert home.spend.text().startswith("Claude: bu oturum") and "toplam" in home.spend_sub.text()
+    assert (tmp_path / "harcama.json").exists() or tracker.path is not None
     assert win.pages["history"].table.rowCount() == 1
     wiz = Wizard(ctl, win)
     from altyazi.ui.wizard import P_PS5, P_TV, REHBER, STEPS

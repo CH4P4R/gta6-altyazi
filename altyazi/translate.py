@@ -316,15 +316,26 @@ class ClaudeMT:
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
         )
+        return self._create(kwargs)
+
+    def _create(self, kwargs: dict):
+        """İsteği gönder (hızlı mod limiti dolarsa normal hızla) ve maliyetini harcama sayacına yaz."""
+        from .harcama import tracker
+
         if self.fast:
             kwargs["speed"] = "fast"
         try:
-            return self.client.beta.messages.create(**kwargs)
+            r = self.client.beta.messages.create(**kwargs)
         except self.anthropic.RateLimitError:
             if not self.fast:
                 raise
             kwargs.pop("speed")  # hızlı modun ayrı limiti doldu: normal hızla dene
-            return self.client.beta.messages.create(**kwargs)
+            r = self.client.beta.messages.create(**kwargs)
+        try:
+            tracker.add(getattr(r, "model", self.model), getattr(r, "usage", None))
+        except Exception:  # noqa: BLE001
+            log.exception("Harcama hesaplanamadı")
+        return r
 
     def read_screen(self, jpeg: bytes, regions: list[tuple[int, str]]) -> list[dict]:
         """Ekran görüntüsündeki yazıları Claude okusun ve çevirsin (tam ekran çeviri için)."""
@@ -345,15 +356,7 @@ class ClaudeMT:
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
         )
-        if self.fast:
-            kwargs["speed"] = "fast"
-        try:
-            r = self.client.beta.messages.create(**kwargs)
-        except self.anthropic.RateLimitError:
-            if not self.fast:
-                raise
-            kwargs.pop("speed")
-            r = self.client.beta.messages.create(**kwargs)
+        r = self._create(kwargs)
         if r.stop_reason == "refusal":
             return []
         text = next((b.text for b in r.content if b.type == "text"), "")
