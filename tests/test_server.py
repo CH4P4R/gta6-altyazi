@@ -164,3 +164,54 @@ def test_tv_protocol_events():
     assert read_event()[0] == "screen-clear"
     srv.clear("altyazi")
     assert read_event()[0] == "clear"
+
+
+class _Resp:
+    def __init__(self, code, data=None, text=""):
+        self.status_code, self._data, self.text = code, data or {}, text
+
+    def json(self):
+        return self._data
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(self.status_code)
+
+
+def test_gemini_rest_request_and_model_fallback():
+    """Gemini SDK'sız çalışır (kurulumda ek paket yok); eskimiş model adında sıradakine geçer."""
+    from altyazi.config import CeviriCfg
+    from altyazi.translate import GeminiMT
+    mt = GeminiMT(CeviriCfg(gemini_anahtar="k", gemini_model="eski-model"))
+    calls = []
+
+    def post(url, json=None, timeout=None):
+        calls.append((url, json))
+        if "eski-model" in url:
+            return _Resp(404)
+        return _Resp(200, {"candidates": [{"content": {"parts": [{"text": "Arabaya bin."}]}}]})
+    mt.s.post = post
+    assert mt.translate("Get in the car.", "altyazi") == "Arabaya bin."
+    assert "gemini-flash-latest:generateContent" in calls[-1][0]
+    body = calls[-1][1]
+    assert body["generationConfig"]["thinkingConfig"] == {"thinkingBudget": 0}
+    assert "Get in the car." in body["contents"][0]["parts"][0]["text"]
+    assert "Grand Theft Auto" in body["systemInstruction"]["parts"][0]["text"]
+    assert mt.s.headers["x-goog-api-key"] == "k"
+
+
+def test_local_ai_openai_compatible():
+    from altyazi.config import CeviriCfg
+    from altyazi.translate import LocalAIMT, TranslationEngine
+    mt = LocalAIMT(CeviriCfg(yerelai_adres="http://localhost:11434/v1/", yerelai_model="qwen2.5:7b"))
+    seen = {}
+
+    def post(url, json=None, timeout=None):
+        seen.update(url=url, body=json)
+        return _Resp(200, {"choices": [{"message": {"content": "<think>hmm</think>\nArabaya bin."}}]})
+    mt.s.post = post
+    assert mt.translate("Get in the car.", "altyazi") == "Arabaya bin."
+    assert seen["url"] == "http://localhost:11434/v1/chat/completions"
+    assert seen["body"]["model"] == "qwen2.5:7b" and seen["body"]["messages"][0]["role"] == "system"
+    # anahtarsız da kalite katmanı olarak açılır
+    assert isinstance(TranslationEngine._make_refine(CeviriCfg(kalite="yerelai")), LocalAIMT)

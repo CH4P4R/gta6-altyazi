@@ -46,7 +46,10 @@ Altta görev yazısı ("Go to the car.") dururken diyalog onun üstüne çıksa 
 Daha önce görülen ya da pakette olan satır anında, yeni satır çoğunlukla yarım saniyenin altında gelir.
 
 **🧠 İki katmanlı çeviri**<br>
-Ekran kartındaki yerel model hız garantisi verir; Claude argoyu, küfrü ve esprileri koruyarak doğal Türkçeye çevirir. Önceki diyaloglar bağlam olarak gider, isimler (Jason, Lucia, Vice City) çevrilmez.
+Ekran kartındaki yerel model hız garantisi verir; üstündeki yapay zekâ argoyu, küfrü ve esprileri koruyarak doğal Türkçeye çevirir. Önceki diyaloglar bağlam olarak gider, isimler (Jason, Lucia, Vice City) çevrilmez.
+
+**🆓 Ücretsiz kullanılabilir**<br>
+Yerel model hep ücretsiz. Yapay zekâ için Claude'un yanında ücretsiz seçenekler var: Google Gemini (ücretsiz anahtar), DeepL Free ya da bilgisayarda çalışan Ollama.
 
 **🖥️ Ekranın tamamı tek tuşla**<br>
 Ctrl+Shift+9: menü, harita, telefon mesajı, tabela... Claude ekranı görerek okur.
@@ -143,7 +146,7 @@ Her çevirinin süresi uygulamanın ana ekranında ve oyunun sağ üstünde gör
 Kurulumun içinde her şey var: yerel çeviri modeli (internetsiz çalışır), OCR, TV uygulamaları ve TV'ye kurmak için gereken araçlar. Ayrıca bir şey indirmen gerekmez.
 
 > [!NOTE]
-> Claude anahtarını [console.anthropic.com](https://console.anthropic.com/settings/keys)'dan alırsın. Anahtar sadece senin bilgisayarında saklanır. Anahtar girmezsen uygulama yalnızca yerel modelle çalışır.
+> Yapay zekâ anahtarı isteğe bağlı: ücretsiz [Gemini anahtarı](https://aistudio.google.com/apikey), [DeepL API Free](https://www.deepl.com/pro-api), anahtarsız [Ollama](https://ollama.com/download) ya da ücretli [Claude](https://console.anthropic.com/settings/keys). Anahtar sadece senin bilgisayarında saklanır. Hiçbirini girmezsen uygulama yerel modelle ücretsiz çalışır.
 
 ## 🗺️ Kurulum yolculuğu
 
@@ -189,6 +192,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 | 💬 [Discord'da arkadaşlarına yayın](#rehber-discord) | Arkadaşların Türkçe altyazılı izlesin. |
 | 🎥 [OBS ile yayın](#rehber-obs) | Türkçe altyazıyı OBS'de oyunun üstüne koy. |
 | 🎯 [GTA 6 için okuma alanlarını ayarla](#rehber-gta6) | Kutuları gerçek altyazının üstüne oturt (5 dakika). |
+| 🆓 [Ücretsiz çeviri (Gemini, DeepL, Ollama)](#rehber-ucretsiz) | Claude şart değil: ücretsiz yapay zekâ seçenekleri ve arkadaşlarla paylaşım. |
 | 📦 [Hazır çeviri paketleri](#rehber-paketler) | GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş. |
 | 🧰 [Sorun giderme](#rehber-sorunlar) | TV bağlanmıyor, altyazı çıkmıyor, yazı kayık... |
 
@@ -545,6 +549,54 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 
 </details>
 
+<a name="rehber-ucretsiz"></a>
+<details>
+<summary><b>🆓 Ücretsiz çeviri (Gemini, DeepL, Ollama)</b> · Claude şart değil: ücretsiz yapay zekâ seçenekleri ve arkadaşlarla paylaşım.</summary>
+
+#### Adım 1: Yerel model zaten ücretsiz
+
+1. Hiçbir şey yapmasan da ekran kartındaki yerel model çevirir: internetsiz, ücretsiz ve anında.
+2. Daha doğal Türkçe için üstüne aşağıdaki ücretsiz yapay zekâlardan birini ekleyebilirsin.
+
+> Herkes kendi anahtarını kullanır; kimse başkasının çevirisini ödemez. Claude şart değil.
+
+#### Adım 2: Google Gemini (ücretsiz anahtar)
+
+1. **Anahtar al**'a bas, Google hesabınla gir ve **Create API key**'e bas.
+2. Programda **Çeviri** sayfasında kalite katmanını **Google Gemini** seç, anahtarı yapıştır, **Kaydet**'e bas.
+
+🔗 [Anahtar al](https://aistudio.google.com/apikey)
+
+> Ücretsiz kotası oyun oynamak için genelde yeter.
+
+#### Adım 3: DeepL (ücretsiz plan)
+
+1. DeepL'in sayfasında **DeepL API Free** planına üye ol (kart bilgisi ister, ücret almaz).
+2. Hesap sayfasındaki anahtarı kopyala (sonu **:fx** ile biter).
+3. Programda kalite katmanını **DeepL** seç, anahtarı yapıştır, **Kaydet**'e bas.
+
+🔗 [DeepL API sayfası](https://www.deepl.com/pro-api)
+
+> Ayda 500 bin karaktere kadar ücretsiz.
+
+#### Adım 4: Yerel yapay zekâ (Ollama, tamamen ücretsiz)
+
+1. **Ollama**'yı indirip kur.
+2. Komut satırında (PowerShell) **ollama pull qwen2.5:7b** yaz, modelin inmesini bekle.
+3. Programda kalite katmanını **Yerel yapay zekâ** seç; adres **http://localhost:11434/v1**, model **qwen2.5:7b** olarak gelir. **Kaydet**'e bas.
+
+🔗 [Ollama'yı indir](https://ollama.com/download)
+
+> Anahtar, kota ve ücret yok; altyazı bilgisayardan çıkmaz. Ekran kartı varsa bir satır 1-2 saniyede gelir.
+
+#### Adım 5: Arkadaşlarınla çevirileri paylaş
+
+1. Biri Claude ya da Gemini ile oynadıkça çeviriler önbelleğe birikir.
+2. **Çeviri** sayfasında **Önbelleği paket olarak kaydet** ile dosya yapıp arkadaşlarına at.
+3. Onlar **Paket ekle** ile yükler; o satırlar onlarda da aynı kalitede, anında ve ücretsiz çıkar.
+
+</details>
+
 <a name="rehber-paketler"></a>
 <details>
 <summary><b>📦 Hazır çeviri paketleri</b> · GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş.</summary>
@@ -638,9 +690,9 @@ Evet. Yerel model, OCR ve paketler internetsiz çalışır. Claude ve "ekranı �
 </details>
 
 <details>
-<summary><b>Claude'un maliyeti ne olur?</b></summary>
+<summary><b>Para ödemem gerekiyor mu? Claude şart mı?</b></summary>
 
-Claude'a yalnızca daha önce görülmemiş satırlar gider; önbellekte ya da pakette olan satırlar ücretsizdir. Oynadıkça önbellek büyür ve maliyet düşer. Kullanım Anthropic hesabından ücretlendirilir.
+Hayır. Yerel model hep ücretsiz çalışır. Daha doğal Türkçe için ücretsiz seçenekler var: Google Gemini (ücretsiz anahtar), DeepL Free (ayda 500 bin karakter) ya da bilgisayarında çalışan Ollama (anahtar ve kota yok). Claude en iyi kaliteyi verir ama ücretlidir: yalnızca daha önce görülmemiş satırlar gider, önbellekte ya da pakette olanlar ücretsizdir. Herkes kendi anahtarını kullanır; kimse başkasının çevirisini ödemez. Ayrıntılar: [Ücretsiz çeviri rehberi](#rehber-ucretsiz).
 
 </details>
 

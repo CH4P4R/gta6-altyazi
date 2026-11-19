@@ -15,6 +15,9 @@ import re
 CHIAKI_DOWNLOAD = "https://github.com/streetpea/chiaki-ng/releases"
 PSN_SIGNUP = "https://www.playstation.com/tr-tr/playstation-network/"
 CLAUDE_KEYS = "https://console.anthropic.com/settings/keys"
+GEMINI_KEYS = "https://aistudio.google.com/apikey"
+DEEPL_SIGNUP = "https://www.deepl.com/pro-api"
+OLLAMA_DOWNLOAD = "https://ollama.com/download"
 NUMS = "①②③④⑤⑥⑦⑧⑨"
 
 
@@ -204,6 +207,33 @@ PAKETLER = [
           "Arkadaşların bu dosyayı **Paket ekle** ile yükler."]),
 ]
 
+UCRETSIZ = [
+    step("Yerel model zaten ücretsiz",
+         ["Hiçbir şey yapmasan da ekran kartındaki yerel model çevirir: internetsiz, ücretsiz ve anında.",
+          "Daha doğal Türkçe için üstüne aşağıdaki ücretsiz yapay zekâlardan birini ekleyebilirsin."],
+         note="Herkes kendi anahtarını kullanır; kimse başkasının çevirisini ödemez. Claude şart değil."),
+    step("Google Gemini (ücretsiz anahtar)",
+         ["**Anahtar al**'a bas, Google hesabınla gir ve **Create API key**'e bas.",
+          "Programda **Çeviri** sayfasında kalite katmanını **Google Gemini** seç, anahtarı yapıştır, **Kaydet**'e bas."],
+         note="Ücretsiz kotası oyun oynamak için genelde yeter.", link=("Anahtar al", GEMINI_KEYS)),
+    step("DeepL (ücretsiz plan)",
+         ["DeepL'in sayfasında **DeepL API Free** planına üye ol (kart bilgisi ister, ücret almaz).",
+          "Hesap sayfasındaki anahtarı kopyala (sonu **:fx** ile biter).",
+          "Programda kalite katmanını **DeepL** seç, anahtarı yapıştır, **Kaydet**'e bas."],
+         note="Ayda 500 bin karaktere kadar ücretsiz.", link=("DeepL API sayfası", DEEPL_SIGNUP)),
+    step("Yerel yapay zekâ (Ollama, tamamen ücretsiz)",
+         ["**Ollama**'yı indirip kur.",
+          "Komut satırında (PowerShell) **ollama pull qwen2.5:7b** yaz, modelin inmesini bekle.",
+          "Programda kalite katmanını **Yerel yapay zekâ** seç; adres **http://localhost:11434/v1**, model "
+          "**qwen2.5:7b** olarak gelir. **Kaydet**'e bas."],
+         note="Anahtar, kota ve ücret yok; altyazı bilgisayardan çıkmaz. Ekran kartı varsa bir satır 1-2 saniyede gelir.",
+         link=("Ollama'yı indir", OLLAMA_DOWNLOAD)),
+    step("Arkadaşlarınla çevirileri paylaş",
+         ["Biri Claude ya da Gemini ile oynadıkça çeviriler önbelleğe birikir.",
+          "**Çeviri** sayfasında **Önbelleği paket olarak kaydet** ile dosya yapıp arkadaşlarına at.",
+          "Onlar **Paket ekle** ile yükler; o satırlar onlarda da aynı kalitede, anında ve ücretsiz çıkar."]),
+]
+
 SORUNLAR = [
     step("TV bilgisayara bağlanamıyor",
          ["**Televizyon** sayfasında **Bağlantı izni › İzin ver**'e bas (Windows bir kez \"Evet\" ister).",
@@ -247,6 +277,8 @@ GUIDES: list[dict] = [
      "summary": "Türkçe altyazıyı OBS'de oyunun üstüne koy.", "steps": OBS},
     {"key": "gta6", "icon": "regions", "title": "GTA 6 için okuma alanlarını ayarla",
      "summary": "Kutuları gerçek altyazının üstüne oturt (5 dakika).", "steps": GTA6_ALAN},
+    {"key": "ucretsiz", "icon": "translate", "title": "Ücretsiz çeviri (Gemini, DeepL, Ollama)",
+     "summary": "Claude şart değil: ücretsiz yapay zekâ seçenekleri ve arkadaşlarla paylaşım.", "steps": UCRETSIZ},
     {"key": "paketler", "icon": "translate", "title": "Hazır çeviri paketleri",
      "summary": "GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş.", "steps": PAKETLER},
     {"key": "sorunlar", "icon": "settings", "title": "Sorun giderme",

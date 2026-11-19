@@ -17,7 +17,7 @@ from altyazi import rehber  # noqa: E402
 
 START, END = "<!-- REHBER:BASLA -->", "<!-- REHBER:BITIS -->"
 EMOJI = {"monitor": "🖥️", "tv-izle": "📺", "google-tv": "🤖", "lg": "📺", "samsung": "📺", "discord": "💬",
-         "obs": "🎥", "gta6": "🎯", "paketler": "📦", "sorunlar": "🧰"}
+         "obs": "🎥", "gta6": "🎯", "ucretsiz": "🆓", "paketler": "📦", "sorunlar": "🧰"}
 
 
 def render() -> str:

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import sqlite3
 import threading
@@ -351,26 +352,71 @@ class ClaudeMT:
 
 
 class GeminiMT:
+    """Google Gemini (ücretsiz anahtar: aistudio.google.com/apikey). SDK'sız, düz HTTP ile: kuruluma ek paket gerekmez."""
+
     name = "gemini"
+    URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     def __init__(self, cfg: CeviriCfg):
-        from google import genai
-        from google.genai import types
+        import requests
 
-        self.types = types
-        self.client = genai.Client(api_key=cfg.gemini_anahtar or None)
-        self.model = cfg.gemini_model
+        key = cfg.gemini_anahtar or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
+        self.s = requests.Session()
+        self.s.headers.update({"x-goog-api-key": key, "Content-Type": "application/json"})
+        self.models = list(dict.fromkeys([cfg.gemini_model, "gemini-flash-latest", "gemini-2.5-flash"]))
+        self.system = SYSTEM_PROMPT.format(glossary=_glossary_text(cfg.sozluk))
+        self.thinking_off = True
+
+    def _body(self, text: str, kind: str, context) -> dict:  # noqa: ANN001
+        gen = {"temperature": 0.3, "maxOutputTokens": 512}
+        if self.thinking_off:
+            gen["thinkingConfig"] = {"thinkingBudget": 0}
+        return {"systemInstruction": {"parts": [{"text": self.system}]},
+                "contents": [{"role": "user", "parts": [{"text": _user_message(text, kind, context or [])}]}],
+                "generationConfig": gen}
+
+    def translate(self, text: str, kind: str = "", context=None) -> str | None:
+        for _ in range(len(self.models) + 1):
+            r = self.s.post(self.URL.format(model=self.models[0]), json=self._body(text, kind, context), timeout=8)
+            if r.status_code == 404 and len(self.models) > 1:      # model adı eskimiş: sıradakini dene
+                log.warning("Gemini modeli bulunamadı (%s), %s deneniyor", self.models[0], self.models[1])
+                self.models.pop(0)
+                continue
+            if r.status_code == 400 and self.thinking_off and "thinking" in r.text.lower():
+                self.thinking_off = False                           # bu model düşünme ayarını tanımıyor
+                continue
+            r.raise_for_status()
+            cands = r.json().get("candidates") or []
+            parts = (cands[0].get("content") or {}).get("parts") or [] if cands else []
+            return "".join(p.get("text", "") for p in parts).strip() or None
+        return None
+
+
+class LocalAIMT:
+    """Bilgisayarda çalışan yapay zekâ (Ollama, LM Studio ya da başka bir OpenAI uyumlu sunucu): ücretsiz, internetsiz.
+    (Fikir CouchSubs'ın 'Yerel model' seçeneğinden.)"""
+
+    name = "yerelai"
+
+    def __init__(self, cfg: CeviriCfg):
+        import requests
+
+        self.url = cfg.yerelai_adres.rstrip("/") + "/chat/completions"
+        self.model = cfg.yerelai_model
+        self.s = requests.Session()
+        if cfg.yerelai_anahtar:
+            self.s.headers["Authorization"] = f"Bearer {cfg.yerelai_anahtar}"
         self.system = SYSTEM_PROMPT.format(glossary=_glossary_text(cfg.sozluk))
 
     def translate(self, text: str, kind: str = "", context=None) -> str | None:
-        t = self.types
-        r = self.client.models.generate_content(
-            model=self.model,
-            contents=_user_message(text, kind, context or []),
-            config=t.GenerateContentConfig(system_instruction=self.system, temperature=0.3,
-                                           thinking_config=t.ThinkingConfig(thinking_budget=0)),
-        )
-        return (r.text or "").strip() or None
+        body = {"model": self.model, "temperature": 0.3, "stream": False, "max_tokens": 512,
+                "messages": [{"role": "system", "content": self.system},
+                             {"role": "user", "content": _user_message(text, kind, context or [])}]}
+        r = self.s.post(self.url, json=body, timeout=15)
+        r.raise_for_status()
+        out = (r.json()["choices"][0]["message"].get("content") or "").strip()
+        out = re.sub(r"<think>.*?</think>", "", out, flags=re.S).strip()   # düşünen modellerin iç sesi
+        return out or None
 
 
 class DeepLMT:
@@ -425,14 +471,14 @@ class TranslationEngine:
 
     @staticmethod
     def _make_refine(cfg: CeviriCfg):
-        import os
-        makers = {"claude": ClaudeMT, "gemini": GeminiMT, "deepl": DeepLMT}
+        makers = {"claude": ClaudeMT, "gemini": GeminiMT, "deepl": DeepLMT, "yerelai": LocalAIMT}
         if cfg.kalite not in makers:
             return None
         has_key = {
             "claude": bool(cfg.claude_anahtar or os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")),
             "gemini": bool(cfg.gemini_anahtar or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")),
             "deepl": bool(cfg.deepl_anahtar),
+            "yerelai": bool(cfg.yerelai_adres and cfg.yerelai_model),
         }[cfg.kalite]
         if not has_key:
             log.info("Kalite katmanı (%s) için anahtar girilmedi; sadece hızlı katman kullanılacak", cfg.kalite)

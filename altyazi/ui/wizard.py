@@ -244,23 +244,46 @@ class Wizard(QDialog):
 
     def _translation(self) -> QWidget:
         w, lay = self._page("Çeviri",
-                            "Yerel model internetsiz ve anında çevirir. En doğal Türkçe için Claude'u bağla: "
-                            "argoyu, esprileri ve karakterlerin konuşma tarzını korur.")
+                            "Ekran kartındaki yerel model her zaman çalışır: internetsiz, ücretsiz ve anında. Üstüne "
+                            "isteğe bağlı bir yapay zekâ daha doğal Türkçe verir. Ücretsiz seçenekler de var; herkes "
+                            "kendi anahtarını kullanır, kimse başkasının çevirisini ödemez.")
         c = self.cfg.ceviri
         card = Card(inner=True, margins=16)
-        self.key = QLineEdit(c.claude_anahtar)
+        self.engine = QComboBox()
+        for key, text in (("gemini", "Google Gemini · ücretsiz anahtar (önerilen ücretsiz seçenek)"),
+                          ("claude", "Claude · en iyi kalite (ücretli, kendi Anthropic hesabın)"),
+                          ("deepl", "DeepL · ücretsiz plan (ayda 500 bin karakter)"),
+                          ("yerelai", "Yerel yapay zekâ · Ollama / LM Studio (ücretsiz, internetsiz)"),
+                          ("yok", "Şimdilik yok · yalnız yerel model")):
+            self.engine.addItem(text, key)
+        self.engine.setCurrentIndex(max(0, self.engine.findData(c.kalite if c.kalite != "claude" or c.claude_anahtar
+                                                                else "gemini")))
+        card.add(label("Kalite katmanı", "h3"))
+        card.add(self.engine)
+        self.key = QLineEdit()
         self.key.setEchoMode(QLineEdit.Password)
-        self.key.setPlaceholderText("Claude API anahtarı (sk-ant-...)")
-        card.add(label("Claude API anahtarı", "h3"))
-        card.add(hbox(self.key, button("Anahtar al", None,
-                                       lambda: webbrowser.open("https://console.anthropic.com/settings/keys"))))
+        self.key_btn = button("Anahtar al", None, self._open_key_page)
+        self.key_row = QWidget()
+        self.key_row.setLayout(hbox(self.key, self.key_btn, spacing=8))
+        card.add(self.key_row)
         self.model = QComboBox()
         self.model.addItem("Claude Opus 5.5 · en iyi kalite (hızlı mod açık)", "claude-opus-5-5")
         self.model.addItem("Claude Haiku 5.5 · daha hızlı ve ucuz", "claude-haiku-5-5")
         self.model.setCurrentIndex(max(0, self.model.findData(c.claude_model)))
         card.add(self.model)
-        card.add(label("Anahtar sadece bu bilgisayarda saklanır. Anahtar girmezsen yalnızca yerel model kullanılır.",
-                       "faint", wrap=True))
+        self.lai_url = QLineEdit(c.yerelai_adres)
+        self.lai_model = QLineEdit(c.yerelai_model)
+        self.lai_box = QWidget()
+        self.lai_box.setLayout(vbox(hbox(self.lai_url, self.lai_model, spacing=8),
+                                    hbox(button("Ollama'yı indir", None, lambda: webbrowser.open(rehber.OLLAMA_DOWNLOAD)),
+                                         label("Kurduktan sonra komut satırında <b>ollama pull qwen2.5:7b</b> yaz.",
+                                               "faint", wrap=True), spacing=10), spacing=8))
+        card.add(self.lai_box)
+        self.engine_hint = label("", "faint", wrap=True)
+        self.engine_hint.setTextFormat(Qt.RichText)
+        card.add(self.engine_hint)
+        self.engine.currentIndexChanged.connect(self._engine_changed)
+        self._engine_changed()
         lay.addWidget(card)
         self.eng_dot = Dot("warn")
         self.eng_msg = label("Motorlar hazırlanıyor...", "muted", wrap=True)
@@ -423,12 +446,51 @@ class Wizard(QDialog):
             self.tv_msg.setText(msg)
 
     # ------------------------------------------------------------------ çeviri
+    ENGINE_HINTS = {
+        "gemini": "Google hesabınla aistudio.google.com'a gir, <b>Create API key</b>'e bas, anahtarı buraya yapıştır. "
+                  "Ücretsiz kotası oyun için genelde yeter.",
+        "claude": "console.anthropic.com'da <b>Create Key</b>'e bas. Kullandıkça Anthropic hesabından ücretlenir; "
+                  "önbellekteki ve paketteki satırlar ücretsizdir.",
+        "deepl": "deepl.com'da <b>DeepL API Free</b> planına üye ol (kart ister, ücret almaz); anahtarın sonu <b>:fx</b> "
+                 "ile biter.",
+        "yerelai": "Bilgisayarında çalışan yapay zekâ: anahtar, kota ve ücret yok. Ekran kartı varsa bir satır 1-2 saniyede gelir.",
+        "yok": "Yalnız yerel model çevirir: anında ve ücretsiz, argoda biraz daha zayıf. Sonra Çeviri sayfasından "
+               "istediğin motoru ekleyebilirsin.",
+    }
+
+    def _key_field(self, eng: str) -> str:
+        return {"claude": "claude_anahtar", "gemini": "gemini_anahtar", "deepl": "deepl_anahtar"}.get(eng, "")
+
+    def _engine_changed(self) -> None:
+        eng = self.engine.currentData()
+        prev = getattr(self, "_eng_prev", None)
+        if prev and self._key_field(prev):
+            setattr(self.cfg.ceviri, self._key_field(prev), self.key.text().strip())
+        self._eng_prev = eng
+        field_name = self._key_field(eng)
+        self.key_row.setVisible(bool(field_name))
+        if field_name:
+            self.key.setText(getattr(self.cfg.ceviri, field_name))
+            self.key.setPlaceholderText({"claude": "Claude API anahtarı (sk-ant-...)", "gemini": "Gemini API anahtarı",
+                                         "deepl": "DeepL API anahtarı (…:fx)"}[eng])
+        self.model.setVisible(eng == "claude")
+        self.lai_box.setVisible(eng == "yerelai")
+        self.engine_hint.setText(self.ENGINE_HINTS[eng])
+
+    def _open_key_page(self) -> None:
+        webbrowser.open({"claude": rehber.CLAUDE_KEYS, "gemini": rehber.GEMINI_KEYS,
+                         "deepl": rehber.DEEPL_SIGNUP}.get(self.engine.currentData(), rehber.GEMINI_KEYS))
+
     def _save_translation(self) -> None:
         c = self.cfg.ceviri
-        c.claude_anahtar = self.key.text().strip()
+        eng = self.engine.currentData()
+        if self._key_field(eng):
+            setattr(c, self._key_field(eng), self.key.text().strip())
         c.claude_model = self.model.currentData()
         c.claude_hizli_mod = c.claude_model == "claude-opus-5-5"
-        c.kalite = "claude" if c.claude_anahtar or c.kalite != "claude" else "yok"
+        c.yerelai_adres = self.lai_url.text().strip() or "http://localhost:11434/v1"
+        c.yerelai_model = self.lai_model.text().strip() or "qwen2.5:7b"
+        c.kalite = eng
 
     def _test(self) -> None:
         self._save_translation()

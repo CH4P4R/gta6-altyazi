@@ -75,14 +75,18 @@ class CeviriCfg:
     yerel_cihaz: str = "auto"     # auto | cuda | cpu
     yerel_beam: int = 2
     # Kalite katmanı: yapay zeka daha doğal çeviriyi gönderir, ekrandaki yazı güncellenir
-    kalite: str = "claude"        # claude | gemini | deepl | yok
+    kalite: str = "claude"        # claude | gemini | deepl | yerelai | yok
     claude_anahtar: str = ""      # boşsa ANTHROPIC_API_KEY ortam değişkeni kullanılır
     claude_model: str = "claude-opus-5-5"
     claude_hizli_mod: bool = True  # Opus 5.5 "fast mode": ~2.5 kat hızlı üretim (2 kat fiyat)
     claude_efor: str = "low"
-    gemini_model: str = "gemini-2.5-flash"
-    gemini_anahtar: str = ""
-    deepl_anahtar: str = ""
+    gemini_model: str = "gemini-2.5-flash"   # bulunamazsa gemini-flash-latest denenir
+    gemini_anahtar: str = ""      # ücretsiz: aistudio.google.com/apikey
+    deepl_anahtar: str = ""       # ücretsiz plan anahtarı ":fx" ile biter
+    # Yerel yapay zekâ (Ollama / LM Studio, OpenAI uyumlu sunucu): anahtar, kota ve ücret yok
+    yerelai_adres: str = "http://localhost:11434/v1"
+    yerelai_model: str = "qwen2.5:7b"
+    yerelai_anahtar: str = ""
     baglam_satir: int = 6         # yapay zekaya verilen önceki diyalog satırı sayısı
     argo_duzelt: bool = True      # yerel modele vermeden önce sokak dilini düzgün İngilizceye çevir
     kalite_bekleme_ms: int = 350  # kaliteli çeviri bu süre içinde gelirse yerel çeviri hiç gösterilmez (0 = kapalı)

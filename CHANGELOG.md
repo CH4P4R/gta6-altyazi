@@ -3,6 +3,15 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.7 · Ücretsiz çeviri
+- **Claude şart değil:** kurulum sihirbazında ve Çeviri sayfasında yapay zekâ seçimi; ücretsiz seçenekler öne çıktı:
+  Google Gemini (ücretsiz anahtar), DeepL Free, bilgisayarda çalışan Ollama / LM Studio (anahtar ve kota yok).
+  Her seçeneğin yanında anahtar sayfasını açan düğme. Herkes kendi anahtarını kullanır.
+- Yeni: **Yerel yapay zekâ** motoru (Ollama, LM Studio ya da OpenAI uyumlu başka bir sunucu).
+- Düzeltme: Gemini seçeneği kurulum dosyasında çalışmıyordu (eksik paket); artık ek paket gerektirmeden çalışıyor,
+  eskimiş model adında yenisine kendiliğinden geçiyor.
+- Rehber'e "Ücretsiz çeviri (Gemini, DeepL, Ollama)" konusu.
+
 ## 0.4.6
 - **Uygulamada Rehber sayfası:** kurulumdan yayına bütün süreçler resimli, adım adım. Konular: bilgisayar monitöründe
   oynamak (chiaki-ng), TV'de oynayıp bilgisayarın izlemesi, Google TV / LG / Samsung TV uygulaması, Discord yayını,

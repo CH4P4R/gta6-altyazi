@@ -613,9 +613,14 @@ class TranslationPage(QWidget):
         row.addWidget(fast, 1)
         q = Card()
         q.add(label("Kalite katmanı (yapay zeka)", "h2"))
-        self.qual = combo([("claude", "Claude (önerilen)"), ("gemini", "Google Gemini"), ("deepl", "DeepL"),
-                           ("yok", "Kapalı")], c.kalite)
+        self.qual = combo([("claude", "Claude · en iyi kalite (ücretli, kendi anahtarın)"),
+                           ("gemini", "Google Gemini · ücretsiz anahtar"),
+                           ("deepl", "DeepL · ücretsiz plan (ayda 500 bin karakter)"),
+                           ("yerelai", "Yerel yapay zekâ · Ollama / LM Studio (ücretsiz, internetsiz)"),
+                           ("yok", "Kapalı (yalnız yerel model)")], c.kalite)
         q.add(self.qual)
+        q.add(label("Herkes kendi anahtarını kullanır; kimse başkasının çevirisini ödemez. Anahtar yalnız bu "
+                    "bilgisayarda saklanır.", "faint", wrap=True))
         self.key = QLineEdit(c.claude_anahtar)
         self.key.setEchoMode(QLineEdit.Password)
         self.key.setPlaceholderText("sk-ant-...  (console.anthropic.com)")
@@ -628,11 +633,27 @@ class TranslationPage(QWidget):
         self.gem.setPlaceholderText("Gemini anahtarı (aistudio.google.com)")
         self.deepl = QLineEdit(c.deepl_anahtar)
         self.deepl.setEchoMode(QLineEdit.Password)
-        self.deepl.setPlaceholderText("DeepL anahtarı")
+        self.deepl.setPlaceholderText("DeepL anahtarı (ücretsiz planda sonu :fx)")
+        self.lai_url = QLineEdit(c.yerelai_adres)
+        self.lai_url.setPlaceholderText("http://localhost:11434/v1")
+        self.lai_model = QLineEdit(c.yerelai_model)
+        self.lai_model.setPlaceholderText("qwen2.5:7b")
         self.claude_box = vbox(field("Claude API anahtarı", self.key), self.model, self.fastmode, spacing=8)
         q.add(self.claude_box)
-        q.add(self.gem)
-        q.add(self.deepl)
+        import webbrowser as _wb
+        self.key_btn = button("Anahtar al", None, lambda: _wb.open(self._key_url()))
+        q.add(hbox(self.gem, self.deepl, self.key_btn, spacing=8))
+        self.lai_box = QWidget()
+        self.lai_box.setLayout(vbox(hbox(field("Sunucu adresi", self.lai_url), field("Model", self.lai_model),
+                                         spacing=10),
+                                    hbox(button("Ollama", None, lambda: self._lai_preset("ollama")),
+                                         button("LM Studio", None, lambda: self._lai_preset("lmstudio")),
+                                         button("Ollama'yı indir", "ghost", lambda: _wb.open("https://ollama.com/download")),
+                                         None, spacing=8),
+                                    label("Ollama'yı kurup komut satırında <b>ollama pull qwen2.5:7b</b> yaz. Ekran kartı "
+                                          "olan bilgisayarda bir satır genelde 1-2 saniyede gelir.", "faint", wrap=True),
+                                    spacing=8))
+        q.add(self.lai_box)
         self.qual.currentIndexChanged.connect(self._vis)
         row.addWidget(q, 1)
         root.addLayout(row)
@@ -694,6 +715,18 @@ class TranslationPage(QWidget):
         self.claude_box.itemAt(0).layout().itemAt(0).widget().setVisible(k == "claude")
         self.gem.setVisible(k == "gemini")
         self.deepl.setVisible(k == "deepl")
+        self.key_btn.setVisible(k in ("claude", "gemini", "deepl"))
+        self.lai_box.setVisible(k == "yerelai")
+
+    def _key_url(self) -> str:
+        from .. import rehber
+        return {"claude": rehber.CLAUDE_KEYS, "gemini": rehber.GEMINI_KEYS,
+                "deepl": rehber.DEEPL_SIGNUP}.get(self.qual.currentData(), rehber.CLAUDE_KEYS)
+
+    def _lai_preset(self, kind: str) -> None:
+        self.lai_url.setText("http://localhost:11434/v1" if kind == "ollama" else "http://localhost:1234/v1")
+        if kind == "ollama" and not self.lai_model.text().strip():
+            self.lai_model.setText("qwen2.5:7b")
 
     def _test(self) -> None:
         self._results = []
@@ -756,6 +789,8 @@ class TranslationPage(QWidget):
         c.claude_hizli_mod = self.fastmode.isChecked() and c.claude_model == "claude-opus-5-5"
         c.gemini_anahtar = self.gem.text().strip()
         c.deepl_anahtar = self.deepl.text().strip()
+        c.yerelai_adres = self.lai_url.text().strip() or "http://localhost:11434/v1"
+        c.yerelai_model = self.lai_model.text().strip() or "qwen2.5:7b"
         gl = {}
         for line in self.gloss.toPlainText().splitlines():
             if "=" in line:
