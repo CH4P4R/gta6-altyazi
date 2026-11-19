@@ -10,6 +10,7 @@ ROOT = Path(SPECPATH).resolve().parent
 IS_WIN = sys.platform == "win32"
 
 datas = [(str(ROOT / "config.yaml"), "."), (str(ROOT / "LICENSE"), "."), (str(ROOT / "NOTICE"), ".")]
+datas.append((str(ROOT / "altyazi" / "ui" / "rehber"), "altyazi/ui/rehber"))   # sihirbaz rehber görselleri
 for rel in ("tv-android/release", "tv-web/release", "tv-web/build/tizen", "models/opus-mt-en-tr", "models/ocr",
             "tools/platform-tools"):
     p = ROOT / rel

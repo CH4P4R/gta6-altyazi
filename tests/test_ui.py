@@ -34,9 +34,27 @@ def test_main_window_and_wizard_build(tmp_path, monkeypatch):
     assert 1 in win.pages["home"].items
     assert win.pages["history"].table.rowCount() == 1
     wiz = Wizard(ctl, win)
-    for i in range(5):
+    from altyazi.ui.wizard import P_PS5, P_TV, REHBER, STEPS
+    for i in range(len(STEPS)):
         wiz._go(i)
         app.processEvents()
+    # resimli rehber: her seçimde adımlar baştan sona gezilir, görseller var
+    for where in ("monitor", "tv", "ikisi"):
+        wiz._set_where(where)
+        wiz._go(P_PS5)
+        g = wiz.ps5_guide
+        names = [st.get("img") for st in g.steps if st.get("img")]
+        assert all((REHBER / f"{n}.png").exists() for n in names)
+        assert any(st.get("img") == "kol-usb" for st in g.steps) == (where != "tv")
+        assert (g.steps[0]["title"].startswith("İkinci PSN")) == (where != "monitor")
+        steps = 0
+        while g.can_next():
+            wiz.next.click()
+            steps += 1
+        assert steps == len(g.steps) - 1
+        wiz.next.click()                       # rehber bitti: sonraki ana adım
+        assert wiz.stack.currentIndex() == (P_TV if where != "monitor" else P_TV + 1)
+    assert all((REHBER / f"{st['img']}.png").exists() for st in wiz.tv_guide.steps)
     # ayar kaydetme: kullanıcı klasörüne yazılır ve geri okunur
     new = ctl.edit_config()
     new.tv.ip = "192.168.1.40"
