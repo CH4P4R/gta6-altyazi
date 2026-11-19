@@ -606,7 +606,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 1. **Çeviri** sayfasında **Önbellek ve çeviri paketleri** kartına in.
 2. Listeden oyunu seç (**GTA 6**, GTA V, RDR2...) ve **Hazır paketi indir**'e bas.
 
-> Pakette olan satırlar anında ve ücretsiz gelir, yapay zekâya sorulmaz. GTA 6 paketi CouchSubs'ın paket sunucusundan gelir ve oyuncular oynadıkça büyür; ara sıra Listeyi yenile'ye basıp yeniden indir.
+> GTA 6 dahil paketler kurulumla birlikte gelir; pakette olan satırlar anında ve ücretsiz çıkar. Paketler bu projenin GitHub sayfasında her 6 saatte bir güncellenir (GTA 6 paketi oyuncular oynadıkça büyür); ara sıra Listeyi yenile'ye basıp yeniden indirebilirsin.
 
 #### Adım 2: Kendi paketini paylaş
 

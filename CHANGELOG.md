@@ -3,6 +3,13 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.9 · Paketler bizde
+- **GTA 6 dahil hazır paketler kurulumla birlikte geliyor:** kurar kurmaz GTA 6 satırları anında ve ücretsiz çıkar,
+  indirmeye gerek yok.
+- Paketler artık bu projenin kendi GitHub sayfasından iniyor ("paketler" sürümü). GitHub her 6 saatte bir CouchSubs
+  ve GameTranslator'daki son hallerini alıp doğrulayarak buraya koyuyor; GTA 6 paketi büyüdükçe **Listeyi yenile** ile
+  yenisi alınır. GitHub yanıt vermezse program doğrudan kaynağa döner.
+
 ## 0.4.8 · GTA 6 paketi
 - **Hazır paketlere CouchSubs'ın paket sunucusu eklendi: GTA 6 paketi tek tıkla.** Çeviri sayfasındaki listede en üstte
   çıkar; oyuncular oynadıkça büyüdüğü için ara sıra **Listeyi yenile** ile yeniden indirilebilir. İndirilen dosya

@@ -79,8 +79,9 @@ def load(path: Path) -> Pack:
 class PackLibrary:
     """Klasördeki tüm paketler. Arama: önce tüm satır, olmazsa cümle cümle (hepsi bulunursa birleştirilir)."""
 
-    def __init__(self, folder: Path):
+    def __init__(self, folder: Path, bundled: Path | None = None):
         self.folder = folder
+        self.bundled = bundled              # kurulumla gelen paketler (indirilen aynı paket bunun önüne geçer)
         self.packs: list[Pack] = []
         self._index: dict[str, tuple[str, str]] = {}
         self.reload()
@@ -88,7 +89,11 @@ class PackLibrary:
     def reload(self) -> None:
         self.packs, self._index = [], {}
         self.folder.mkdir(parents=True, exist_ok=True)
-        for p in sorted(self.folder.glob("*.json*")):
+        files = sorted(self.folder.glob("*.json*"))
+        have = {f.name for f in files}
+        if self.bundled and self.bundled.is_dir():
+            files += [f for f in sorted(self.bundled.glob("*.json*")) if f.name not in have]
+        for p in files:
             if p.suffix == ".tmp":
                 continue
             try:
@@ -248,5 +253,67 @@ def download_couchsubs(info: dict, folder: Path, progress=None, fetch=None) -> P
     dest = folder / f"{pid}.json.gz"
     tmp = dest.with_suffix(".tmp")
     tmp.write_bytes(raw if raw[:2] == b"\x1f\x8b" else gzip.compress(raw, 6))
+    tmp.replace(dest)
+    return load(dest)
+
+
+# ---------------------------------------------------------------------------------------------- kendi paket sürümümüz
+# GitHub Actions (paketler.yml) CouchSubs ve GameTranslator paketlerini her 6 saatte bir bu deponun 'paketler'
+# sürümüne koyar. Program paketleri önce buradan indirir; burası yanıt vermezse doğrudan kaynaklara döner.
+OWN_RELEASE = "https://github.com/CH4P4R/gta6-altyazi/releases/download/paketler/"
+
+
+def own_catalog(timeout: float = 10, fetch=None) -> list[dict]:  # noqa: ANN001
+    import urllib.request
+
+    try:
+        if fetch is None:
+            req = urllib.request.Request(OWN_RELEASE + "index.json", headers={"User-Agent": "gta6-altyazi"})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = json.loads(r.read().decode("utf-8"))
+        else:
+            data = fetch(OWN_RELEASE + "index.json")
+    except Exception as e:  # noqa: BLE001
+        log.info("Paket listesi (GitHub) alınamadı: %s", e)
+        return []
+    out = []
+    for p in data.get("packs") or []:
+        if isinstance(p, dict) and _PACK_ID.match(str(p.get("id", ""))) and p.get("sha256"):
+            out.append({"id": p["id"], "title": str(p.get("title") or p["id"]), "entries": int(p.get("entries") or 0),
+                        "sha256": str(p["sha256"]).lower(), "version": p.get("version", 0),
+                        "auto": bool(p.get("auto")), "source": str(p.get("source") or ""), "own": True})
+    return out
+
+
+def download_own(info: dict, folder: Path, progress=None, fetch=None) -> Pack:  # noqa: ANN001
+    """Kendi sürümümüzden indir (dosya zaten .json.gz; SHA-256 doğrulanır)."""
+    import urllib.request
+
+    pid = info["id"]
+    if not _PACK_ID.match(pid):
+        raise ValueError(f"Geçersiz paket kimliği: {pid}")
+    url = f"{OWN_RELEASE}{pid}.json.gz"
+    if fetch is None:
+        req = urllib.request.Request(url, headers={"User-Agent": "gta6-altyazi"})
+        chunks, done = [], 0
+        with urllib.request.urlopen(req, timeout=60) as r:
+            total = int(r.headers.get("Content-Length") or 0)
+            while True:
+                b = r.read(1 << 16)
+                if not b:
+                    break
+                chunks.append(b)
+                done += len(b)
+                if progress and total:
+                    progress(done / total)
+        raw = b"".join(chunks)
+    else:
+        raw = fetch(url)
+    if hashlib.sha256(raw).hexdigest() != info["sha256"]:
+        raise ValueError("İndirilen paket doğrulanamadı (SHA-256 tutmadı); tekrar dene.")
+    folder.mkdir(parents=True, exist_ok=True)
+    dest = folder / f"{pid}.json.gz"
+    tmp = dest.with_suffix(".tmp")
+    tmp.write_bytes(raw)
     tmp.replace(dest)
     return load(dest)

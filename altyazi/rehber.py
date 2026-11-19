@@ -201,8 +201,9 @@ PAKETLER = [
     step("Hazır paket indir",
          ["**Çeviri** sayfasında **Önbellek ve çeviri paketleri** kartına in.",
           "Listeden oyunu seç (**GTA 6**, GTA V, RDR2...) ve **Hazır paketi indir**'e bas."],
-         note="Pakette olan satırlar anında ve ücretsiz gelir, yapay zekâya sorulmaz. GTA 6 paketi CouchSubs'ın paket "
-              "sunucusundan gelir ve oyuncular oynadıkça büyür; ara sıra Listeyi yenile'ye basıp yeniden indir."),
+         note="GTA 6 dahil paketler kurulumla birlikte gelir; pakette olan satırlar anında ve ücretsiz çıkar. Paketler "
+              "bu projenin GitHub sayfasında her 6 saatte bir güncellenir (GTA 6 paketi oyuncular oynadıkça büyür); "
+              "ara sıra Listeyi yenile'ye basıp yeniden indirebilirsin."),
     step("Kendi paketini paylaş",
          ["**Önbelleği paket olarak kaydet** ile oynadıkça biriken çevirileri dosya yap.",
           "Arkadaşların bu dosyayı **Paket ekle** ile yükler."]),

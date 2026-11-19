@@ -67,6 +67,20 @@ jobs:
       - name: Samsung TV paket klasörü
         run: python tools/tv_web_hazirla.py
 
+      - name: Hazır çeviri paketleri (kuruluma gömülür)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force paketler | Out-Null
+          gh release download paketler -p "*.json.gz" -D paketler --clobber
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "paketler sürümü yok; doğrudan kaynaklardan alınıyor"
+            python tools/paket_aynasi.py paketler
+          }
+          Remove-Item paketler\pool-*.json.gz -ErrorAction SilentlyContinue
+          Get-ChildItem paketler | Format-Table Name, Length
+          $global:LASTEXITCODE = 0
+
       - name: Uygulamayı paketle (PyInstaller)
         run: pyinstaller --noconfirm --clean packaging/gta6altyazi.spec
 

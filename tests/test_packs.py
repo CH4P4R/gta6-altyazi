@@ -86,3 +86,25 @@ def test_couchsubs_catalog_and_verified_download(tmp_path):
     except ValueError:
         pass
     assert packs.couchsubs_catalog(fetch=lambda url: (_ for _ in ()).throw(OSError("yok"))) == []
+
+
+def test_own_release_catalog_and_bundled_packs(tmp_path):
+    """Paketler kendi GitHub sürümümüzden iner; kurulumla gelen paketler de yüklenir, indirilen sürüm önce gelir."""
+    import hashlib
+    gz = gzip.compress(json.dumps({"id": "gta-6", "title": "Grand Theft Auto VI",
+                                   "entries": {packs.key("Get in the sea plane."): "Deniz uçağına bin."}}).encode())
+    index = {"packs": [{"id": "gta-6", "title": "Grand Theft Auto VI", "entries": 1, "source": "CouchSubs",
+                        "sha256": hashlib.sha256(gz).hexdigest(), "size": len(gz), "version": 5}]}
+    cat = packs.own_catalog(fetch=lambda url: index)
+    assert cat[0]["own"] and cat[0]["source"] == "CouchSubs"
+    data = tmp_path / "data"
+    packs.download_own(cat[0], data, fetch=lambda url: gz)
+    bundled = tmp_path / "bundled"
+    bundled.mkdir()
+    old = {"id": "gta-6", "title": "eski", "entries": {packs.key("Get in the sea plane."): "ESKİ"}}
+    (bundled / "gta-6.json.gz").write_bytes(gzip.compress(json.dumps(old).encode()))
+    other = {"id": "gta-v", "title": "GTA V", "entries": {packs.key("Lose the cops."): "Polislerden kurtul."}}
+    (bundled / "gta-v.json.gz").write_bytes(gzip.compress(json.dumps(other).encode()))
+    lib = packs.PackLibrary(data, bundled)
+    assert lib.lookup("Get in the sea plane.") == ("Deniz uçağına bin.", "gta-6")   # indirilen, gömülüden önce
+    assert lib.lookup("Lose the cops.") == ("Polislerden kurtul.", "gta-v")         # gömülü paket de çalışır

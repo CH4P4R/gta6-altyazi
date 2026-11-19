@@ -448,7 +448,7 @@ class TranslationEngine:
         self.cache = Cache(str(paths.data(cfg.onbellek)) if not Path(cfg.onbellek).is_absolute() else cfg.onbellek,
                            cfg.benzerlik)
         from .packs import PackLibrary
-        self.packs = PackLibrary(paths.data("paketler"))
+        self.packs = PackLibrary(paths.data("paketler"), paths.resource("paketler"))
         self.fast = self._make_fast(cfg)
         self.refine = self._make_refine(cfg)
         self.fast_pool = ThreadPoolExecutor(4, thread_name_prefix="hizli")

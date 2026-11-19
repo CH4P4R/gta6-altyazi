@@ -579,7 +579,9 @@ class AppController(QObject):
         from . import packs
 
         def run() -> None:
-            cat = packs.couchsubs_catalog()
+            cat = packs.own_catalog()                # önce kendi GitHub sürümümüz
+            if not cat:
+                cat = packs.couchsubs_catalog()      # yanıt yoksa doğrudan CouchSubs
             self._cs_catalog = {p["id"]: p for p in cat}
             self.packCatalog.emit(cat)
 
@@ -596,7 +598,8 @@ class AppController(QObject):
                     info = getattr(self, "_cs_catalog", {}).get(pack_id[3:])
                     if not info:
                         raise RuntimeError("CouchSubs paket listesi alınamadı; internet bağlantısını kontrol et.")
-                    pack = packs.download_couchsubs(info, paths.data("paketler"), prog)
+                    dl = packs.download_own if info.get("own") else packs.download_couchsubs
+                    pack = dl(info, paths.data("paketler"), prog)
                 else:
                     pack = packs.download(pack_id, paths.data("paketler"), prog)
                 if self.engine:

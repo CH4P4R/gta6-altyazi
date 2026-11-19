@@ -692,8 +692,8 @@ class TranslationPage(QWidget):
         self.pack_dl = button("Hazır paketi indir", "primary", self._download_pack)
         cache.add(hbox(self.pack_combo, self.pack_dl, button("Listeyi yenile", "ghost", ctl.load_pack_catalog), None,
                        spacing=10))
-        cache.add(label("Kaynaklar: CouchSubs paket sunucusu (GTA 6 dahil) ve GameTranslator paket deposu.", "faint",
-                        wrap=True))
+        cache.add(label("Paketler bu projenin GitHub sayfasından iner; her 6 saatte bir CouchSubs (GTA 6 dahil) ve "
+                        "GameTranslator'dan güncellenir. GTA 6 paketi kurulumla birlikte de gelir.", "faint", wrap=True))
         ctl.packCatalog.connect(self._on_catalog)
         ctl.load_pack_catalog()
         cache.add(hbox(button("Paket ekle", None, self._add_pack),
@@ -760,9 +760,14 @@ class TranslationPage(QWidget):
         for k, p in enumerate(cat):
             n = f"{p['entries']:,}".replace(",", ".")
             extra = " · ek satırlar" if p.get("auto") else ""
-            self.pack_combo.insertItem(k, f"{p['title']}{extra} · CouchSubs ({n} satır)", f"cs:{p['id']}")
+            src = p.get("source") or "CouchSubs"
+            self.pack_combo.insertItem(k, f"{p['title']}{extra} · {src} ({n} satır)", f"cs:{p['id']}")
         if cat:
             self.pack_combo.setCurrentIndex(0)
+            if any(p.get("own") for p in cat):   # kendi listemiz geldiyse aynı oyunun eski kaynak girdisini gizle
+                for i in reversed(range(self.pack_combo.count())):
+                    if not str(self.pack_combo.itemData(i)).startswith("cs:"):
+                        self.pack_combo.removeItem(i)
 
     def _download_pack(self) -> None:
         self.pack_dl.setEnabled(False)

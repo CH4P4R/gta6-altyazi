@@ -1,0 +1,29 @@
+name: Hazır çeviri paketleri (günlük)
+
+# CouchSubs ve GameTranslator paketlerinin son halini indirip doğrular ve bu deponun 'paketler' sürümüne koyar.
+# Uygulama paketleri buradan indirir; Windows derlemesi de buradan alıp kuruluma gömer.
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ayna:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Paketleri indir ve doğrula
+        run: python3 tools/paket_aynasi.py cikti
+      - name: Paketler sürümüne yükle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view paketler > /dev/null 2>&1; then
+            gh release create paketler --prerelease --title "Hazır çeviri paketleri" \
+              --notes "Uygulamanın Çeviri sayfasındaki hazır paketler. Kaynaklar: CouchSubs (https://github.com/yorulmazsinan/couchsubs) ve GameTranslator (https://gitlab.com/sefflex/GameTranslator). Her 6 saatte bir güncellenir."
+          fi
+          gh release upload paketler cikti/*.json.gz cikti/index.json --clobber
+          echo "Yüklendi: $(ls cikti | wc -l) dosya"

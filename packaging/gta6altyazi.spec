@@ -12,7 +12,7 @@ IS_WIN = sys.platform == "win32"
 datas = [(str(ROOT / "config.yaml"), "."), (str(ROOT / "LICENSE"), "."), (str(ROOT / "NOTICE"), ".")]
 datas.append((str(ROOT / "altyazi" / "ui" / "rehber"), "altyazi/ui/rehber"))   # sihirbaz rehber görselleri
 for rel in ("tv-android/release", "tv-web/release", "tv-web/build/tizen", "models/opus-mt-en-tr", "models/ocr",
-            "tools/platform-tools"):
+            "tools/platform-tools", "paketler"):   # paketler: kuruluma gömülü hazır çeviri paketleri
     p = ROOT / rel
     if p.exists():
         datas.append((str(p), rel))
