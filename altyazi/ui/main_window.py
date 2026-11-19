@@ -58,6 +58,19 @@ class HomePage(QWidget):
         self.sub = label("Motorlar hazırlanıyor...", "muted")
         root.addLayout(vbox(label("Ana ekran", "h1"), self.sub, spacing=4))
 
+        # --- güncelleme kartı (yeni sürüm varsa görünür)
+        self.upd = Card(margins=14)
+        self.upd.setStyleSheet(f"#card {{ border: 2px solid {T.A1}; }}")
+        self.upd_title = label("", "h3")
+        self.upd_text = label("Tek tıkla indirilir ve kurulur; ayarların, anahtarların ve paketlerin korunur. "
+                              "Program kapanıp yeni sürümle yeniden açılır.", "muted", wrap=True)
+        self.upd_btn = button("Güncelle", "primary", self._update)
+        self.upd.add(hbox(vbox(self.upd_title, self.upd_text, spacing=2), None, self.upd_btn, spacing=14))
+        self.upd.hide()
+        root.addWidget(self.upd)
+        ctl.updateAvailable.connect(self._on_update)
+        ctl.updateProgress.connect(self._on_update_progress)
+
         # --- kahraman kartı
         hero = Card(margins=22)
         self.start = StartButton()
@@ -162,6 +175,25 @@ class HomePage(QWidget):
             self.lat.setText(f"{avg:.0f}")
         if not updated:
             self.spark.push(it.latency_ms)
+
+    def _on_update(self, rel: dict) -> None:
+        size = rel.get("size", 0) / 1e9
+        self.upd_title.setText(f"Yeni sürüm hazır: GTA6 Altyazı {rel['version']}" + (f"  ·  {size:.1f} GB" if size else ""))
+        self.upd.show()
+
+    def _update(self) -> None:
+        self.upd_btn.setEnabled(False)
+        self.upd_btn.setText("İndiriliyor...")
+        self.ctl.install_update()
+
+    def _on_update_progress(self, f: float) -> None:
+        if f < 0:
+            self.upd_btn.setEnabled(True)
+            self.upd_btn.setText("Tekrar dene")
+        elif f >= 1:
+            self.upd_btn.setText("Kuruluyor, program yeniden açılacak...")
+        else:
+            self.upd_btn.setText(f"İndiriliyor %{int(f * 100)}")
 
     def on_source(self, ok: bool, title: str) -> None:
         if self.ctl.cfg.kaynak.tur != "pencere":
@@ -977,6 +1009,17 @@ class SettingsPage(QWidget):
                        "modundayken ağdan bulur. Telefon kumandasında da Başlat/Durdur ve PS5'e bağlan düğmeleri var.",
                        "faint", wrap=True))
         root.addWidget(auto)
+        upd = Card()
+        upd.add(label("Güncellemeler", "h2"))
+        self.u_pack = QCheckBox("Hazır paketlerin (GTA 6 dahil) yenisini açılışta kendiliğinden indir")
+        self.u_pack.setChecked(o.paket_guncelle)
+        self.u_app = QCheckBox("Yeni sürüm çıkınca ana ekranda haber ver (tek tıkla güncellenir)")
+        self.u_app.setChecked(o.surum_denetle)
+        upd.add(self.u_pack)
+        upd.add(self.u_app)
+        upd.add(label("Kurulumu yeniden yapmana gerek yok: paketler sessizce güncellenir, uygulama Güncelle düğmesiyle "
+                      "kendini yeniler. Ayarların, anahtarların ve paketlerin korunur.", "faint", wrap=True))
+        root.addWidget(upd)
         ctl.ps5Found.connect(self._on_ps5)
 
         other = Card()
@@ -1048,6 +1091,8 @@ class SettingsPage(QWidget):
         o.chiaki_gorunce_baslat = self.a_src.isChecked()
         o.ps5_acilinca_baglan = self.a_ps5.isChecked()
         o.chiaki_tam_ekran = self.a_fs.isChecked()
+        o.paket_guncelle = self.u_pack.isChecked()
+        o.surum_denetle = self.u_app.isChecked()
         o.ps5_adi = self.ps5_name.text().strip()
         o.ps5_ip = self.ps5_ip.text().strip()
         self.ctl.apply_config(cfg)

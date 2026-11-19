@@ -58,6 +58,8 @@ class AppController(QObject):
     ps5Found = Signal(list)               # [ps5.Console]
     packProgress = Signal(str, float)     # (paket kimliği, 0..1; 1 bitti, -1 hata)
     packCatalog = Signal(list)            # CouchSubs paket sunucusundaki paketler [{id, title, entries, ...}]
+    updateAvailable = Signal(dict)        # uygulamanın yeni sürümü: {version, url, size, notes}
+    updateProgress = Signal(float)        # güncelleme indirme ilerlemesi (0..1; -1 hata)
     _uiCommand = Signal(str)              # başka iş parçacıklarından gelen ve ana iş parçacığında yapılması gereken işler
 
     def __init__(self, cfg: config_mod.Config):
@@ -155,6 +157,9 @@ class AppController(QObject):
             self.engine_info = info
             self.enginesReady.emit(info)
             self._set_state("hazir")
+            if not getattr(self, "_updates_checked", False):
+                self._updates_checked = True
+                threading.Thread(target=self._check_updates, daemon=True, name="guncelleme").start()
         except Exception as e:  # noqa: BLE001
             log.exception("Motorlar hazırlanamadı")
             self._notice(f"Motorlar hazırlanamadı: {e}")
@@ -215,8 +220,52 @@ class AppController(QObject):
             self._user_stopped = False
             self.start()
 
+    # ------------------------------------------------------------------ güncellemeler
+    def _check_updates(self) -> None:
+        from . import updater
+        o = self.cfg.otomatik
+        if o.paket_guncelle:
+            try:
+                done = updater.update_packs()
+                if done and self.engine:
+                    self.engine.packs.reload()
+                    names = ", ".join(f"{p.title} ({p.count:,} satır)".replace(",", ".") for p in done)
+                    self.notice.emit(f"Hazır paket güncellendi: {names}")
+            except Exception as e:  # noqa: BLE001
+                log.warning("Paket güncellemesi başarısız: %s", e)
+        if o.surum_denetle:
+            rel = updater.latest_release()
+            if updater.newer_than_current(rel):
+                self.update_info = rel
+                self.updateAvailable.emit(rel)
+
+    def install_update(self) -> None:
+        """Yeni sürümü indir, sessiz kur; kurulum programı kapatır ve yeniden açar."""
+        from . import updater
+        rel = getattr(self, "update_info", None)
+        if not rel:
+            return
+
+        def run() -> None:
+            try:
+                setup = updater.download_setup(rel, lambda f: self.updateProgress.emit(min(f, 0.99)))
+                self.updateProgress.emit(1.0)
+                updater.run_setup(setup)
+                self._uiCommand.emit("cik")
+            except Exception as e:  # noqa: BLE001
+                log.warning("Güncelleme kurulamadı: %s", e)
+                self.notice.emit(f"Güncelleme kurulamadı: {e}")
+                self.updateProgress.emit(-1.0)
+
+        self.stop()
+        threading.Thread(target=run, daemon=True, name="guncelle").start()
+
     def _run_ui_command(self, name: str) -> None:
-        if name == "toggle":
+        if name == "cik":
+            from PySide6.QtWidgets import QApplication
+            self.shutdown()
+            QApplication.quit()
+        elif name == "toggle":
             self.toggle()
         elif name == "baglan":
             self.launch_chiaki(stream=True)

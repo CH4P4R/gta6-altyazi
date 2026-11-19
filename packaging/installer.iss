@@ -53,3 +53,5 @@ Name: "{userdesktop}\GTA6 Altyazı"; Filename: "{app}\GTA6Altyazi.exe"; Tasks: d
 
 [Run]
 Filename: "{app}\GTA6Altyazi.exe"; Description: "GTA6 Altyazı'yı şimdi aç"; Flags: nowait postinstall skipifsilent
+; Uygulama içinden güncellenince (sessiz kurulum) uygulama kendiliğinden yeniden açılsın
+Filename: "{app}\GTA6Altyazi.exe"; Flags: nowait; Check: WizardSilent

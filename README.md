@@ -194,6 +194,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 | 🎯 [GTA 6 için okuma alanlarını ayarla](#rehber-gta6) | Kutuları gerçek altyazının üstüne oturt (5 dakika). |
 | 🆓 [Ücretsiz çeviri (Gemini, DeepL, Ollama)](#rehber-ucretsiz) | Claude şart değil: ücretsiz yapay zekâ seçenekleri ve arkadaşlarla paylaşım. |
 | 📦 [Hazır çeviri paketleri](#rehber-paketler) | GTA 6, GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş. |
+| 🔄 [Güncellemeler](#rehber-guncelleme) | Paketler sessizce, uygulama tek tıkla güncellenir; yeniden kurmak gerekmez. |
 | 🧰 [Sorun giderme](#rehber-sorunlar) | TV bağlanmıyor, altyazı çıkmıyor, yazı kayık... |
 
 <a name="rehber-monitor"></a>
@@ -612,6 +613,27 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 
 1. **Önbelleği paket olarak kaydet** ile oynadıkça biriken çevirileri dosya yap.
 2. Arkadaşların bu dosyayı **Paket ekle** ile yükler.
+
+</details>
+
+<a name="rehber-guncelleme"></a>
+<details>
+<summary><b>🔄 Güncellemeler</b> · Paketler sessizce, uygulama tek tıkla güncellenir; yeniden kurmak gerekmez.</summary>
+
+#### Adım 1: Paketler kendiliğinden güncellenir
+
+1. Program her açılışta GitHub'daki hazır paketlere bakar.
+2. Bilgisayarındaki bir paketin (ör. GTA 6) yenisi varsa sessizce indirir; köşede "Hazır paket güncellendi" yazar.
+
+> Kurulumu yeniden yapmana gerek yok. Ayarlar › Güncellemeler'den kapatabilirsin.
+
+#### Adım 2: Uygulama tek tıkla güncellenir
+
+1. Yeni sürüm çıkınca ana ekranın en üstünde **Yeni sürüm hazır** kartı çıkar.
+2. **Güncelle**'ye bas: kurulum dosyası iner, kendiliğinden kurulur ve program yeni sürümle yeniden açılır.
+3. Ayarların, anahtarların ve paketlerin korunur.
+
+> Neyin değiştiğini GitHub'daki sürüm notlarında (CHANGELOG) görebilirsin.
 
 </details>
 

@@ -126,6 +126,8 @@ class OtomatikCfg:
     chiaki_gorunce_baslat: bool = True  # chiaki penceresi açılınca çeviri başlasın, kapanınca dursun
     ps5_acilinca_baglan: bool = False  # PS5 açılınca chiaki kendiliğinden bağlansın
     chiaki_tam_ekran: bool = True      # otomatik bağlanınca chiaki tam ekran açılsın
+    paket_guncelle: bool = True        # açılışta hazır paketlerin (GTA 6 dahil) yenisini sessizce indir
+    surum_denetle: bool = True         # açılışta uygulamanın yeni sürümü var mı bak
     ps5_adi: str = ""                  # chiaki'de kayıtlı PS5 adı (ör. PS5-123); "PS5'i bul" doldurur
     ps5_ip: str = ""
 

@@ -236,6 +236,19 @@ UCRETSIZ = [
           "Onlar **Paket ekle** ile yükler; o satırlar onlarda da aynı kalitede, anında ve ücretsiz çıkar."]),
 ]
 
+GUNCELLEME = [
+    step("Paketler kendiliğinden güncellenir",
+         ["Program her açılışta GitHub'daki hazır paketlere bakar.",
+          "Bilgisayarındaki bir paketin (ör. GTA 6) yenisi varsa sessizce indirir; köşede \"Hazır paket güncellendi\" "
+          "yazar."],
+         note="Kurulumu yeniden yapmana gerek yok. Ayarlar › Güncellemeler'den kapatabilirsin."),
+    step("Uygulama tek tıkla güncellenir",
+         ["Yeni sürüm çıkınca ana ekranın en üstünde **Yeni sürüm hazır** kartı çıkar.",
+          "**Güncelle**'ye bas: kurulum dosyası iner, kendiliğinden kurulur ve program yeni sürümle yeniden açılır.",
+          "Ayarların, anahtarların ve paketlerin korunur."],
+         note="Neyin değiştiğini GitHub'daki sürüm notlarında (CHANGELOG) görebilirsin."),
+]
+
 SORUNLAR = [
     step("TV bilgisayara bağlanamıyor",
          ["**Televizyon** sayfasında **Bağlantı izni › İzin ver**'e bas (Windows bir kez \"Evet\" ister).",
@@ -283,6 +296,8 @@ GUIDES: list[dict] = [
      "summary": "Claude şart değil: ücretsiz yapay zekâ seçenekleri ve arkadaşlarla paylaşım.", "steps": UCRETSIZ},
     {"key": "paketler", "icon": "translate", "title": "Hazır çeviri paketleri",
      "summary": "GTA 6, GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş.", "steps": PAKETLER},
+    {"key": "guncelleme", "icon": "history", "title": "Güncellemeler",
+     "summary": "Paketler sessizce, uygulama tek tıkla güncellenir; yeniden kurmak gerekmez.", "steps": GUNCELLEME},
     {"key": "sorunlar", "icon": "settings", "title": "Sorun giderme",
      "summary": "TV bağlanmıyor, altyazı çıkmıyor, yazı kayık...", "steps": SORUNLAR},
 ]
