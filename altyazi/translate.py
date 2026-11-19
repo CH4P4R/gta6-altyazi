@@ -96,16 +96,33 @@ def ocr_variant(a: str, b: str) -> bool:
 
 
 class Cache:  # noqa: D101
+    # Yeni sürümde çevirisi düzeltilen ifadeler: önbellekteki eski (yanlış) çevirileri bir kez silinir
+    STALE = [("long-guns", re.compile(r"\blong guns?\b", re.IGNORECASE))]
+
     def __init__(self, path: str, similarity: int):
         self.similarity = similarity
         self.lock = threading.Lock()
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.execute("CREATE TABLE IF NOT EXISTS ceviri (anahtar TEXT PRIMARY KEY, kaynak TEXT,"
                         " ceviri TEXT, kalite INTEGER, motor TEXT, zaman REAL)")
+        self._forget_stale()
         self.mem: dict[str, tuple[str, int, str]] = {
             k: (t, q, m) for k, t, q, m in self.db.execute("SELECT anahtar, ceviri, kalite, motor FROM ceviri")}
         self.keys = list(self.mem)
         log.info("Önbellek: %d çeviri yüklendi", len(self.mem))
+
+    def _forget_stale(self) -> None:
+        self.db.execute("CREATE TABLE IF NOT EXISTS temizlik (ad TEXT PRIMARY KEY)")
+        done = {r[0] for r in self.db.execute("SELECT ad FROM temizlik")}
+        for name, rx in self.STALE:
+            if name in done:
+                continue
+            rows = [k for k, src in self.db.execute("SELECT anahtar, kaynak FROM ceviri") if rx.search(src or k)]
+            self.db.executemany("DELETE FROM ceviri WHERE anahtar = ?", [(k,) for k in rows])
+            self.db.execute("INSERT INTO temizlik VALUES (?)", (name,))
+            if rows:
+                log.info("Önbellek: %d eski çeviri silindi (%s)", len(rows), name)
+        self.db.commit()
 
     def get(self, text: str) -> tuple[str, int, str] | None:
         key = normalize(text)

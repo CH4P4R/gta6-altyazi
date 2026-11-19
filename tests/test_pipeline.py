@@ -357,3 +357,24 @@ def test_license_plates_and_bare_names_are_not_translated():
     for t in ["Get in the car.", "GO", "OKAY.", "Follow Lucia.", "Wanted level 2", "STOP", "I'm in Vice City.",
               "WASTED", "BUSTED", "MISSION PASSED"]:
         assert not is_plate_or_name(t, names), t
+
+
+def test_fixed_phrases_leave_cache_once(tmp_path):
+    """Çevirisi düzeltilen ifadenin eski önbellek kaydı bir kez silinir; sonra kaydedilen kalır."""
+    path = str(tmp_path / "c.sqlite")
+    c = Cache(path, 92)
+    c.db.execute("DELETE FROM temizlik")
+    c.put("Long guns can be stored in your trunk.", "Uzun kollu silahlar bagajınızda saklanabilir.", REFINED, "x")
+    c.put("Get in the car.", "Arabaya bin.", REFINED, "x")
+    c.db.commit()
+    c2 = Cache(path, 92)
+    assert c2.get("Long guns can be stored in your trunk.") is None
+    assert c2.get("Get in the car.")[0] == "Arabaya bin."
+    c2.put("Long guns can be stored in your trunk.", "Uzun namlulu silahlar bagajda saklanabilir.", REFINED, "x")
+    assert Cache(path, 92).get("Long guns can be stored in your trunk.")[0].startswith("Uzun namlulu")
+
+
+def test_long_guns_not_long_sleeved():
+    from altyazi.slang import normalize
+    assert normalize("Long guns can be stored in and retrieved from your trunk.") == \
+        "Rifles can be stored in and retrieved from your trunk."

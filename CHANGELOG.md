@@ -3,6 +3,13 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.12
+- **Yardım kutusu alanı aşağı uzatıldı:** GTA 6'da sol üstteki yardım kutusu köşede değil biraz aşağıda çıkıyor; eski
+  alan uzun kutuların son satırını kesiyordu. Alan artık ekranın ortasına kadar iniyor. Okuma alanlarını elle
+  değiştirmediysen kendiliğinden düzelir.
+- "Long guns" artık "uzun kollu silahlar" değil, "uzun namlulu silahlar" / "tüfekler" diye çevriliyor; önbellekteki
+  eski yanlış çeviri bir kez silinir.
+
 ## 0.4.11
 - Araç plakaları ("46EEK572", "5ABC 123") ve plakadaki eyalet yazısı ("LEONIDA") çevrilmiyor; yalnız özel addan oluşan
   yazılar (ör. tek başına "Vice City") da çevrilmeden bırakılıyor. "Ekranı çevir"de de geçerli.

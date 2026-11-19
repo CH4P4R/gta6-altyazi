@@ -217,6 +217,12 @@ def _migrate(cfg: Config) -> None:
         if not any(b.ad == "telefon" for b in cfg.bolgeler) and any(b.ad == "bildirim" for b in cfg.bolgeler):
             cfg.bolgeler.append(BolgeCfg(ad="telefon", alan=[0.66, 0.33, 1.0, 0.78], tur="altyazi", hizalama="sag",
                                          capa="ust", silme_ms=400))
+    if "yardim-asagi" not in cfg.gocler:
+        # GTA 6'nın yardım kutusu köşede değil biraz aşağıda; eski alan (y ≤ 0.32) son satırı kesiyordu
+        cfg.gocler.append("yardim-asagi")
+        for b in cfg.bolgeler:
+            if b.ad == "yardim" and [round(float(v), 2) for v in b.alan] == [0.0, 0.0, 0.36, 0.32]:
+                b.alan = [0.0, 0.0, 0.36, 0.50]
 
 
 def to_dict(cfg) -> dict:  # noqa: ANN001

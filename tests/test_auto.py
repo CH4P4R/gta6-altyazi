@@ -136,3 +136,20 @@ def test_old_user_config_gets_phone_zone_once(tmp_path, monkeypatch):
     again.bolgeler = [b for b in again.bolgeler if b.ad != "telefon"]        # kullanıcı sildi
     config.save(again)
     assert "telefon" not in [b.ad for b in config.load().bolgeler]
+
+
+def test_old_help_zone_moves_down_once(tmp_path, monkeypatch):
+    """GTA 6'nın yardım kutusu köşede değil: eski varsayılan alan (y ≤ 0.32) bir kez aşağı uzatılır, elle ayarlanan korunur."""
+    monkeypatch.setenv("ALTYAZI_DATA", str(tmp_path))
+    from altyazi import config
+    cfg = config.load()
+    help_zone = next(b for b in cfg.bolgeler if b.ad == "yardim")
+    assert help_zone.alan[3] >= 0.5
+    help_zone.alan = [0.0, 0.0, 0.36, 0.32]
+    cfg.gocler = [g for g in cfg.gocler if g != "yardim-asagi"]
+    config.save(cfg)
+    again = config.load()
+    assert next(b for b in again.bolgeler if b.ad == "yardim").alan == [0.0, 0.0, 0.36, 0.50]
+    next(b for b in again.bolgeler if b.ad == "yardim").alan = [0.0, 0.0, 0.36, 0.32]   # kullanıcı geri aldı
+    config.save(again)
+    assert next(b for b in config.load().bolgeler if b.ad == "yardim").alan == [0.0, 0.0, 0.36, 0.32]

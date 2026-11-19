@@ -67,6 +67,8 @@ _PHRASES = [
     (r"\bpiece of cake\b", "very easy"), (r"\bcut it out\b", "stop it"), (r"\bknock it off\b", "stop it"),
     (r"\bgo dark\b", "stop all communication"), (r"\btake (him|her|them) out\b", "kill \\1"),
     (r"\bsmoke (him|her|them)\b", "kill \\1"), (r"\bpop (him|her|them)\b", "shoot \\1"),
+    # "long guns" kelimesi kelimesine "uzun kollu silahlar" çıkıyordu
+    (r"\blong guns\b", "rifles"), (r"\blong gun\b", "rifle"),
 ]
 _PHRASES_RE = [(re.compile(p, re.IGNORECASE), r) for p, r in _PHRASES]
 

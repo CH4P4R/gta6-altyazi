@@ -32,7 +32,7 @@ bolgeler:
     capa: alt
 
   - ad: yardim                   # sol üstteki yardım kutusu ("X'e basarak araca bin" gibi)
-    alan: [0.00, 0.00, 0.36, 0.32]
+    alan: [0.00, 0.00, 0.36, 0.50]     # GTA 6'da kutu biraz aşağıda, uzun olanlar ekranın ortasına iner
     tur: arayuz
     hizalama: sol
     capa: ust

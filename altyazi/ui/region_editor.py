@@ -16,7 +16,7 @@ PRESETS = {
     "Alt orta (altyazı)": ([0.10, 0.76, 0.90, 0.97], "altyazi", "orta", "alt"),
     "Geniş alt bant": ([0.02, 0.70, 0.98, 0.98], "altyazi", "orta", "alt"),
     "Tüm alt yarı": ([0.0, 0.50, 1.0, 1.0], "altyazi", "orta", "alt"),
-    "Sol üst (yardım kutusu)": ([0.0, 0.0, 0.36, 0.32], "arayuz", "sol", "ust"),
+    "Sol üst (yardım kutusu)": ([0.0, 0.0, 0.36, 0.50], "arayuz", "sol", "ust"),
     "Sağ üst (bildirim)": ([0.64, 0.0, 1.0, 0.32], "arayuz", "sag", "ust"),
     "Üst orta (görev)": ([0.20, 0.0, 0.80, 0.20], "arayuz", "orta", "ust"),
     "Sağ orta (telefon mesajları)": ([0.66, 0.33, 1.0, 0.78], "altyazi", "sag", "ust"),
