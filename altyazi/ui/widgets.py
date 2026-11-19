@@ -163,6 +163,17 @@ def draw_icon(p: QPainter, name: str, r: QRectF, color: QColor, width: float = 1
         path.lineTo(x + w * .42, y + h * .72)
         path.lineTo(x + w * .82, y + h * .3)
         p.drawPath(path)
+    elif name == "guide":                              # açık kitap
+        path = QPainterPath()
+        path.moveTo(cx, y + h * .28)
+        path.cubicTo(cx - w * .12, y + h * .18, x + w * .22, y + h * .18, x + w * .1, y + h * .24)
+        path.lineTo(x + w * .1, y + h * .8)
+        path.cubicTo(x + w * .22, y + h * .74, cx - w * .12, y + h * .74, cx, y + h * .84)
+        path.cubicTo(cx + w * .12, y + h * .74, x + w * .78, y + h * .74, x + w * .9, y + h * .8)
+        path.lineTo(x + w * .9, y + h * .24)
+        path.cubicTo(x + w * .78, y + h * .18, cx + w * .12, y + h * .18, cx, y + h * .28)
+        p.drawPath(path)
+        p.drawLine(QPointF(cx, y + h * .28), QPointF(cx, y + h * .84))
     elif name == "copy":
         p.drawRoundedRect(QRectF(x + w * .3, y + h * .3, w * .5, h * .55), 2, 2)
         p.drawPolyline([QPointF(x + w * .2, y + h * .7), QPointF(x + w * .2, y + h * .15),

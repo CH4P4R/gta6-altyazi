@@ -19,7 +19,8 @@
   <a href="#-indir-ve-kur"><b>İndir</b></a> ·
   <a href="#-nasıl-görünüyor">Nasıl görünüyor</a> ·
   <a href="#-nasıl-çalışır">Nasıl çalışır</a> ·
-  <a href="#-evdeki-kurulum">Kurulum rehberi</a> ·
+  <a href="#-adım-adım-rehber">Rehber</a> ·
+  <a href="CHANGELOG.md">Sürüm notları</a> ·
   <a href="#-sık-sorulanlar">SSS</a>
 </p>
 
@@ -117,6 +118,10 @@ Her çevirinin süresi uygulamanın ana ekranında ve oyunun sağ üstünde gör
 <td width="50%"><img src="docs/img/uygulama-tv.png" alt="Televizyon"><br><sub><b>Televizyon:</b> TV'yi ağda bul, tek tıkla kur ve başlat, güvenlik duvarı izni</sub></td>
 <td width="50%"><img src="docs/img/uygulama-ceviri.png" alt="Çeviri"><br><sub><b>Çeviri:</b> yerel model + Claude, deneme kutusu, sözlük, hazır paketler</sub></td>
 </tr>
+<tr>
+<td width="50%"><img src="docs/img/uygulama-rehber.png" alt="Rehber"><br><sub><b>Rehber:</b> kurulumdan yayına her süreç resimli, adım adım</sub></td>
+<td width="50%"><img src="docs/img/uygulama-gecmis.png" alt="Geçmiş"><br><sub><b>Geçmiş:</b> oturumdaki bütün çeviriler, aranabilir ve kaydedilebilir</sub></td>
+</tr>
 </table>
 
 | Sayfa | Ne yapar |
@@ -126,90 +131,475 @@ Her çevirinin süresi uygulamanın ana ekranında ve oyunun sağ üstünde gör
 | **Televizyon** | TV'yi ağda bulma, eşleştirme, kurma, mod seçimi, deneme altyazısı, güvenlik duvarı izni |
 | **Çeviri** | Yerel model / Google, Claude / Gemini / DeepL, API anahtarı, deneme çevirisi, sözlük, hazır çeviri paketleri |
 | **Geçmiş** | Oturumdaki bütün çeviriler; aranabilir, metin olarak kaydedilebilir |
+| **Rehber** | Kurulumdan yayına bütün süreçler resimli, adım adım (bu sayfadaki rehberle aynı) |
 | **Ayarlar** | Görüntü kaynağı (chiaki / capture kart), gösterim, kısayollar, otomatik başlatma, OBS adresi |
 
 ## 📥 İndir ve kur
 
 1. **[Releases](https://github.com/CH4P4R/gta6-altyazi/releases)** sayfasından en son `GTA6Altyazi-Setup.exe`'yi indir.
 2. Çalıştır. Yönetici izni istemez. "Windows kişisel bilgisayarınızı korudu" uyarısı çıkarsa **Ek bilgi › Yine de çalıştır**'a bas.
-3. İlk açılışta 5 adımlı sihirbaz karşılar: PS5 bağlantısı, TV, çeviri (Claude anahtarı) ve hazır.
+3. İlk açılışta resimli kurulum sihirbazı karşılar: nerede oynayacağın, PS5 ve chiaki-ng, TV, çeviri (Claude anahtarı) ve hazır.
 
 Kurulumun içinde her şey var: yerel çeviri modeli (internetsiz çalışır), OCR, TV uygulamaları ve TV'ye kurmak için gereken araçlar. Ayrıca bir şey indirmen gerekmez.
 
 > [!NOTE]
 > Claude anahtarını [console.anthropic.com](https://console.anthropic.com/settings/keys)'dan alırsın. Anahtar sadece senin bilgisayarında saklanır. Anahtar girmezsen uygulama yalnızca yerel modelle çalışır.
 
-## 🏠 Evdeki kurulum
+## 🗺️ Kurulum yolculuğu
 
-<details open>
-<summary><b>1. Ağ</b></summary>
+```mermaid
+flowchart LR
+    A["📥 Kurulum dosyasını<br/>indir ve kur"] --> B{"Nerede<br/>oynayacaksın?"}
+    B -- "🖥️ Monitörde" --> C["chiaki-ng'yi kur<br/>kendi hesabınla eşle"]
+    B -- "📺 TV'de" --> D["İkinci PSN hesabı<br/>chiaki-ng ile eşle"]
+    D --> E["TV uygulamasını kur<br/>(Google TV / LG / Samsung)"]
+    C --> F["🔑 Claude anahtarı"]
+    E --> F
+    F --> G["▶️ Başlat"]
+    classDef s fill:#2b2140,stroke:#ff5c8a,color:#ffffff
+    classDef q fill:#3a2350,stroke:#ff9f6b,color:#ffffff
+    classDef go fill:#ff5c8a,stroke:#ff5c8a,color:#ffffff
+    class A,C,D,E,F s
+    class B q
+    class G go
+```
 
-- **Kasa:** kabloyla modeme.
-- **PS5:** mümkünse kabloyla. chiaki'nin görüntüsü PS5'ten kasaya bu yoldan gider.
-- **TV:** kabloya alabiliyorsan al. Wi-Fi'da da çalışır.
-- Hepsi aynı ağda olmalı. TV bulunamıyorsa menzil arttırıcı cihazları ayırıyor demektir; TV'yi kabloya almak çözer.
+Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım yürütür; her adımda neye basacağın resimde işaretlidir. Sonradan bir şeye bakmak istersen uygulamadaki **Rehber** sayfası aynı anlatımı her zaman açık tutar.
 
-</details>
+<table>
+<tr>
+<td width="50%"><img src="docs/img/sihirbaz-secim.png" alt="Sihirbaz: nerede oynayacaksın"><br><sub><b>Sihirbaz:</b> nerede oynayacağını seç, anlatım ona göre değişsin</sub></td>
+<td width="50%"><img src="docs/img/sihirbaz-chiaki.png" alt="Sihirbaz: chiaki adımı"><br><sub><b>Sihirbaz:</b> her adım resimli; neye basacağın işaretli</sub></td>
+</tr>
+</table>
 
-<details open>
-<summary><b>2. İkinci PSN hesabı (chiaki için)</b></summary>
+## 📖 Adım adım rehber
 
-chiaki-ng'ye kendi hesabınla bağlanırsan TV'deki kolun kopar.
+<!-- REHBER:BASLA -->
 
-1. [PlayStation sitesinden](https://www.playstation.com) ücretsiz yeni bir hesap aç ve PS5'te bu hesapla bir kez giriş yap.
-2. Bu kullanıcıdayken **Ayarlar › Sistem › Uzaktan Oynatma**: aç ve **Cihazı Bağla**'ya bas (8 haneli kod çıkar).
-3. [chiaki-ng](https://github.com/streetpea/chiaki-ng/releases)'yi kur. PS5'i kaydederken ikinci hesapla giriş yap ve kodu gir. Ayarlardan 1080p, 60 fps ve en yüksek bitrate seç.
-4. **Ayarlar › Sistem › Güç Tasarrufu › Dinlenme Modunda Kullanılabilir Özellikler**: **İnternete Bağlı Kal** ve **Ağ Üzerinden PS5'i Açmayı Etkinleştir** açık olsun.
+> Bu bölüm uygulamadaki **Rehber** sayfasıyla aynıdır (kaynak: `altyazi/rehber.py`). Uygulamada da soldaki menüden **Rehber**'e girip aynı adımları resimli izleyebilirsin.
 
-</details>
+| Konu | Ne anlatıyor |
+|---|---|
+| 🖥️ [Bilgisayar monitöründe oyna](#rehber-monitor) | chiaki-ng ile PS5'i bilgisayarda oyna; Türkçe chiaki'nin üstünde çıksın. |
+| 📺 [TV'de oyna, bilgisayar izlesin](#rehber-tv-izle) | Sen TV'den HDMI ile oyna; bilgisayar ikinci hesapla izleyip Türkçeyi TV'ye göndersin. |
+| 🤖 [TV uygulaması: Google TV / Android TV](#rehber-google-tv) | TCL, Sony, Philips, Xiaomi, Hisense ve diğer Android TV'ler. |
+| 📺 [TV uygulaması: LG (webOS)](#rehber-lg) | LG Developer Mode ile kurulum. |
+| 📺 [TV uygulaması: Samsung (Tizen)](#rehber-samsung) | Tizen Studio olmadan, Samsung hesabıyla kurulum. |
+| 💬 [Discord'da arkadaşlarına yayın](#rehber-discord) | Arkadaşların Türkçe altyazılı izlesin. |
+| 🎥 [OBS ile yayın](#rehber-obs) | Türkçe altyazıyı OBS'de oyunun üstüne koy. |
+| 🎯 [GTA 6 için okuma alanlarını ayarla](#rehber-gta6) | Kutuları gerçek altyazının üstüne oturt (5 dakika). |
+| 📦 [Hazır çeviri paketleri](#rehber-paketler) | GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş. |
+| 🧰 [Sorun giderme](#rehber-sorunlar) | TV bağlanmıyor, altyazı çıkmıyor, yazı kayık... |
 
-<details open>
-<summary><b>3. Televizyon: Google TV / Android TV (TCL, Sony, Philips, Xiaomi, Hisense...)</b></summary>
-
-1. **Ayarlar › Sistem › Hakkında › Android TV OS derlemesi** satırına 7 kez bas.
-2. **Ayarlar › Sistem › Geliştirici seçenekleri**: **USB hata ayıklama**'yı aç. Yoksa ya da TV bulunamazsa **Kablosuz hata ayıklama**'yı aç.
-3. Uygulamada **Televizyon** sayfası: **Ağda ara › Bağlan, kur ve başlat**. TV'de çıkan "Hata ayıklamaya izin verilsin mi?" sorusunda **Her zaman izin ver**'i işaretleyip **İzin ver**'e bas.
-   - Kablosuz hata ayıklamada önce TV'deki **Eşleştirme koduyla cihaz eşleştir** ekranındaki adres:port ve kodu **Eşleştir** kısmına yaz.
-4. **Deneme altyazısı gönder** ile TV'de yerini kontrol et.
-5. TV bağlanamıyorsa aynı sayfadaki **Bağlantı izni › İzin ver** ile Windows güvenlik duvarına izin ver.
-
-TV uygulaması PS5'in HDMI görüntüsünü kendi içinde açar ve Türkçeyi üstüne çizer; PS5'in hangi HDMI'da olduğunu kendisi bulur. TCL gibi bazı Google TV'ler HDMI'yı öne alıp uygulamayı arka plana iterse ya da görüntü siyah kalırsa uygulama kendiliğinden **katman moduna** geçer.
-
-</details>
-
+<a name="rehber-monitor"></a>
 <details>
-<summary><b>3. Televizyon: LG (webOS)</b></summary>
+<summary><b>🖥️ Bilgisayar monitöründe oyna</b> · chiaki-ng ile PS5'i bilgisayarda oyna; Türkçe chiaki'nin üstünde çıksın.</summary>
 
-1. TV'de LG Content Store'dan ücretsiz **Developer Mode** uygulamasını kur ve LG hesabınla gir.
-2. **Dev Mode Status** ve **Key Server**'ı aç.
-3. Ekrandaki IP'yi ve **Passphrase**'i uygulamanın Televizyon sayfasına yaz, **Bağlan**'a bas.
+#### Adım 1: chiaki-ng'yi indir ve kur
 
-Geliştirici modu en çok 1000 saat açık kalır; uygulama her bağlanışta süreyi kendisi baştan başlatır.
+<img src="altyazi/ui/rehber/chiaki-indir.png" alt="chiaki-ng'yi indir ve kur" width="640">
+
+1. **İndirme sayfasını aç**'a bas.
+2. En üstteki sürümün **Assets** listesinde adında **windows** geçen dosyayı indir.
+3. İndirdiğin dosyayı çalıştırıp kur.
+
+🔗 [İndirme sayfasını aç](https://github.com/streetpea/chiaki-ng/releases)
+
+> chiaki-ng, PS5'in görüntüsünü ağ üzerinden bilgisayara getiren ücretsiz programdır.
+
+#### Adım 2: chiaki-ng'de PSN girişi
+
+<img src="altyazi/ui/rehber/chiaki-kopyala.png" alt="chiaki-ng'de PSN girişi" width="640">
+
+1. chiaki-ng'yi aç. PS5 eklemek için hesabını ister: **PSN Login** ekranı açılır.
+2. **Click to Re-Copy URL**'ye bas. Sony'nin giriş adresi kopyalanır.
+
+#### Adım 3: Tarayıcıda giriş yap
+
+<img src="altyazi/ui/rehber/tarayici-giris.png" alt="Tarayıcıda giriş yap" width="640">
+
+1. Chrome ya da Edge'i aç, adres çubuğuna tıkla, **Ctrl+V** yap ve **Enter**'a bas.
+2. Açılan PlayStation sayfasında **Kendi PlayStation hesabınla** giriş yap (oyunların ve kayıtların o hesapta).
+
+#### Adım 4: Açılan sayfanın adresini kopyala
+
+<img src="altyazi/ui/rehber/tarayici-adres.png" alt="Açılan sayfanın adresini kopyala" width="640">
+
+1. Giriş bitince boş ya da hatalı görünen bir sayfa açılır. **Bu normal.**
+2. Adres çubuğuna tıkla (adres *remoteplay.dl.playstation.net/…redirect?code=* ile başlar).
+3. **Ctrl+A**, sonra **Ctrl+C** yap.
+
+> Bu kod birkaç dakika geçerli, hızlı ol.
+
+#### Adım 5: chiaki-ng'ye yapıştır
+
+<img src="altyazi/ui/rehber/chiaki-yapistir.png" alt="chiaki-ng'ye yapıştır" width="640">
+
+1. chiaki-ng'ye dön, **Click to Paste URL**'ye bas.
+2. Hesap bilgisi alınır; sol üstteki **‹** ile ana ekrana dön.
+
+> Hata verirse kodun süresi dolmuştur: PSN girişi adımından tekrarla.
+
+#### Adım 6: PS5'te bağlantı kodunu al
+
+<img src="altyazi/ui/rehber/ps5-kod.png" alt="PS5'te bağlantı kodunu al" width="640">
+
+1. PS5'te chiaki'ye girdiğin hesapla oturum açıkken **Ayarlar › Sistem › Uzaktan Oynatma**: **Uzaktan Oynatmayı Etkinleştir** açık olsun.
+2. **Cihazı Bağla**'ya bas; 8 haneli bir kod çıkar (ekranda bırak).
+3. **Ayarlar › Sistem › Güç Tasarrufu › Dinlenme Modunda Kullanılabilir Özellikler**: **İnternete Bağlı Kal** ve **Ağ Üzerinden PS5'i Açmayı Etkinleştir**'i aç.
+
+> TV'de oynayacaksan Uzaktan Oynatma ayarlarındaki bağlantı durumu açılır penceresini gizle; yoksa chiaki bağlanınca TV ekranında "bağlandı" yazısı çıkar.
+
+#### Adım 7: PS5'i chiaki-ng'ye kaydet
+
+<img src="altyazi/ui/rehber/chiaki-kayit.png" alt="PS5'i chiaki-ng'ye kaydet" width="640">
+
+1. chiaki-ng ana ekranında PS5'in kutusuna tıkla.
+2. **PIN** kutusuna PS5'teki 8 haneli kodu yaz.
+3. **Register**'a bas.
+
+> PS5 görünmüyorsa PS5 ve bilgisayar aynı modeme bağlı mı bak; sağ üstteki + ile IP'siyle de eklenir.
+
+#### Adım 8: Görüntü ayarları (bir kere)
+
+<img src="altyazi/ui/rehber/chiaki-ayar.png" alt="Görüntü ayarları (bir kere)" width="640">
+
+1. chiaki-ng ayarlarında (dişli simgesi) **Video** bölümüne gir.
+2. **Resolution: 1080p**, **FPS: 60** seç.
+3. **Bitrate**'i en yükseğe al.
+
+> Yazıların net okunması için bu önemli.
+
+#### Adım 9: Kolu bilgisayara bağla
+
+<img src="altyazi/ui/rehber/kol-usb.png" alt="Kolu bilgisayara bağla" width="640">
+
+1. DualSense'i **USB kablosuyla** bilgisayara tak (titreşim de çalışır). Bluetooth da olur.
+
+#### Adım 10: Bağlan
+
+<img src="altyazi/ui/rehber/chiaki-baglan.png" alt="Bağlan" width="640">
+
+1. chiaki-ng'de PS5'in kutusuna tıkla; PS5'in ekranı açılır, kolla oynarsın.
+2. İstersen **F11** ile tam ekran yap.
+
+#### Adım 11: Türkçeyi aç
+
+<img src="altyazi/ui/rehber/baslat.png" alt="Türkçeyi aç" width="640">
+
+1. **GTA6 Altyazı**'yı aç.
+2. Ana ekrandaki büyük düğmeye (**Başlat**) bas.
+3. Oyunda İngilizce altyazıyı aç; yazılar Türkçe görünür.
+
+> Kısayollar: Ctrl+Shift+9 ekranın tamamını çevirir, Ctrl+Shift+0 duraklatır.
 
 </details>
 
+<a name="rehber-tv-izle"></a>
 <details>
-<summary><b>3. Televizyon: Samsung (Tizen)</b></summary>
+<summary><b>📺 TV'de oyna, bilgisayar izlesin</b> · Sen TV'den HDMI ile oyna; bilgisayar ikinci hesapla izleyip Türkçeyi TV'ye göndersin.</summary>
 
-Tizen Studio gerekmez.
+#### Adım 1: İkinci PSN hesabı aç (ücretsiz)
 
-1. TV'de Uygulamalar ekranında kumandayla **1-2-3-4-5** yaz ve Developer mode'u aç.
-2. Host PC IP olarak bilgisayarın IP'sini gir (uygulama Televizyon sayfasında gösterir).
-3. TV'yi güç tuşuna 2 saniye basılı tutarak yeniden başlat.
-4. Uygulamada **Bağlan**'a bas. İlk seferde tarayıcıda bir kez Samsung hesabınla giriş yaparsın; sonra uygulama kendisi imzalar, kurar ve açar.
+1. Ücretsiz yeni bir PlayStation hesabı aç.
+2. PS5'i aç ve bu yeni hesapla **bir kez** oturum aç.
 
-Samsung TV kendiliğinden HDMI'ya geçiyorsa **Anynet+ (HDMI-CEC)** ve **Otomatik Kaynak Değiştirme**'yi kapat.
+🔗 [PSN hesabı aç](https://www.playstation.com/tr-tr/playstation-network/)
+
+> TV'de oynarken bilgisayar PS5'i ikinci bir hesapla izler; kendi hesabınla bağlanırsa TV'deki kolun kopar.
+
+#### Adım 2: chiaki-ng'yi indir ve kur
+
+<img src="altyazi/ui/rehber/chiaki-indir.png" alt="chiaki-ng'yi indir ve kur" width="640">
+
+1. **İndirme sayfasını aç**'a bas.
+2. En üstteki sürümün **Assets** listesinde adında **windows** geçen dosyayı indir.
+3. İndirdiğin dosyayı çalıştırıp kur.
+
+🔗 [İndirme sayfasını aç](https://github.com/streetpea/chiaki-ng/releases)
+
+> chiaki-ng, PS5'in görüntüsünü ağ üzerinden bilgisayara getiren ücretsiz programdır.
+
+#### Adım 3: chiaki-ng'de PSN girişi
+
+<img src="altyazi/ui/rehber/chiaki-kopyala.png" alt="chiaki-ng'de PSN girişi" width="640">
+
+1. chiaki-ng'yi aç. PS5 eklemek için hesabını ister: **PSN Login** ekranı açılır.
+2. **Click to Re-Copy URL**'ye bas. Sony'nin giriş adresi kopyalanır.
+
+#### Adım 4: Tarayıcıda giriş yap
+
+<img src="altyazi/ui/rehber/tarayici-giris.png" alt="Tarayıcıda giriş yap" width="640">
+
+1. Chrome ya da Edge'i aç, adres çubuğuna tıkla, **Ctrl+V** yap ve **Enter**'a bas.
+2. Açılan PlayStation sayfasında **İkinci PSN hesabınla** giriş yap. Kendi hesabınla girersen TV'de oynarken kolun kopar.
+
+#### Adım 5: Açılan sayfanın adresini kopyala
+
+<img src="altyazi/ui/rehber/tarayici-adres.png" alt="Açılan sayfanın adresini kopyala" width="640">
+
+1. Giriş bitince boş ya da hatalı görünen bir sayfa açılır. **Bu normal.**
+2. Adres çubuğuna tıkla (adres *remoteplay.dl.playstation.net/…redirect?code=* ile başlar).
+3. **Ctrl+A**, sonra **Ctrl+C** yap.
+
+> Bu kod birkaç dakika geçerli, hızlı ol.
+
+#### Adım 6: chiaki-ng'ye yapıştır
+
+<img src="altyazi/ui/rehber/chiaki-yapistir.png" alt="chiaki-ng'ye yapıştır" width="640">
+
+1. chiaki-ng'ye dön, **Click to Paste URL**'ye bas.
+2. Hesap bilgisi alınır; sol üstteki **‹** ile ana ekrana dön.
+
+> Hata verirse kodun süresi dolmuştur: PSN girişi adımından tekrarla.
+
+#### Adım 7: PS5'te bağlantı kodunu al
+
+<img src="altyazi/ui/rehber/ps5-kod.png" alt="PS5'te bağlantı kodunu al" width="640">
+
+1. PS5'te chiaki'ye girdiğin hesapla oturum açıkken **Ayarlar › Sistem › Uzaktan Oynatma**: **Uzaktan Oynatmayı Etkinleştir** açık olsun.
+2. **Cihazı Bağla**'ya bas; 8 haneli bir kod çıkar (ekranda bırak).
+3. **Ayarlar › Sistem › Güç Tasarrufu › Dinlenme Modunda Kullanılabilir Özellikler**: **İnternete Bağlı Kal** ve **Ağ Üzerinden PS5'i Açmayı Etkinleştir**'i aç.
+
+> TV'de oynayacaksan Uzaktan Oynatma ayarlarındaki bağlantı durumu açılır penceresini gizle; yoksa chiaki bağlanınca TV ekranında "bağlandı" yazısı çıkar.
+
+#### Adım 8: PS5'i chiaki-ng'ye kaydet
+
+<img src="altyazi/ui/rehber/chiaki-kayit.png" alt="PS5'i chiaki-ng'ye kaydet" width="640">
+
+1. chiaki-ng ana ekranında PS5'in kutusuna tıkla.
+2. **PIN** kutusuna PS5'teki 8 haneli kodu yaz.
+3. **Register**'a bas.
+
+> PS5 görünmüyorsa PS5 ve bilgisayar aynı modeme bağlı mı bak; sağ üstteki + ile IP'siyle de eklenir.
+
+#### Adım 9: Görüntü ayarları (bir kere)
+
+<img src="altyazi/ui/rehber/chiaki-ayar.png" alt="Görüntü ayarları (bir kere)" width="640">
+
+1. chiaki-ng ayarlarında (dişli simgesi) **Video** bölümüne gir.
+2. **Resolution: 1080p**, **FPS: 60** seç.
+3. **Bitrate**'i en yükseğe al.
+
+> Yazıların net okunması için bu önemli.
+
+#### Adım 10: Bağlan
+
+<img src="altyazi/ui/rehber/chiaki-baglan.png" alt="Bağlan" width="640">
+
+1. chiaki-ng'de PS5'in kutusuna tıkla. Sen TV'den oynamaya devam et; chiaki açık kalsın.
+2. chiaki penceresini **simge durumuna küçültme**, program görüntüyü oradan okuyor.
+
+#### Adım 11: Türkçeyi aç
+
+<img src="altyazi/ui/rehber/baslat.png" alt="Türkçeyi aç" width="640">
+
+1. **GTA6 Altyazı**'yı aç.
+2. Ana ekrandaki büyük düğmeye (**Başlat**) bas.
+3. Oyunda İngilizce altyazıyı aç; yazılar Türkçe görünür.
+
+> Kısayollar: Ctrl+Shift+9 ekranın tamamını çevirir, Ctrl+Shift+0 duraklatır.
 
 </details>
 
+<a name="rehber-google-tv"></a>
 <details>
-<summary><b>4. Discord (yayın kasadan, konuşma başka cihazdan)</b></summary>
+<summary><b>🤖 TV uygulaması: Google TV / Android TV</b> · TCL, Sony, Philips, Xiaomi, Hisense ve diğer Android TV'ler.</summary>
 
-- **Kasa:** ikinci bir Discord hesabıyla sesli kanala gir. Mikrofonu ve sesi kapat, sonra **Ekran paylaş › Ekranlar › chiaki'nin olduğu monitör › Go Live**. Tüm ekranı paylaşmak şart: Türkçe yazı ayrı bir katman olduğu için sadece chiaki penceresini paylaşırsan görünmez.
-- **Konuştuğun cihaz:** kendi hesabınla aynı kanala gir. Kulaklık kullan, yoksa mikrofon TV'nin sesini de alır.
-- Kasanın ekranı kilitlenirse okuma durur. **Ayarlar › Sistem › Güç ve pil**: ekran için **Hiçbir zaman** seç. chiaki penceresini simge durumuna küçültme.
+#### Adım 1: TV'de geliştirici seçeneklerini aç
+
+<img src="altyazi/ui/rehber/tv-gelistirici.png" alt="TV'de geliştirici seçeneklerini aç" width="640">
+
+1. TV kumandasıyla **Ayarlar › Sistem › Hakkında**'ya gir.
+2. **Android TV OS derlemesi** satırına arka arkaya **7 kez** bas. "Artık geliştiricisiniz" yazar.
+
+#### Adım 2: USB hata ayıklamayı aç
+
+<img src="altyazi/ui/rehber/tv-hata-ayiklama.png" alt="USB hata ayıklamayı aç" width="640">
+
+1. **Ayarlar › Sistem › Geliştirici seçenekleri**'ne gir.
+2. **USB hata ayıklama**'yı aç.
+
+> Yoksa ya da TV bulunamazsa Kablosuz hata ayıklama'yı aç; ekrandaki eşleştirme adresi ve kodunu programdaki Eşleştir kısmına yazarsın.
+
+#### Adım 3: Bağlan ve izin ver
+
+<img src="altyazi/ui/rehber/tv-izin.png" alt="Bağlan ve izin ver" width="640">
+
+1. Programda **Televizyon** sayfasında **Ağda ara**'ya bas (ya da TV'nin IP'sini yaz), sonra **Bağlan, kur ve başlat**'a bas.
+2. TV'de çıkan soruda **Bu bilgisayardan her zaman izin ver**'i işaretle, **İzin ver**'e bas.
+
+> TV uygulaması PS5'in HDMI'ını kendisi bulur. TV HDMI'yı öne alırsa ya da görüntü siyah kalırsa kendiliğinden katman moduna geçer.
 
 </details>
+
+<a name="rehber-lg"></a>
+<details>
+<summary><b>📺 TV uygulaması: LG (webOS)</b> · LG Developer Mode ile kurulum.</summary>
+
+#### Adım 1: TV'de Developer Mode'u aç
+
+<img src="altyazi/ui/rehber/lg-devmode.png" alt="TV'de Developer Mode'u aç" width="640">
+
+1. TV'de **LG Content Store**'dan ücretsiz **Developer Mode** uygulamasını kur ve LG hesabınla gir.
+2. **Dev Mode Status**'u aç; TV yeniden başlar.
+3. Uygulamayı tekrar aç ve **Key Server**'ı aç.
+
+#### Adım 2: Programdan kur
+
+<img src="altyazi/ui/rehber/lg-devmode.png" alt="Programdan kur" width="640">
+
+1. Programda **Televizyon** sayfasında markayı **LG** seç.
+2. Developer Mode ekranındaki **IP** adresini ve **Passphrase**'i yaz.
+3. **Bağlan, kur ve başlat**'a bas.
+
+> Geliştirici modu en çok 1000 saat açık kalır; program her bağlanışta süreyi kendisi baştan başlatır.
+
+</details>
+
+<a name="rehber-samsung"></a>
+<details>
+<summary><b>📺 TV uygulaması: Samsung (Tizen)</b> · Tizen Studio olmadan, Samsung hesabıyla kurulum.</summary>
+
+#### Adım 1: TV'de Developer mode'u aç
+
+<img src="altyazi/ui/rehber/samsung-devmode.png" alt="TV'de Developer mode'u aç" width="640">
+
+1. TV'de **Uygulamalar** ekranını aç.
+2. Kumandayla **1 2 3 4 5** yaz; Developer mode penceresi açılır.
+3. **Developer mode**'u **On** yap, **Host PC IP**'ye bu bilgisayarın IP'sini yaz (program Televizyon sayfasında gösterir), **OK**'a bas.
+4. TV'yi güç tuşuna yaklaşık 2 saniye basılı tutarak yeniden başlat.
+
+> Tizen Studio gerekmez.
+
+#### Adım 2: Programdan kur
+
+<img src="altyazi/ui/rehber/samsung-devmode.png" alt="Programdan kur" width="640">
+
+1. Programda **Televizyon** sayfasında markayı **Samsung** seç ve **Bağlan, kur ve başlat**'a bas.
+2. İlk seferde tarayıcıda bir kez **Samsung hesabınla** giriş yap; program uygulamayı TV'ne özel imzalatır, kurar ve açar.
+
+> TV kendiliğinden HDMI'ya geçiyorsa Anynet+ (HDMI-CEC) ve Otomatik Kaynak Değiştirme'yi kapat.
+
+</details>
+
+<a name="rehber-discord"></a>
+<details>
+<summary><b>💬 Discord'da arkadaşlarına yayın</b> · Arkadaşların Türkçe altyazılı izlesin.</summary>
+
+#### Adım 1: Bilgisayardan yayın aç
+
+<img src="altyazi/ui/rehber/discord-paylas.png" alt="Bilgisayardan yayın aç" width="640">
+
+1. Bilgisayarda ikinci bir Discord hesabıyla sesli kanala gir; mikrofonunu ve sesini kapat.
+2. **Ekran Paylaş**'a bas, **Ekranlar** sekmesinden chiaki'nin olduğu monitörü seç, **Yayına Başla**'ya bas.
+
+> Tüm ekranı paylaşmak şart: Türkçe yazı ayrı bir katman olduğu için sadece chiaki penceresini paylaşırsan görünmez.
+
+#### Adım 2: Başka cihazdan konuş
+
+<img src="altyazi/ui/rehber/discord-paylas.png" alt="Başka cihazdan konuş" width="640">
+
+1. Telefondan ya da başka bir bilgisayardan kendi hesabınla aynı kanala gir ve konuş.
+2. Kulaklık kullan; yoksa mikrofon TV'nin sesini de alır.
+
+> Bilgisayarın ekranı kilitlenirse okuma durur: ekranı hiç kapanmayacak şekilde ayarla.
+
+</details>
+
+<a name="rehber-obs"></a>
+<details>
+<summary><b>🎥 OBS ile yayın</b> · Türkçe altyazıyı OBS'de oyunun üstüne koy.</summary>
+
+#### Adım 1: OBS'ye tarayıcı kaynağı ekle
+
+<img src="altyazi/ui/rehber/obs-kaynak.png" alt="OBS'ye tarayıcı kaynağı ekle" width="640">
+
+1. OBS'de **Kaynaklar** kutusunda **+**'ya bas, **Tarayıcı**'yı seç.
+2. URL: **http://localhost:8787/obs**, genişlik **1920**, yükseklik **1080** yaz.
+3. Bu kaynağı oyun görüntüsünün **üstüne** koy.
+
+> Capture kart kullanıyorsan OBS'de Sanal Kamerayı Başlat'a bas ve programda kaynak olarak OBS Virtual Camera'yı seç.
+
+</details>
+
+<a name="rehber-gta6"></a>
+<details>
+<summary><b>🎯 GTA 6 için okuma alanlarını ayarla</b> · Kutuları gerçek altyazının üstüne oturt (5 dakika).</summary>
+
+#### Adım 1: Oyundan bir kare al
+
+<img src="altyazi/ui/rehber/alan-ayar.png" alt="Oyundan bir kare al" width="640">
+
+1. Oyunda bir altyazı ekrandayken programda **Okuma alanları** sayfasına gir.
+2. **Görüntü al**'a bas.
+
+#### Adım 2: Kutuları yazıların üstüne çek
+
+<img src="altyazi/ui/rehber/alan-ayar.png" alt="Kutuları yazıların üstüne çek" width="640">
+
+1. **altyazi** kutusunu alttaki diyalog ve görev yazısının üstüne, **yardim**'ı sol üstteki yardım kutusuna, **bildirim**'i sağ üstteki bildirimlere oturt.
+2. **Algılanan yazıyı kırmızı göster** açıkken kırmızı noktalar yazının üstünde toplanıyorsa ayar doğrudur.
+3. **Kaydet**'e bas.
+
+</details>
+
+<a name="rehber-paketler"></a>
+<details>
+<summary><b>📦 Hazır çeviri paketleri</b> · GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş.</summary>
+
+#### Adım 1: Hazır paket indir
+
+1. **Çeviri** sayfasında **Önbellek ve çeviri paketleri** kartına in.
+2. Listeden oyunu seç (GTA V, RDR2...) ve **Hazır paketi indir**'e bas.
+
+> Pakette olan satırlar anında ve ücretsiz gelir, yapay zekâya sorulmaz.
+
+#### Adım 2: Kendi paketini paylaş
+
+1. **Önbelleği paket olarak kaydet** ile oynadıkça biriken çevirileri dosya yap.
+2. Arkadaşların bu dosyayı **Paket ekle** ile yükler.
+
+</details>
+
+<a name="rehber-sorunlar"></a>
+<details>
+<summary><b>🧰 Sorun giderme</b> · TV bağlanmıyor, altyazı çıkmıyor, yazı kayık...</summary>
+
+#### Adım 1: TV bilgisayara bağlanamıyor
+
+1. **Televizyon** sayfasında **Bağlantı izni › İzin ver**'e bas (Windows bir kez "Evet" ister).
+2. Bilgisayarın ağı **Ortak** görünüyorsa Windows Ayarları › Ağ ve İnternet'te **Özel** yap.
+3. TV ve bilgisayar aynı modeme mi bağlı, bak; menzil arttırıcı bazen cihazları ayırır.
+
+#### Adım 2: Altyazı hiç çıkmıyor
+
+1. Oyunun kendi ayarlarında **altyazılar açık** mı, bak.
+2. chiaki penceresi **simge durumunda** olmasın.
+3. **Okuma alanları › Görüntü al** ile kutuların yazının üstünde olduğunu kontrol et.
+
+#### Adım 3: Türkçe kayık ya da yanlış yerde
+
+1. chiaki'yi tam ekran (**F11**) yap ya da pencereyi büyüt.
+2. **Okuma alanları**'nda kutuları yeniden oturt.
+3. TV'de kumandanın **Yeşil** tuşu bilgi panelini açar; bağlantı ve HDMI orada görünür.
+
+#### Adım 4: chiaki PS5'e bağlanmıyor
+
+1. PS5'te **Uzaktan Oynatma** açık mı, bak.
+2. Kayıt sırasında PIN hatası verdiyse kodun süresi dolmuştur; PS5'te **Cihazı Bağla**'ya yeniden bas.
+3. chiaki'ye girdiğin hesapla PS5'te oturum açtığından emin ol.
+
+#### Adım 5: Çeviri yavaş ya da Claude çalışmıyor
+
+1. **Çeviri** sayfasındaki **Dene** kutusuna bir cümle yazıp **Çevir**'e bas; süreyi ve motoru gösterir.
+2. Claude anahtarını ve Anthropic hesabındaki krediyi kontrol et.
+3. Anahtar yoksa da program yerel modelle çalışmaya devam eder.
+
+</details>
+
+<!-- REHBER:BITIS -->
 
 ### Desteklenen TV'ler
 
@@ -230,23 +620,6 @@ TV kumandası: **Yeşil** bilgi paneli · **◀ ▶** ya da **1-4** HDMI girişi
 
 TV'den oynarken aynı düğmeler telefon kumandasında da var; ana ekrandaki QR kodunu okutman yeterli.
 
-## 📦 Hazır çeviri paketleri
-
-**Çeviri** sayfasındaki **Hazır paketi indir** ile GTA V, Red Dead Redemption 2 ve başka oyunların topluluk çeviri paketleri tek tıkla indirilir ([GameTranslator](https://gitlab.com/sefflex/GameTranslator)'ın paket deposundan).
-
-- Pakette olan satırlar anında ve ücretsiz gelir, yapay zekâya sorulmaz.
-- GTA V paketiyle uygulamayı GTA 6'dan önce GTA V'te deneyebilirsin.
-- Kendi önbelleğini **Önbelleği paket olarak kaydet** ile dosya yapıp arkadaşlarına verebilirsin; onlar **Paket ekle** ile yükler.
-
-## 🎯 GTA 6 çıkınca yapılacak ayar
-
-Okuma alanlarının yeri ve yazı renkleri GTA V'e göre ayarlandı. Oyun çıkınca **Okuma alanları › Görüntü al** ile bir kare al ve kutuları gerçek altyazının, yardım kutusunun ve bildirimin üstüne çek. Kırmızı noktalar yazının üstünde toplanıyorsa ayar doğrudur.
-
-## 🎥 OBS ile yayın
-
-OBS'de **Kaynak ekle › Tarayıcı**: URL `http://localhost:8787/obs`, genişlik 1920, yükseklik 1080. Bu kaynağı oyun görüntüsünün üstüne koy.
-
-Capture kart kullanıyorsan OBS'de **Sanal Kamerayı Başlat**'a bas ve uygulamada kaynak olarak capture kart + OBS Virtual Camera'yı seç.
 
 ## ❓ Sık sorulanlar
 

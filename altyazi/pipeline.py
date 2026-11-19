@@ -165,10 +165,19 @@ _DETERMINERS = {"your", "the", "my", "his", "her", "our", "their", "its", "it", 
                 "this", "that", "you"}
 
 
+_KEY_TOKEN = re.compile(r"^[\[(<{]?([A-Z]|[RL][123]|[RL][BT]|OPTIONS|TOUCHPAD|SHARE|SPACE|ENTER|ESC|TAB|SHIFT|CTRL|ALT|"
+                        r"LMB|RMB|MMB)[\])>}]?[.,]?$", re.IGNORECASE)
+
+
+def _clean_key(w: str) -> bool:
+    return bool(_KEY_TOKEN.match(w)) and not (w.isalpha() and w.upper() in _REAL_UPPER)
+
+
 def is_button_prompt(text: str) -> bool:
-    """"Press [△] to take cover" gibi tuş ipucu mu? Tuş simgesi resim olduğu için OCR ya hiç okumuyor ("Press to
-    threaten the teller") ya da kalıntı okuyor ("Press @ to", "Hold I LI to"). Çevirip üstünü kapatırsak hangi tuşa
-    basılacağı kayboluyordu; bu satırlar çevrilmez, oyunun kendi yazısı (simgesiyle) görünür kalır."""
+    """"Press [△] to take cover" gibi, tuş simgesi OKUNAMAMIŞ tuş ipucu mu? Simge resim olduğu için OCR ya hiç okumuyor
+    ("Press to threaten the teller") ya da kalıntı okuyor ("Press @ to", "Hold I LI to"). Bunları çevirip üstünü
+    kapatırsak hangi tuşa basılacağı kayboluyordu; çevrilmez, oyunun kendi yazısı simgesiyle görünür kalır.
+    Tuş adı düzgün okunduysa ("Press E to enter", "Hold [RB] to aim") çevrilir: Claude tuş adını aynen korur."""
     t = text.strip()
     if not t or any(c in t for c in "!?\"“”:"):
         return False
@@ -178,14 +187,16 @@ def is_button_prompt(text: str) -> bool:
     idx = next((i for i in range(1, min(len(words), 5)) if words[i].lower() == "to"), None)
     if idx is None or idx + 1 >= len(words):
         return False
-    residue = words[1:idx]
+    residue = [w for w in words[1:idx] if w.lower() not in ("and", "or")]
+    if residue and all(_clean_key(w) for w in residue):
+        return False                             # tuş adı okunmuş: normal çevrilsin
     for w in residue:
         core = w.strip("[]()<>{}.,")
-        if not any(ch.isalpha() for ch in w) or len(core) <= 1 or core.lower() in _KEY_NAMES or w.lower() in ("and", "or"):
+        if not any(ch.isalpha() for ch in w) or len(core) <= 1 or core.lower() in _KEY_NAMES:
             continue
         if core.isupper() and len(core) <= 3 and core not in _REAL_UPPER:
             continue
-        return False
+        return False                             # gerçek bir sözcük: ipucu değil ("Use the car to escape")
     if not residue and words[idx + 1].lower().strip(",.") in _DETERMINERS:
         return False                             # "Hold to your course" konuşmadır
     return True

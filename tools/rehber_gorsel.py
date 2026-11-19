@@ -331,6 +331,138 @@ def tv_izin():
     save(img, "tv-izin.png")
 
 
+# ---------------------------------------------------------------------------------------------- diğer rehberler
+def lg_devmode():
+    img, d = canvas()
+    tv_screen(d)
+    d.text((80, 62), "Developer Mode", font=font(28, "Bold"), fill=TXT)
+    rows = [("Dev Mode Status", True), ("Key Server", True)]
+    for i, (r, on) in enumerate(rows):
+        y = 120 + i * 70
+        d.rounded_rectangle([80, y, 520, y + 54], 10, fill=(22, 22, 28))
+        d.text((104, y + 14), r, font=font(22), fill=TXT)
+        d.rounded_rectangle([440, y + 14, 500, y + 40], 13, fill=(80, 200, 120))
+        d.ellipse([475, y + 16, 497, y + 38], fill=(255, 255, 255))
+    highlight(d, (80, 120, 520, 174), 1, pad=6)
+    highlight(d, (80, 190, 520, 244), 2, pad=6)
+    d.rounded_rectangle([560, 120, 880, 330], 12, fill=(22, 22, 28))
+    for i, (k, v) in enumerate((("IP", "192.168.1.40"), ("Passphrase", "A1B2C3"), ("Remain Session", "999:59:59"))):
+        d.text((584, 136 + i * 64), k, font=font(16), fill=MUTED)
+        d.text((584, 158 + i * 64), v, font=font(24, "Bold"), fill=TXT)
+    highlight(d, (576, 132, 864, 254), 3, pad=4)
+    caption(d, "Dev Mode Status ve Key Server açık; IP ile Passphrase'i programa yaz")
+    save(img, "lg-devmode.png")
+
+
+def samsung_devmode():
+    img, d = canvas()
+    tv_screen(d)
+    d.text((80, 62), "Uygulamalar", font=font(26, "Bold"), fill=TXT)
+    for i, k in enumerate("12345"):
+        button_(d, (90 + i * 74, 120, 150 + i * 74, 176), k, fill=(48, 48, 58), size=26)
+    highlight(d, (90, 120, 446, 176), 1, pad=6)
+    d.rounded_rectangle([480, 110, 880, 410], 14, fill=(36, 36, 44), outline=(90, 90, 100), width=2)
+    d.text((510, 128), "Developer mode", font=font(22, "Bold"), fill=TXT)
+    d.text((510, 178), "Developer mode", font=font(18), fill=MUTED)
+    d.rounded_rectangle([700, 174, 760, 200], 13, fill=(80, 200, 120))
+    d.ellipse([735, 176, 757, 198], fill=(255, 255, 255))
+    d.text((775, 176), "On", font=font(18, "Bold"), fill=TXT)
+    d.text((510, 230), "Host PC IP", font=font(18), fill=MUTED)
+    d.rounded_rectangle([510, 256, 850, 296], 8, fill=(26, 26, 30), outline=(80, 80, 86), width=2)
+    d.text((524, 264), "192.168.1.25", font=font(20), fill=TXT)
+    highlight(d, (510, 256, 850, 296), 2, pad=5)
+    button_(d, (720, 336, 850, 380), "OK", fill=(0, 112, 209), color=(255, 255, 255))
+    caption(d, "Uygulamalar'da 1-2-3-4-5 → Developer mode On → Host PC IP → OK")
+    save(img, "samsung-devmode.png")
+
+
+def discord_paylas():
+    img, d = canvas()
+    window(d, (40, 30, 920, 470), "Discord", bar=(30, 31, 34), body=(49, 51, 56))
+    d.rounded_rectangle([200, 90, 760, 420], 14, fill=(43, 45, 49), outline=(70, 72, 78), width=2)
+    d.text((230, 108), "Ekran Paylaş", font=font(22, "Bold"), fill=(242, 243, 245))
+    for i, (t, act) in enumerate((("Uygulamalar", False), ("Ekranlar", True))):
+        x = 230 + i * 170
+        d.text((x, 150), t, font=font(18, "Bold"), fill=(242, 243, 245) if act else (148, 155, 164))
+        if act:
+            d.rectangle([x, 176, x + 90, 180], fill=(88, 101, 242))
+    highlight(d, (400, 146, 500, 182), 1, pad=4)
+    for i in range(2):
+        x = 230 + i * 260
+        d.rounded_rectangle([x, 200, x + 240, 335], 8, fill=(30, 31, 34), outline=(88, 101, 242) if i == 0 else None,
+                            width=3)
+        d.text((x + 12, 344), "Ekran 1 (chiaki)" if i == 0 else "Ekran 2", font=font(16), fill=(242, 243, 245))
+    highlight(d, (230, 200, 470, 335), 2, pad=6)
+    button_(d, (590, 366, 740, 406), "Yayına Başla", fill=(88, 101, 242), color=(255, 255, 255), size=17)
+    highlight(d, (590, 366, 740, 406), 3, pad=5)
+    caption(d, "Ekran Paylaş → Ekranlar → chiaki'nin olduğu ekran → Yayına Başla")
+    save(img, "discord-paylas.png")
+
+
+def obs_kaynak():
+    img, d = canvas()
+    window(d, (40, 30, 920, 470), "OBS Studio", bar=(30, 30, 36), body=(39, 42, 51))
+    d.rounded_rectangle([70, 80, 600, 380], 6, fill=(16, 18, 24))
+    d.text((90, 96), "Oyun görüntüsü", font=font(18), fill=MUTED)
+    d.rounded_rectangle([170, 320, 500, 356], 6, fill=(0, 0, 0))
+    d.text((210, 326), "Türkçe altyazı burada", font=font(18, "Bold"), fill=(255, 255, 255))
+    d.text((630, 84), "Kaynaklar", font=font(18, "Bold"), fill=TXT)
+    for i, (t, hi) in enumerate((("GTA6 Altyazı (Tarayıcı)", True), ("Oyun (Pencere Yakalama)", False))):
+        y = 116 + i * 40
+        d.rounded_rectangle([630, y, 890, y + 32], 6, fill=(60, 66, 82) if hi else (48, 52, 64))
+        d.text((642, y + 6), t, font=font(15), fill=TXT)
+    highlight(d, (630, 116, 890, 148), 1, pad=4)
+    d.rounded_rectangle([630, 210, 890, 380], 8, fill=(48, 52, 64))
+    for i, (k, v) in enumerate((("URL", "http://localhost:8787/obs"), ("Genişlik", "1920"), ("Yükseklik", "1080"))):
+        d.text((644, 222 + i * 52), k, font=font(14), fill=MUTED)
+        d.text((644, 240 + i * 52), v, font=font(16, "Bold"), fill=TXT)
+    highlight(d, (640, 218, 880, 372), 2, pad=4)
+    caption(d, "Kaynaklar → + → Tarayıcı → localhost:8787/obs, 1920×1080, en üste")
+    save(img, "obs-kaynak.png")
+
+
+def alan_ayar():
+    img, d = canvas()
+    window(d, (40, 30, 920, 470), "GTA6 Altyazı · Okuma alanları", bar=(28, 22, 38), body=(20, 15, 29))
+    d.rounded_rectangle([70, 76, 890, 430], 8, fill=(48, 26, 70))
+    for i in range(10):
+        x = 90 + i * 80
+        h = 60 + (i * 37) % 130
+        d.rectangle([x, 330 - h, x + 60, 330], fill=(30, 16, 46))
+    d.rectangle([70, 330, 890, 430], fill=(22, 14, 30))
+    d.text((300, 352), "Hurry up, they are right behind us!", font=font(20, "Bold"), fill=(255, 255, 255))
+    d.text((390, 388), "Go to the car.", font=font(20, "Bold"), fill=(255, 255, 255))
+    d.rounded_rectangle([96, 92, 360, 130], 4, fill=(10, 8, 14))
+    d.text((106, 100), "Press E to enter the vehicle.", font=font(15, "Bold"), fill=(240, 240, 240))
+    for box, name, col in (((150, 340, 810, 420), "altyazi", ACC), ((84, 84, 380, 170), "yardim", ACC2),
+                           ((620, 84, 880, 170), "bildirim", (100, 180, 255))):
+        d.rounded_rectangle(box, 6, outline=col, width=3)
+        d.rounded_rectangle([box[0], box[1] - 24, box[0] + 90, box[1]], 6, fill=col)
+        d.text((box[0] + 8, box[1] - 22), name, font=font(15, "Bold"), fill=(20, 15, 29))
+    for (x, y) in ((150, 340), (810, 340), (150, 420), (810, 420)):
+        d.ellipse([x - 7, y - 7, x + 7, y + 7], fill=ACC, outline=(255, 255, 255), width=2)
+    caption(d, "Görüntü al → kutuları yazıların üstüne çek → Kaydet")
+    save(img, "alan-ayar.png")
+
+
+def baslat():
+    img, d = canvas()
+    window(d, (40, 30, 920, 470), "GTA6 Altyazı", bar=(28, 22, 38), body=(20, 15, 29))
+    d.rounded_rectangle([90, 100, 870, 300], 18, fill=(30, 24, 42), outline=(60, 50, 80), width=2)
+    d.ellipse([130, 130, 270, 270], outline=ACC, width=8)
+    d.rounded_rectangle([182, 182, 218, 218], 6, fill=ACC)
+    highlight(d, (130, 130, 270, 270), 1, pad=8)
+    d.text((310, 150), "Çeviri açık", font=font(34, "Black"), fill=TXT)
+    d.text((310, 200), "Oyundaki yazılar okunuyor ve çevriliyor.", font=font(19), fill=MUTED)
+    d.text((310, 236), "Ctrl+Shift+9 ekranı çevir · Ctrl+Shift+0 duraklat", font=font(16), fill=MUTED)
+    d.rounded_rectangle([90, 320, 870, 420], 14, fill=(30, 24, 42))
+    d.text((116, 336), "ALTYAZI", font=font(14, "Bold"), fill=ACC2)
+    d.text((116, 360), "Arabaya bin, misafirlerimiz var!", font=font(22, "Bold"), fill=TXT)
+    d.text((116, 392), "Get in the car, we got company!", font=font(15), fill=MUTED)
+    caption(d, "Ana ekrandaki büyük düğmeye bas: çeviri başlar")
+    save(img, "baslat.png")
+
+
 def main() -> None:
     chiaki_indir()
     chiaki_ekran("kopyala")
@@ -345,6 +477,12 @@ def main() -> None:
     tv_gelistirici()
     tv_hata_ayiklama()
     tv_izin()
+    lg_devmode()
+    samsung_devmode()
+    discord_paylas()
+    obs_kaynak()
+    alan_ayar()
+    baslat()
 
 
 if __name__ == "__main__":

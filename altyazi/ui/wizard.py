@@ -3,21 +3,22 @@
 from __future__ import annotations
 
 import webbrowser
-from pathlib import Path
 
-from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPixmap
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout,
-                               QLineEdit, QPushButton, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget)
+                               QLineEdit, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
 
+from .. import rehber
 from ..app import CHIAKI_DOWNLOAD, AppController
 from . import theme as T
+from .guide import REHBER, Guide
 from .widgets import Card, Dot, Icon, Logo, PreviewArt, QrCode, Stepper, button, hbox, label, vbox
 
 STEPS = ["Hoş geldin", "Nerede oynayacaksın?", "PS5 ve chiaki-ng", "Televizyon", "Çeviri", "Hazır"]
 P_WELCOME, P_WHERE, P_PS5, P_TV, P_TRANSLATION, P_DONE = range(6)
-REHBER = Path(__file__).resolve().parent / "rehber"
-PSN_SIGNUP = "https://www.playstation.com/tr-tr/playstation-network/"
+__all__ = ["Wizard", "STEPS", "REHBER", "P_WELCOME", "P_WHERE", "P_PS5", "P_TV", "P_TRANSLATION", "P_DONE"]
+PSN_SIGNUP = rehber.PSN_SIGNUP
 
 
 class Hero(QWidget):
@@ -55,111 +56,6 @@ def check_row(title: str, text: str, *buttons) -> Card:  # noqa: ANN002
     t = label(text, "muted", wrap=True)
     c.add(t)
     return c
-
-
-class GuideImage(QWidget):
-    """Rehber görseli: oranı korunarak, köşeleri yuvarlatılmış çizilir."""
-
-    def __init__(self):
-        super().__init__()
-        self.pix: QPixmap | None = None
-        self.setMinimumHeight(170)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-    def set_image(self, name: str | None) -> None:
-        path = REHBER / f"{name}.png" if name else None
-        self.pix = QPixmap(str(path)) if path and path.exists() else None
-        self.setVisible(self.pix is not None)
-        self.update()
-
-    def paintEvent(self, _e) -> None:  # noqa: ANN001, N802
-        if not self.pix or self.pix.isNull():
-            return
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        p.setRenderHint(QPainter.SmoothPixmapTransform)
-        ratio = self.pix.width() / self.pix.height()
-        w = min(self.width(), self.height() * ratio)
-        h = w / ratio
-        r = QRectF((self.width() - w) / 2, 0, w, h)
-        path = QPainterPath()
-        path.addRoundedRect(r, 14, 14)
-        p.setClipPath(path)
-        p.drawPixmap(r, self.pix, QRectF(self.pix.rect()))
-
-
-class Guide(QWidget):
-    """Resimli, adım adım anlatım. Her adım: görsel + başlık + açıklama + (isteğe bağlı) düğmeler/durum."""
-
-    def __init__(self):
-        super().__init__()
-        self.steps: list[dict] = []
-        self.index = 0
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(10)
-        self.image = GuideImage()
-        lay.addWidget(self.image, 1)
-        self.counter = label("", "tag")
-        self.title = label("", "h2")
-        lay.addLayout(hbox(self.title, None, self.counter, spacing=10))
-        self.text = label("", "muted", wrap=True)
-        self.text.setTextFormat(Qt.RichText)
-        self.text.setOpenExternalLinks(True)
-        lay.addWidget(self.text)
-        self.extra = QStackedWidget()
-        self.extra.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        lay.addWidget(self.extra)
-        self.dots = QHBoxLayout()
-        self.dots.setSpacing(6)
-        lay.addLayout(self.dots)
-        self._empty = QWidget()
-        self.extra.addWidget(self._empty)
-
-    def set_steps(self, steps: list[dict]) -> None:
-        self.steps = steps
-        for st in steps:
-            w = st.get("extra")
-            if w is not None and self.extra.indexOf(w) < 0:
-                self.extra.addWidget(w)
-        while self.dots.count():
-            item = self.dots.takeAt(0)
-            if item.widget():
-                item.widget().setParent(None)      # eski çizgiler ekranda asılı kalmasın
-                item.widget().deleteLater()
-        self._dots = []
-        for _ in steps:
-            d = QFrame()
-            d.setFixedSize(26, 6)
-            self._dots.append(d)
-            self.dots.addWidget(d)
-        self.dots.addStretch(1)
-        self.show_step(min(self.index, len(steps) - 1))
-
-    def show_step(self, i: int) -> None:
-        self.index = i
-        st = self.steps[i]
-        self.image.set_image(st.get("img"))
-        self.title.setText(st["title"])
-        self.counter.setText(f"ADIM {i + 1} / {len(self.steps)}")
-        self.text.setText(st["text"])
-        self.extra.setCurrentWidget(st.get("extra") or self._empty)
-        self.extra.setVisible(st.get("extra") is not None)
-        for k, d in enumerate(self._dots):
-            color = T.A1 if k <= i else T.BORDER_HI
-            d.setStyleSheet(f"background: {color}; border-radius: 3px;")
-
-    def can_next(self) -> bool:
-        return self.index < len(self.steps) - 1
-
-    def can_back(self) -> bool:
-        return self.index > 0
-
-    def next(self) -> None:
-        self.show_step(self.index + 1)
-
-    def back(self) -> None:
-        self.show_step(self.index - 1)
 
 
 CHOICES = [("monitor", "tv", "🖥️  Bilgisayar monitöründe",
@@ -279,7 +175,7 @@ class Wizard(QDialog):
     def _set_where(self, key: str) -> None:
         self.where = key
         self.cfg.kaynak.oyun_yeri = key
-        self.ps5_guide.set_steps(self._ps5_steps())
+        self.ps5_guide.set_steps(self._ps5_steps(), self._ps5_extras())
         self.ps5_guide.show_step(0)
 
     def _ps5(self) -> QWidget:
@@ -304,75 +200,15 @@ class Wizard(QDialog):
         self.act_chiaki = act1
         self.ps5_guide = Guide()
         lay.addWidget(self.ps5_guide, 1)
-        self.ps5_guide.set_steps(self._ps5_steps())
+        self.ps5_guide.set_steps(self._ps5_steps(), self._ps5_extras())
         self._refresh_chiaki()
         return w
 
     def _ps5_steps(self) -> list[dict]:
-        where = self.where
-        account = {"monitor": "<b>Kendi PlayStation hesabınla</b> giriş yap (oyunların ve kayıtların o hesapta).",
-                   "tv": "<b>İkinci PSN hesabınla</b> giriş yap. Kendi hesabınla girersen TV'de oynarken kolun kopar.",
-                   "ikisi": "Bugün nerede oynayacaksan o hesapla gir: <b>monitörde kendi hesabın</b>, <b>TV'de ikinci "
-                            "hesap</b>. Diğerini sonra aynı adımlarla eklersin."}[where]
-        steps: list[dict] = []
-        if where in ("tv", "ikisi"):
-            steps.append({"title": "İkinci PSN hesabı aç (ücretsiz)",
-                          "text": "TV'de oynarken bilgisayar PS5'i ikinci bir hesapla izler; kendi hesabınla "
-                                  "bağlanırsa TV'deki kolun kopar.<br>① Aşağıdaki düğmeyle ücretsiz yeni bir PSN "
-                                  "hesabı aç.<br>② PS5'i aç ve bu yeni hesapla <b>bir kez</b> oturum aç."
-                                  + ("<br><span>Sadece monitörde oynayacaksan bu adımı geçebilirsin.</span>"
-                                     if where == "ikisi" else ""),
-                          "extra": self.act_psn})
-        steps += [
-            {"img": "chiaki-indir", "title": "chiaki-ng'yi indir ve kur",
-             "text": "① <b>İndirme sayfasını aç</b>'a bas.<br>② En üstteki sürümün <b>Assets</b> listesinde adında "
-                     "<b>windows</b> geçen dosyayı indir.<br>③ İndirdiğin dosyayı çalıştırıp kur. Kurulunca aşağıdaki "
-                     "satır yeşil olur (olmazsa <b>chiaki.exe'yi seç</b> ile yerini göster).",
-             "extra": self.act_chiaki},
-            {"img": "chiaki-kopyala", "title": "chiaki-ng'de PSN girişi",
-             "text": "① chiaki-ng'yi aç. PS5 eklemek için hesabını ister: <b>PSN Login</b> ekranı açılır "
-                     "(açılmazsa sağ üstteki ☰ menüsünden ya da PS5 eklerken çıkar).<br>② <b>Click to Re-Copy URL</b>'ye "
-                     "bas. Sony'nin giriş adresi kopyalanır."},
-            {"img": "tarayici-giris", "title": "Tarayıcıda giriş yap",
-             "text": "① Chrome ya da Edge'i aç, adres çubuğuna tıkla, <b>Ctrl+V</b> yap ve <b>Enter</b>'a bas.<br>"
-                     f"② Açılan PlayStation sayfasında {account}"},
-            {"img": "tarayici-adres", "title": "Açılan sayfanın adresini kopyala",
-             "text": "Giriş bitince boş ya da hatalı görünen bir sayfa açılır. <b>Bu normal.</b><br>① Adres çubuğuna "
-                     "tıkla (adres <i>remoteplay.dl.playstation.net/…redirect?code=</i> ile başlar).<br>② <b>Ctrl+A</b>, "
-                     "sonra <b>Ctrl+C</b> yap. Bu kod birkaç dakika geçerli, hızlı ol."},
-            {"img": "chiaki-yapistir", "title": "chiaki-ng'ye yapıştır",
-             "text": "① chiaki-ng'ye dön, <b>Click to Paste URL</b>'ye bas.<br>② Hesap bilgisi alınır; sol üstteki "
-                     "<b>‹</b> ile ana ekrana dön.<br>Hata verirse kodun süresi dolmuştur: 2. adımdan tekrarla."},
-            {"img": "ps5-kod", "title": "PS5'te bağlantı kodunu al",
-             "text": "PS5'te chiaki'ye girdiğin hesapla oturum açıkken:<br>① <b>Ayarlar › Sistem › Uzaktan Oynatma</b>: "
-                     "<b>Uzaktan Oynatmayı Etkinleştir</b> açık olsun.<br>② <b>Cihazı Bağla</b>'ya bas; 8 haneli bir kod "
-                     "çıkar (ekranda bırak).<br>③ Ayrıca <b>Ayarlar › Sistem › Güç Tasarrufu › Dinlenme Modunda "
-                     "Kullanılabilir Özellikler</b>: <b>İnternete Bağlı Kal</b> ve <b>Ağ Üzerinden PS5'i Açmayı "
-                     "Etkinleştir</b>'i aç.<br>④ TV'de oynayacaksan: Uzaktan Oynatma ayarlarındaki <b>bağlantı durumu "
-                     "açılır penceresini gizle</b> seçeneğini aç; yoksa chiaki bağlanınca TV ekranında \"bağlandı\" "
-                     "yazısı çıkar."},
-            {"img": "chiaki-kayit", "title": "PS5'i chiaki-ng'ye kaydet",
-             "text": "① chiaki-ng ana ekranında PS5'in kutusuna tıkla (görünmüyorsa PS5 ve bilgisayar aynı modeme "
-                     "bağlı mı bak; sağ üstteki <b>+</b> ile IP'siyle de eklenir).<br>② <b>PIN</b> kutusuna PS5'teki "
-                     "8 haneli kodu yaz.<br>③ <b>Register</b>'a bas."},
-            {"img": "chiaki-ayar", "title": "Görüntü ayarları (bir kere)",
-             "text": "chiaki-ng ayarlarında (dişli simgesi) <b>Video</b> bölümü:<br>① <b>Resolution: 1080p</b><br>"
-                     "② <b>FPS: 60</b><br>③ <b>Bitrate</b> en yüksek.<br>Yazıların net okunması için bu önemli."},
-        ]
-        if where in ("monitor", "ikisi"):
-            steps.append({"img": "kol-usb", "title": "Kolu bilgisayara bağla",
-                          "text": "Monitörde oynarken kol bilgisayara bağlı olur.<br>① DualSense'i <b>USB kablosuyla</b> "
-                                  "bilgisayara tak (en kolayı; titreşim de çalışır). Bluetooth da olur.<br>"
-                                  + ("TV günlerinde kolu yine PS5'e bağlarsın." if where == "ikisi" else "")})
-        last = {"monitor": "① chiaki-ng'de PS5'in kutusuna tıkla; PS5'in ekranı açılır, kolla oynarsın.<br>② İstersen "
-                           "<b>F11</b> ile tam ekran yap.<br>③ Bağlanınca aşağıdaki satır yeşil olur.",
-                "tv": "① chiaki-ng'de PS5'in kutusuna tıkla. Sen TV'den oynamaya devam et; chiaki açık kalsın.<br>"
-                      "② chiaki penceresini <b>simge durumuna küçültme</b>, program görüntüyü oradan okuyor.<br>"
-                      "③ Bağlanınca aşağıdaki satır yeşil olur.",
-                "ikisi": "① chiaki-ng'de PS5'in kutusuna tıkla.<br>② Monitörde oynuyorsan <b>F11</b> ile tam ekran yap; "
-                         "TV'de oynuyorsan chiaki açık kalsın, küçültme.<br>③ Bağlanınca aşağıdaki satır yeşil olur."}[where]
-        steps.append({"img": "chiaki-baglan", "title": "Bağlan", "text": last, "extra": self.act_conn})
-        return steps
+        return rehber.chiaki_steps(self.where)
+
+    def _ps5_extras(self) -> dict:
+        return {"psn": self.act_psn, "indir": self.act_chiaki, "baglan": self.act_conn}
 
     def _tv(self) -> QWidget:
         w, lay = self._page("Televizyon",
@@ -402,20 +238,7 @@ class Wizard(QDialog):
                                  spacing=10),
                             hbox(self.tv_dot, self.tv_msg, 1, spacing=6), spacing=8))
         self.tv_guide = Guide()
-        self.tv_guide.set_steps([
-            {"img": "tv-gelistirici", "title": "TV'de geliştirici seçeneklerini aç",
-             "text": "TV kumandasıyla:<br>① <b>Ayarlar › Sistem › Hakkında</b>'ya gir.<br>② <b>Android TV OS "
-                     "derlemesi</b> satırına arka arkaya <b>7 kez</b> bas. \"Artık geliştiricisiniz\" yazar."},
-            {"img": "tv-hata-ayiklama", "title": "USB hata ayıklamayı aç",
-             "text": "① <b>Ayarlar › Sistem › Geliştirici seçenekleri</b>'ne gir.<br>② <b>USB hata ayıklama</b>'yı aç. "
-                     "Yoksa ya da TV bulunamazsa <b>Kablosuz hata ayıklama</b>'yı aç; ekrandaki eşleştirme adresi ve "
-                     "kodunu bir sonraki adımda yazarsın."},
-            {"img": "tv-izin", "title": "Bağlan ve izin ver",
-             "text": "① <b>Ağda ara</b>'ya bas (ya da TV'nin IP'sini yaz), sonra <b>Bağlan ve kur</b>'a bas.<br>"
-                     "② TV'de çıkan soruda <b>Bu bilgisayardan her zaman izin ver</b>'i işaretle, <b>İzin ver</b>'e bas."
-                     "<br>TV uygulaması kurulup açılınca aşağıdaki satır yeşil olur.",
-             "extra": conn},
-        ])
+        self.tv_guide.set_steps(rehber.GOOGLE_TV, {"baglan": conn})
         lay.addWidget(self.tv_guide, 1)
         return w
 

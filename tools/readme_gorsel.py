@@ -266,6 +266,31 @@ def main() -> int:
         pump(0.05)
         win.grab().save(str(OUT / name))
         print("kaydedildi:", name)
+    # Rehber sayfası ve sihirbaz
+    win.go("guide")
+    pump(0.3)
+    gp = win.pages["guide"]
+    gp.open_key("monitor")
+    gp.guide.show_step(1)
+    pump(0.3)
+    if getattr(win, "toast", None) is not None:
+        win.toast.hide()
+    win.grab().save(str(OUT / "uygulama-rehber.png"))
+    from altyazi.ui.wizard import P_PS5, P_WHERE, Wizard
+    wiz = Wizard(ctl)
+    wiz.resize(1120, 780)
+    wiz.show()
+    wiz._go(P_WHERE)
+    pump(0.3)
+    wiz.grab().save(str(OUT / "sihirbaz-secim.png"))
+    wiz._set_where("monitor")
+    wiz._go(P_PS5)
+    for _ in range(4):
+        wiz.next.click()
+    pump(0.3)
+    wiz.grab().save(str(OUT / "sihirbaz-chiaki.png"))
+    wiz.close()
+    print("kaydedildi: rehber ve sihirbaz")
     demo_images(OUT)
     comparison(OUT)
     banner(OUT)

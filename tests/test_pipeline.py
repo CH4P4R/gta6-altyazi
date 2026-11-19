@@ -315,9 +315,11 @@ def test_fuzzy_cache_does_not_mix_different_sentences(tmp_path):
 def test_gta6_button_prompts_and_short_hud_are_not_subtitles():
     """CouchSubs'ın GTA 6'da bulduğu: simgesi okunmayan tuş ipuçları ve kısa büyük harfli HUD yazıları çevrilmez."""
     from altyazi.pipeline import is_button_prompt, is_short_hud
-    assert is_button_prompt("Press to threaten the teller.")
-    assert is_button_prompt("Press [RB] to take cover")
+    assert is_button_prompt("Press to threaten the teller.")     # simge hiç okunmadı
+    assert is_button_prompt("Press @ to take cover")              # simge kalıntısı
     assert is_button_prompt("Hold I LI to aim")
+    assert not is_button_prompt("Press E to enter the vehicle.")  # tuş adı okundu: çevrilir, Claude tuşu korur
+    assert not is_button_prompt("Hold [RB] to take cover")
     assert not is_button_prompt("Hold to your course.")
     assert not is_button_prompt("Press the button, Jason!")
     assert is_short_hud("TAKE AMMO PACK (0/3)") and is_short_hud("• ADD TO TRUNK")

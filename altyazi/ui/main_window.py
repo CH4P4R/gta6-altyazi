@@ -997,10 +997,88 @@ class SettingsPage(QWidget):
 
 
 # ============================================================================ Pencere
+# ============================================================================ Rehber
+class GuidePage(QWidget):
+    """Bütün süreçlerin resimli, adım adım anlatımı (içerik: altyazi/rehber.py; README'deki rehberle aynı)."""
+
+    def __init__(self, ctl: AppController):
+        super().__init__()
+        from PySide6.QtWidgets import QButtonGroup, QPushButton
+
+        from .. import rehber
+        from .guide import Guide
+
+        self.ctl = ctl
+        content = QWidget()
+        content.setObjectName("page")
+        root = QVBoxLayout(content)
+        root.setContentsMargins(32, 28, 32, 24)
+        root.setSpacing(16)
+        root.addLayout(page_header("Rehber", "Kurulumdan yayına, her şeyin resimli anlatımı. Soldan konuyu seç, "
+                                   "adımları sırayla izle."))
+        body = QHBoxLayout()
+        body.setSpacing(16)
+        side = QVBoxLayout()
+        side.setSpacing(8)
+        self.group = QButtonGroup(self)
+        self.group.setExclusive(True)
+        self.guides = rehber.GUIDES
+        for i, g in enumerate(self.guides):
+            b = QPushButton()
+            b.setCheckable(True)
+            t1, t2 = label(g["title"], "h3"), label(g["summary"], "faint", wrap=True)
+            for t in (t1, t2):
+                t.setAttribute(Qt.WA_TransparentForMouseEvents)
+                t.setStyleSheet("background: transparent;")
+            inner = vbox(t1, t2, spacing=2)
+            inner.setContentsMargins(14, 10, 14, 10)
+            b.setLayout(inner)
+            b.setMinimumHeight(76)
+            b.setStyleSheet(
+                f"QPushButton {{ text-align: left; border-radius: 12px; background: {T.SURFACE};"
+                f" border: 1px solid {T.BORDER}; }} QPushButton:hover {{ border-color: {T.BORDER_HI}; }}"
+                f"QPushButton:checked {{ background: {T.SURFACE2}; border: 2px solid {T.A1}; }}")
+            b.clicked.connect(lambda _=False, k=i: self.show_guide(k))
+            self.group.addButton(b, i)
+            side.addWidget(b)
+        side.addStretch(1)
+        side_w = QWidget()
+        side_w.setLayout(side)
+        side_w.setFixedWidth(330)
+        side_scroll = scroll_page(side_w)
+        side_scroll.setFixedWidth(346)
+        body.addWidget(side_scroll)
+        card = Card()
+        self.heading = label("", "h2")
+        card.add(self.heading)
+        self.guide = Guide(nav=True)
+        self.guide.setMinimumHeight(560)
+        card.add(self.guide)
+        body.addWidget(card, 1)
+        root.addLayout(body, 1)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(content)
+        self.show_guide(0)
+
+    def show_guide(self, i: int) -> None:
+        g = self.guides[i]
+        self.group.button(i).setChecked(True)
+        self.heading.setText(g["title"])
+        self.guide.index = 0
+        self.guide.set_steps(g["steps"])
+
+    def open_key(self, key: str) -> None:
+        for i, g in enumerate(self.guides):
+            if g["key"] == key:
+                self.show_guide(i)
+                return
+
+
 class MainWindow(QMainWindow):
     PAGES = [("home", "Ana ekran", "home"), ("regions", "Okuma alanları", "regions"), ("tv", "Televizyon", "tv"),
              ("translate", "Çeviri", "translate"), ("history", "Geçmiş", "history"),
-             ("settings", "Ayarlar", "settings")]
+             ("guide", "Rehber", "guide"), ("settings", "Ayarlar", "settings")]
 
     def __init__(self, ctl: AppController):
         super().__init__()
@@ -1026,7 +1104,7 @@ class MainWindow(QMainWindow):
         self.nav: dict[str, NavButton] = {}
         self.stack = QStackedWidget()
         factories = {"home": HomePage, "regions": RegionsPage, "tv": TvPage, "translate": TranslationPage,
-                     "history": HistoryPage, "settings": SettingsPage}
+                     "history": HistoryPage, "guide": GuidePage, "settings": SettingsPage}
         self.pages: dict[str, QWidget] = {}
         for key, text, icon in self.PAGES:
             b = NavButton(text, icon)
