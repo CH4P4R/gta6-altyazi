@@ -690,7 +690,12 @@ class TranslationPage(QWidget):
         for pid, title in CATALOG:
             self.pack_combo.addItem(title, pid)
         self.pack_dl = button("Hazır paketi indir", "primary", self._download_pack)
-        cache.add(hbox(self.pack_combo, self.pack_dl, None, spacing=10))
+        cache.add(hbox(self.pack_combo, self.pack_dl, button("Listeyi yenile", "ghost", ctl.load_pack_catalog), None,
+                       spacing=10))
+        cache.add(label("Kaynaklar: CouchSubs paket sunucusu (GTA 6 dahil) ve GameTranslator paket deposu.", "faint",
+                        wrap=True))
+        ctl.packCatalog.connect(self._on_catalog)
+        ctl.load_pack_catalog()
         cache.add(hbox(button("Paket ekle", None, self._add_pack),
                        button("Önbelleği paket olarak kaydet", None, self._export_pack), None, spacing=10))
         root.addWidget(cache)
@@ -745,6 +750,18 @@ class TranslationPage(QWidget):
         ps = self.ctl.pack_list()
         self.packs_l.setText("Yüklü paketler: " + ", ".join(f"<b>{p.title}</b> ({p.count:,} satır)".replace(",", ".")
                                                              for p in ps) if ps else "Yüklü paket yok.")
+
+    def _on_catalog(self, cat: list) -> None:
+        # Önceki CouchSubs girdilerini kaldır, yenilerini en üste koy (GTA 6 en başta)
+        for i in reversed(range(self.pack_combo.count())):
+            if str(self.pack_combo.itemData(i)).startswith("cs:"):
+                self.pack_combo.removeItem(i)
+        cat = sorted(cat, key=lambda p: (0 if "6" in p["id"] or "vi" in p["id"].split("-") else 1, p["title"]))
+        for k, p in enumerate(cat):
+            n = f"{p['entries']:,}".replace(",", ".")
+            self.pack_combo.insertItem(k, f"{p['title']} · CouchSubs ({n} satır)", f"cs:{p['id']}")
+        if cat:
+            self.pack_combo.setCurrentIndex(0)
 
     def _download_pack(self) -> None:
         self.pack_dl.setEnabled(False)

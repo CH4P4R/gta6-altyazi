@@ -64,3 +64,25 @@ def test_speaker_label_lookup(tmp_path):
     assert lib.lookup("FRANKLIN: Get in the car.") == ("FRANKLIN: Arabaya bin.", "x")
     assert lib.lookup("- Get in the car.") == ("Arabaya bin.", "x")      # çizgi sadeleştirmede zaten düşer
     assert lib.lookup("Lamar: Go home.") is None
+
+
+def test_couchsubs_catalog_and_verified_download(tmp_path):
+    """CouchSubs paket sunucusu: liste + SHA-256 doğrulamalı indirme (GTA 6 paketi burada dağıtılıyor)."""
+    import hashlib
+    raw = gzip.compress(json.dumps({"format": 2, "id": "gta-6", "title": "Grand Theft Auto VI",
+                                    "entries": {packs.key("Get in the sea plane."): "Deniz uçağına bin."}}).encode())
+    index = {"packs": [{"id": "gta-6", "title": "Grand Theft Auto VI", "version": 3, "size": len(raw), "entries": 1,
+                        "sha256": hashlib.sha256(raw).hexdigest()},
+                       {"id": "../kötü", "title": "x", "sha256": "0" * 64}]}
+    cat = packs.couchsubs_catalog(fetch=lambda url: index)
+    assert [p["id"] for p in cat] == ["gta-6"]                 # geçersiz kimlik ayıklanır
+    pack = packs.download_couchsubs(cat[0], tmp_path, fetch=lambda url: raw)
+    assert pack.title == "Grand Theft Auto VI"
+    assert packs.PackLibrary(tmp_path).lookup("Get in the sea plane.") == ("Deniz uçağına bin.", "gta-6")
+    bad = dict(cat[0], sha256="1" * 64)
+    try:
+        packs.download_couchsubs(bad, tmp_path / "b", fetch=lambda url: raw)
+        raise AssertionError("doğrulama yapılmadı")
+    except ValueError:
+        pass
+    assert packs.couchsubs_catalog(fetch=lambda url: (_ for _ in ()).throw(OSError("yok"))) == []

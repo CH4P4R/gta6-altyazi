@@ -3,6 +3,11 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.8 · GTA 6 paketi
+- **Hazır paketlere CouchSubs'ın paket sunucusu eklendi: GTA 6 paketi tek tıkla.** Çeviri sayfasındaki listede en üstte
+  çıkar; oyuncular oynadıkça büyüdüğü için ara sıra **Listeyi yenile** ile yeniden indirilebilir. İndirilen dosya
+  sunucunun verdiği SHA-256 ile doğrulanır.
+
 ## 0.4.7 · Ücretsiz çeviri
 - **Claude şart değil:** kurulum sihirbazında ve Çeviri sayfasında yapay zekâ seçimi; ücretsiz seçenekler öne çıktı:
   Google Gemini (ücretsiz anahtar), DeepL Free, bilgisayarda çalışan Ollama / LM Studio (anahtar ve kota yok).

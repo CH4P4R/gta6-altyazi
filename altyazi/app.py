@@ -57,6 +57,7 @@ class AppController(QObject):
     testResult = Signal(object)           # translate.Result
     ps5Found = Signal(list)               # [ps5.Console]
     packProgress = Signal(str, float)     # (paket kimliği, 0..1; 1 bitti, -1 hata)
+    packCatalog = Signal(list)            # CouchSubs paket sunucusundaki paketler [{id, title, entries, ...}]
     _uiCommand = Signal(str)              # başka iş parçacıklarından gelen ve ana iş parçacığında yapılması gereken işler
 
     def __init__(self, cfg: config_mod.Config):
@@ -573,12 +574,31 @@ class AppController(QObject):
         else:
             self._notice("Güvenlik duvarı izni verilemedi.")
 
+    def load_pack_catalog(self) -> None:
+        """CouchSubs paket sunucusunun listesini arka planda al (GTA 6 paketi burada)."""
+        from . import packs
+
+        def run() -> None:
+            cat = packs.couchsubs_catalog()
+            self._cs_catalog = {p["id"]: p for p in cat}
+            self.packCatalog.emit(cat)
+
+        threading.Thread(target=run, daemon=True, name="paket-liste").start()
+
     def download_pack(self, pack_id: str) -> None:
+        """pack_id: GameTranslator kataloğundaki kimlik ya da CouchSubs için 'cs:<kimlik>'."""
         from . import paths, packs
 
         def run() -> None:
             try:
-                pack = packs.download(pack_id, paths.data("paketler"), lambda f: self.packProgress.emit(pack_id, min(f, 0.99)))
+                prog = lambda f: self.packProgress.emit(pack_id, min(f, 0.99))  # noqa: E731
+                if pack_id.startswith("cs:"):
+                    info = getattr(self, "_cs_catalog", {}).get(pack_id[3:])
+                    if not info:
+                        raise RuntimeError("CouchSubs paket listesi alınamadı; internet bağlantısını kontrol et.")
+                    pack = packs.download_couchsubs(info, paths.data("paketler"), prog)
+                else:
+                    pack = packs.download(pack_id, paths.data("paketler"), prog)
                 if self.engine:
                     self.engine.packs.reload()
                 self.notice.emit(f"{pack.title}: {pack.count:,} satır hazır".replace(",", "."))

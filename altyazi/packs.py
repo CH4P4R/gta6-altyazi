@@ -185,3 +185,67 @@ def download(pack_id: str, folder: Path, progress=None) -> Pack:  # noqa: ANN001
     tmp.write_bytes(gzip.compress(raw, 6))
     tmp.replace(dest)
     return load(dest)
+
+
+# ---------------------------------------------------------------------------------------------- CouchSubs paketleri
+# CouchSubs'ın ücretsiz paket sunucusu (hesap/anahtar yok; https://github.com/yorulmazsinan/couchsubs, server/packs).
+# GTA 6 paketi burada dağıtılıyor (oyuncuların gördüğü satırlardan, topluluk katkısıyla). Liste: GET /v1/packs,
+# dosya: GET /v1/packs/<id> (.json.gz). İndirilen dosya listedeki SHA-256 ile doğrulanır. Sunucu IP başına saatte
+# 60 indirmeye izin verir; program yalnız kullanıcı düğmeye basınca indirir.
+COUCHSUBS_PACKS = "https://couchsubs-packs.enmera.workers.dev/v1/packs"
+_PACK_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+
+
+def couchsubs_catalog(timeout: float = 8, fetch=None) -> list[dict]:  # noqa: ANN001
+    """[{id, title, entries, sha256, version}] — sunucu yanıt vermezse boş liste."""
+    import urllib.request
+
+    try:
+        if fetch is None:
+            req = urllib.request.Request(COUCHSUBS_PACKS, headers={"User-Agent": "gta6-altyazi"})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = json.loads(r.read().decode("utf-8"))
+        else:
+            data = fetch(COUCHSUBS_PACKS)
+    except Exception as e:  # noqa: BLE001
+        log.info("CouchSubs paket listesi alınamadı: %s", e)
+        return []
+    out = []
+    for p in data.get("packs") or []:
+        if isinstance(p, dict) and _PACK_ID.match(str(p.get("id", ""))) and p.get("sha256"):
+            out.append({"id": p["id"], "title": str(p.get("title") or p["id"]), "entries": int(p.get("entries") or 0),
+                        "sha256": str(p["sha256"]).lower(), "version": p.get("version", 0)})
+    return out
+
+
+def download_couchsubs(info: dict, folder: Path, progress=None, fetch=None) -> Pack:  # noqa: ANN001
+    import urllib.request
+
+    pid = info["id"]
+    if not _PACK_ID.match(pid):
+        raise ValueError(f"Geçersiz paket kimliği: {pid}")
+    url = f"{COUCHSUBS_PACKS}/{pid}"
+    if fetch is None:
+        req = urllib.request.Request(url, headers={"User-Agent": "gta6-altyazi"})
+        chunks, done = [], 0
+        with urllib.request.urlopen(req, timeout=60) as r:
+            total = int(r.headers.get("Content-Length") or 0)
+            while True:
+                b = r.read(1 << 16)
+                if not b:
+                    break
+                chunks.append(b)
+                done += len(b)
+                if progress and total:
+                    progress(done / total)
+        raw = b"".join(chunks)
+    else:
+        raw = fetch(url)
+    if hashlib.sha256(raw).hexdigest() != info["sha256"]:
+        raise ValueError("İndirilen paket doğrulanamadı (SHA-256 tutmadı); tekrar dene.")
+    folder.mkdir(parents=True, exist_ok=True)
+    dest = folder / f"{pid}.json.gz"
+    tmp = dest.with_suffix(".tmp")
+    tmp.write_bytes(raw if raw[:2] == b"\x1f\x8b" else gzip.compress(raw, 6))
+    tmp.replace(dest)
+    return load(dest)

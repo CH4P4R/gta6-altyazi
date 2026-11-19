@@ -11,6 +11,9 @@ değiştirilmiş bir türevidir:
   Copyright (C) 2026 Sefflex
   https://gitlab.com/sefflex/GameTranslator
 
+Hazır çeviri paketleri kullanıcı istediğinde CouchSubs'ın paket sunucusundan
+(GTA 6 dahil) ve GameTranslator'ın paket deposundan indirilir; kuruluma gömülmez.
+
 Based on CouchSubs by Sinan Yorulmaz (https://github.com/yorulmazsinan/couchsubs),
 modified since 2026-11-16. Alınan kodlar Python'a taşınmış, GTA 6'ya, chiaki-ng
 penceresinden okumaya ve bu projenin çeviri hattına göre değiştirilmiştir.

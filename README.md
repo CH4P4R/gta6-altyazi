@@ -61,7 +61,7 @@ Ctrl+Shift+9: menü, harita, telefon mesajı, tabela... Claude ekranı görerek 
 TV'de oyunun üstünde, bilgisayarda chiaki'nin üstünde, Discord yayınında ve OBS'de aynı anda.
 
 **📦 Hazır çeviri paketleri**<br>
-GTA V, RDR2 ve başka oyunların topluluk paketleri tek tıkla. Pakette olan satır ücretsiz ve anında.
+GTA 6, GTA V, RDR2 ve başka oyunların topluluk paketleri tek tıkla (CouchSubs ve GameTranslator). Pakette olan satır ücretsiz ve anında.
 
 **🛡️ Gerçek oyun sorunlarına karşı**<br>
 Görev yazısı ile diyalog ayrılır, OCR hatası yüzünden yanlış çeviri gelmez, yazı titremez.
@@ -193,7 +193,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 | 🎥 [OBS ile yayın](#rehber-obs) | Türkçe altyazıyı OBS'de oyunun üstüne koy. |
 | 🎯 [GTA 6 için okuma alanlarını ayarla](#rehber-gta6) | Kutuları gerçek altyazının üstüne oturt (5 dakika). |
 | 🆓 [Ücretsiz çeviri (Gemini, DeepL, Ollama)](#rehber-ucretsiz) | Claude şart değil: ücretsiz yapay zekâ seçenekleri ve arkadaşlarla paylaşım. |
-| 📦 [Hazır çeviri paketleri](#rehber-paketler) | GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş. |
+| 📦 [Hazır çeviri paketleri](#rehber-paketler) | GTA 6, GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş. |
 | 🧰 [Sorun giderme](#rehber-sorunlar) | TV bağlanmıyor, altyazı çıkmıyor, yazı kayık... |
 
 <a name="rehber-monitor"></a>
@@ -599,14 +599,14 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 
 <a name="rehber-paketler"></a>
 <details>
-<summary><b>📦 Hazır çeviri paketleri</b> · GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş.</summary>
+<summary><b>📦 Hazır çeviri paketleri</b> · GTA 6, GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş.</summary>
 
 #### Adım 1: Hazır paket indir
 
 1. **Çeviri** sayfasında **Önbellek ve çeviri paketleri** kartına in.
-2. Listeden oyunu seç (GTA V, RDR2...) ve **Hazır paketi indir**'e bas.
+2. Listeden oyunu seç (**GTA 6**, GTA V, RDR2...) ve **Hazır paketi indir**'e bas.
 
-> Pakette olan satırlar anında ve ücretsiz gelir, yapay zekâya sorulmaz.
+> Pakette olan satırlar anında ve ücretsiz gelir, yapay zekâya sorulmaz. GTA 6 paketi CouchSubs'ın paket sunucusundan gelir ve oyuncular oynadıkça büyür; ara sıra Listeyi yenile'ye basıp yeniden indir.
 
 #### Adım 2: Kendi paketini paylaş
 

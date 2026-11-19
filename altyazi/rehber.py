@@ -200,8 +200,9 @@ GTA6_ALAN = [
 PAKETLER = [
     step("Hazır paket indir",
          ["**Çeviri** sayfasında **Önbellek ve çeviri paketleri** kartına in.",
-          "Listeden oyunu seç (GTA V, RDR2...) ve **Hazır paketi indir**'e bas."],
-         note="Pakette olan satırlar anında ve ücretsiz gelir, yapay zekâya sorulmaz."),
+          "Listeden oyunu seç (**GTA 6**, GTA V, RDR2...) ve **Hazır paketi indir**'e bas."],
+         note="Pakette olan satırlar anında ve ücretsiz gelir, yapay zekâya sorulmaz. GTA 6 paketi CouchSubs'ın paket "
+              "sunucusundan gelir ve oyuncular oynadıkça büyür; ara sıra Listeyi yenile'ye basıp yeniden indir."),
     step("Kendi paketini paylaş",
          ["**Önbelleği paket olarak kaydet** ile oynadıkça biriken çevirileri dosya yap.",
           "Arkadaşların bu dosyayı **Paket ekle** ile yükler."]),
@@ -280,7 +281,7 @@ GUIDES: list[dict] = [
     {"key": "ucretsiz", "icon": "translate", "title": "Ücretsiz çeviri (Gemini, DeepL, Ollama)",
      "summary": "Claude şart değil: ücretsiz yapay zekâ seçenekleri ve arkadaşlarla paylaşım.", "steps": UCRETSIZ},
     {"key": "paketler", "icon": "translate", "title": "Hazır çeviri paketleri",
-     "summary": "GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş.", "steps": PAKETLER},
+     "summary": "GTA 6, GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş.", "steps": PAKETLER},
     {"key": "sorunlar", "icon": "settings", "title": "Sorun giderme",
      "summary": "TV bağlanmıyor, altyazı çıkmıyor, yazı kayık...", "steps": SORUNLAR},
 ]
