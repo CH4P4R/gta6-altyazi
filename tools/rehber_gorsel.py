@@ -376,6 +376,171 @@ def samsung_devmode():
     save(img, "samsung-devmode.png")
 
 
+def _ribbon(d, active=None):
+    """TV ana ekranının alt şeridi."""
+    d.rounded_rectangle([60, 380, 900, 450], 12, fill=(30, 30, 38))
+    tiles = ["Kaynak", "Uygulamalar", "TV Plus", "Netflix", "YouTube", "Ayarlar"]
+    for i, t in enumerate(tiles):
+        x = 76 + i * 136
+        d.rounded_rectangle([x, 392, x + 124, 438], 8, fill=(52, 52, 64) if t == active else (40, 40, 50))
+        tw = d.textlength(t, font=font(16))
+        d.text((x + 62 - tw / 2, 404), t, font=font(16), fill=TXT)
+    return 76 + tiles.index(active) * 136 if active in tiles else None
+
+
+def samsung_uygulamalar():
+    img, d = canvas()
+    tv_screen(d)
+    # sol: ana ekran şeridi, Uygulamalar seçili
+    x = _ribbon(d, "Uygulamalar")
+    highlight(d, (x, 392, x + 124, 438), 1, pad=5)
+    d.text((104, 60), "Uygulamalar", font=font(26, "Bold"), fill=TXT)
+    d.text((104, 98), "Tam sayfa: uygulamalar büyük kareler halinde", font=font(17), fill=MUTED)
+    for r in range(2):
+        for c in range(6):
+            x0, y0 = 80 + c * 134, 140 + r * 104
+            d.rounded_rectangle([x0, y0, x0 + 118, y0 + 88], 12, fill=(40 + c * 6, 36, 58 - c * 3))
+    highlight(d, (80, 60, 330, 92), 2, pad=6)
+    caption(d, "Ev tuşu → Uygulamalar → OK: bu tam sayfa açılmalı")
+    save(img, "samsung-uygulamalar.png")
+
+
+def _remote(d, x, y, hl_123=True):
+    """Rakam tuşu olmayan ince akıllı kumanda (sadeleştirilmiş)."""
+    d.rounded_rectangle([x, y, x + 110, y + 400], 50, fill=(44, 44, 50), outline=(80, 80, 90), width=2)
+    d.ellipse([x + 45, y + 22, x + 65, y + 42], fill=(200, 60, 60))                 # güç
+    d.ellipse([x + 20, y + 70, x + 90, y + 140], fill=(60, 60, 68))                 # yön halkası
+    d.ellipse([x + 40, y + 90, x + 70, y + 120], fill=(80, 80, 90))                 # OK
+    d.text((x + 46, y + 96), "OK", font=font(13, "Bold"), fill=TXT)
+    for i in range(3):
+        d.ellipse([x + 8 + i * 34, y + 160, x + 36 + i * 34, y + 188], fill=(60, 60, 68))
+    hx, hy = x + 56, y + 174                                                        # ev tuşu simgesi
+    d.polygon([(hx - 8, hy - 1), (hx, hy - 8), (hx + 8, hy - 1)], fill=TXT)
+    d.rectangle([hx - 6, hy - 1, hx + 6, hy + 7], fill=TXT)
+    d.line([(x + 16, y + 174), (x + 28, y + 174)], fill=TXT, width=3)                # geri
+    d.polygon([(x + 16, y + 168), (x + 10, y + 174), (x + 16, y + 180)], fill=TXT)
+    d.polygon([(x + 84, y + 167), (x + 84, y + 181), (x + 94, y + 174)], fill=TXT)   # oynat
+    d.rounded_rectangle([x + 18, y + 210, x + 46, y + 300], 14, fill=(60, 60, 68))   # ses
+    d.rounded_rectangle([x + 64, y + 210, x + 92, y + 300], 14, fill=(60, 60, 68))   # kanal
+    d.ellipse([x + 35, y + 314, x + 75, y + 354], fill=(70, 70, 82))                # 123 / renk
+    for k, c in enumerate(((230, 70, 70), (70, 190, 90), (240, 200, 60), (70, 130, 230))):
+        cx, cy = x + 47 + (k % 2) * 16, y + 326 + (k // 2) * 16
+        d.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=c)
+    if hl_123:
+        highlight(d, (x + 35, y + 314, x + 75, y + 354), 1, pad=6)
+        d.text((x + 120, y + 318), "123 / renkli", font=font(17, "Bold"), fill=ACC2)
+        d.text((x + 120, y + 340), "nokta tuşu", font=font(17, "Bold"), fill=ACC2)
+
+
+def samsung_123():
+    img, d = canvas()
+    _remote(d, 40, 60)
+    d.rounded_rectangle([300, 40, 930, 470], 18, fill=(14, 14, 18), outline=(70, 70, 80), width=3)
+    d.text((330, 64), "Uygulamalar", font=font(24, "Bold"), fill=TXT)
+    for r in range(2):
+        for c in range(5):
+            x0, y0 = 330 + c * 116, 110 + r * 84
+            d.rounded_rectangle([x0, y0, x0 + 100, y0 + 70], 10, fill=(40, 36, 54))
+    # ekrandaki sanal tuş takımı
+    d.rounded_rectangle([330, 300, 900, 450], 14, fill=(36, 36, 44), outline=(90, 90, 100), width=2)
+    keys = "1234567890"
+    for i, k in enumerate(keys):
+        x0 = 346 + i * 55
+        d.rounded_rectangle([x0, 320, x0 + 46, 370], 8, fill=(70, 70, 82) if k in "12345" else (52, 52, 62))
+        d.text((x0 + 15, 328), k, font=font(26, "Bold"), fill=TXT)
+    highlight(d, (346, 320, 392, 370), 2, pad=4)
+    d.text((346, 392), "Yön tuşlarıyla rakama gel → OK", font=font(19, "Bold"), fill=ACC2)
+    d.text((346, 420), "1 OK · 2 OK · 3 OK · 4 OK · 5 OK", font=font(18), fill=MUTED)
+    caption(d, "Rakam tuşu yoksa: 123 tuşu → ekrandaki rakamlar")
+    save(img, "samsung-123.png")
+
+
+def samsung_telefon():
+    img, d = canvas()
+    # telefon
+    d.rounded_rectangle([90, 30, 340, 500], 34, fill=(24, 24, 30), outline=(90, 90, 100), width=3)
+    d.text((118, 60), "SmartThings › TV", font=font(17, "Bold"), fill=TXT)
+    d.text((118, 86), "Kumanda", font=font(15), fill=MUTED)
+    keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", ""]
+    for i, k in enumerate(keys):
+        if not k:
+            continue
+        r, c = divmod(i, 3)
+        x0, y0 = 122 + c * 66, 130 + r * 72
+        d.ellipse([x0, y0, x0 + 54, y0 + 54], fill=(60, 60, 72) if k in "12345" else (44, 44, 54))
+        d.text((x0 + 19, y0 + 11), k, font=font(26, "Bold"), fill=TXT)
+    highlight(d, (122, 130, 308, 256), 2, pad=6)
+    button_(d, (140, 440, 290, 476), "123", fill=ACC, color=(255, 255, 255), size=18)
+    highlight(d, (140, 440, 290, 476), 1, pad=5)
+    # TV
+    d.rounded_rectangle([420, 90, 920, 400], 16, fill=(14, 14, 18), outline=(70, 70, 80), width=3)
+    d.text((450, 112), "Uygulamalar", font=font(22, "Bold"), fill=TXT)
+    for c in range(4):
+        d.rounded_rectangle([450 + c * 114, 160, 550 + c * 114, 230], 10, fill=(40, 36, 54))
+    d.rounded_rectangle([560, 260, 900, 380], 12, fill=(36, 36, 44), outline=(90, 90, 100), width=2)
+    d.text((580, 278), "Developer mode", font=font(20, "Bold"), fill=TXT)
+    d.text((580, 312), "açılır →", font=font(18), fill=ACC2)
+    d.line([(350, 200), (440, 200)], fill=ACC2, width=4)
+    d.polygon([(440, 192), (456, 200), (440, 208)], fill=ACC2)
+    caption(d, "Telefondan: SmartThings › TV › 123 → 1 2 3 4 5")
+    save(img, "samsung-telefon.png")
+
+
+def samsung_anynet():
+    img, d = canvas()
+    tv_screen(d)
+    d.text((80, 62), "Ayarlar  ›  Genel  ›  Harici Aygıt Yöneticisi", font=font(22, "Bold"), fill=TXT)
+    rows = [("Anynet+ (HDMI-CEC)", False), ("Otomatik Kaynak Değiştirme", False), ("Giriş Sinyali Artı", None)]
+    for i, (r, on) in enumerate(rows):
+        y = 130 + i * 70
+        d.rounded_rectangle([80, y, 880, y + 54], 10, fill=(22, 22, 28))
+        d.text((104, y + 14), r, font=font(22), fill=TXT)
+        if on is not None:
+            d.rounded_rectangle([790, y + 14, 850, y + 40], 13, fill=(70, 70, 80))
+            d.ellipse([793, y + 16, 815, y + 38], fill=(255, 255, 255))
+            d.text((720, y + 15), "Kapalı", font=font(18, "Bold"), fill=MUTED)
+    highlight(d, (80, 130, 880, 184), 1, pad=6)
+    highlight(d, (80, 200, 880, 254), 2, pad=6)
+    d.text((110, 360), "Açık kalırsa PS5 açılınca TV bizim uygulamadan çıkıp HDMI'ya geçer.", font=font(19),
+           fill=MUTED)
+    caption(d, "Anynet+ ve Otomatik Kaynak Değiştirme: Kapalı")
+    save(img, "samsung-anynet.png")
+
+
+def samsung_hdmi():
+    img, d = canvas()
+    tv_screen(d)
+    d.rounded_rectangle([60, 50, 900, 450], 12, fill=(40, 70, 60))
+    d.text((90, 80), "PS5 görüntüsü (uygulamanın içinde)", font=font(20, "Bold"), fill=(220, 240, 230))
+    d.rounded_rectangle([250, 360, 710, 420], 10, fill=(10, 10, 12))
+    d.text((290, 374), "Arabaya bin, misafirlerimiz var!", font=font(22, "Bold"), fill=TXT)
+    d.rounded_rectangle([320, 160, 640, 230], 14, fill=(30, 30, 38), outline=(90, 90, 100), width=2)
+    d.text((344, 182), "◀", font=font(26, "Bold"), fill=ACC2)
+    d.text((410, 182), "HDMI 2 · PS5", font=font(24, "Bold"), fill=TXT)
+    d.text((598, 182), "▶", font=font(26, "Bold"), fill=ACC2)
+    highlight(d, (320, 160, 640, 230), 1, pad=6)
+    caption(d, "Kumandada ◀ ▶ ile PS5'in HDMI girişini seç")
+    save(img, "samsung-hdmi.png")
+
+
+def lg_store():
+    img, d = canvas()
+    tv_screen(d)
+    d.text((80, 62), "LG Content Store", font=font(26, "Bold"), fill=TXT)
+    d.rounded_rectangle([80, 110, 600, 156], 10, fill=(26, 26, 30), outline=(80, 80, 86), width=2)
+    d.ellipse([98, 122, 116, 140], outline=TXT, width=3)
+    d.line([(113, 137), (122, 146)], fill=TXT, width=3)
+    d.text((134, 120), "Developer Mode", font=font(20), fill=TXT)
+    highlight(d, (80, 110, 600, 156), 1, pad=5)
+    d.rounded_rectangle([80, 190, 300, 380], 14, fill=(40, 36, 54))
+    d.text((100, 300), "Developer Mode", font=font(18, "Bold"), fill=TXT)
+    d.text((100, 326), "Ücretsiz", font=font(16), fill=MUTED)
+    button_(d, (340, 300, 500, 344), "Yükle", fill=ACC, color=(255, 255, 255))
+    highlight(d, (340, 300, 500, 344), 2, pad=5)
+    caption(d, "Content Store'da Developer Mode'u ara ve yükle")
+    save(img, "lg-store.png")
+
+
 def discord_paylas():
     img, d = canvas()
     window(d, (40, 30, 920, 470), "Discord", bar=(30, 31, 34), body=(49, 51, 56))
@@ -479,6 +644,12 @@ def main() -> None:
     tv_izin()
     lg_devmode()
     samsung_devmode()
+    samsung_uygulamalar()
+    samsung_123()
+    samsung_telefon()
+    samsung_anynet()
+    samsung_hdmi()
+    lg_store()
     discord_paylas()
     obs_kaynak()
     alan_ayar()

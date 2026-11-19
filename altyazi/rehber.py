@@ -113,8 +113,10 @@ START_STEP = step("Türkçeyi aç",
 GOOGLE_TV = [
     step("TV'de geliştirici seçeneklerini aç",
          ["TV kumandasıyla **Ayarlar › Sistem › Hakkında**'ya gir.",
-          "**Android TV OS derlemesi** satırına arka arkaya **7 kez** bas. \"Artık geliştiricisiniz\" yazar."],
-         img="tv-gelistirici"),
+          "**Android TV OS derlemesi** satırına gel ve **OK**'a arka arkaya **7 kez** bas. \"Artık geliştiricisiniz\" "
+          "yazar."],
+         img="tv-gelistirici",
+         note="TCL'de menü adları biraz farklı olabilir: Ayarlar › Sistem › Hakkında › Derleme / Yapı numarası."),
     step("USB hata ayıklamayı aç",
          ["**Ayarlar › Sistem › Geliştirici seçenekleri**'ne gir.",
           "**USB hata ayıklama**'yı aç."],
@@ -122,44 +124,105 @@ GOOGLE_TV = [
          note="Yoksa ya da TV bulunamazsa Kablosuz hata ayıklama'yı aç; ekrandaki eşleştirme adresi ve kodunu "
               "programdaki Eşleştir kısmına yazarsın."),
     step("Bağlan ve izin ver",
-         ["Programda **Televizyon** sayfasında **Ağda ara**'ya bas (ya da TV'nin IP'sini yaz), sonra **Bağlan, kur ve "
-          "başlat**'a bas.",
+         ["Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de "
+          "**Ayarlar › Ağ ve İnternet**'te bağlı olduğun Wi-Fi'ye gir, IP adresi orada yazar.",
+          "**Bağlan ve kur**'a bas.",
           "TV'de çıkan soruda **Bu bilgisayardan her zaman izin ver**'i işaretle, **İzin ver**'e bas."],
          img="tv-izin", sid="baglan",
-         note="TV uygulaması PS5'in HDMI'ını kendisi bulur. TV HDMI'yı öne alırsa ya da görüntü siyah kalırsa "
-              "kendiliğinden katman moduna geçer."),
+         note="TV ile bilgisayar aynı modeme bağlı olmalı. TV uygulaması PS5'in HDMI'ını kendisi bulur; TV HDMI'yı "
+              "öne alırsa ya da görüntü siyah kalırsa kendiliğinden katman moduna geçer."),
 ]
 
 LG_TV = [
-    step("TV'de Developer Mode'u aç",
-         ["TV'de **LG Content Store**'dan ücretsiz **Developer Mode** uygulamasını kur ve LG hesabınla gir.",
+    step("LG geliştirici hesabı aç (ücretsiz)",
+         ["Bilgisayarda LG'nin geliştirici sitesini aç ve **Sign Up** ile ücretsiz hesap aç.",
+          "E-postana gelen onayı tamamla. Bu kullanıcı adı ve şifreyi TV'de kullanacaksın."],
+         img="lg-devmode", link=("LG geliştirici sitesi", "https://webostv.developer.lge.com/"),
+         note="Normal LG hesabın değil, geliştirici sitesinden açılan hesap gerekir."),
+    step("TV'ye Developer Mode uygulamasını kur",
+         ["TV'de **LG Content Store**'u (Uygulamalar) aç.",
+          "Aramaya **Developer Mode** yaz, ücretsiz uygulamayı **Yükle**."],
+         img="lg-store"),
+    step("Developer Mode'u aç",
+         ["**Developer Mode** uygulamasını aç, geliştirici hesabınla gir.",
           "**Dev Mode Status**'u aç; TV yeniden başlar.",
-          "Uygulamayı tekrar aç ve **Key Server**'ı aç."],
-         img="lg-devmode"),
+          "Uygulamayı tekrar aç ve **Key Server**'ı da aç. Ekranda **IP** ve **Passphrase** görünür."],
+         img="lg-devmode", note="Geliştirici modu en çok 1000 saat açık kalır; program her bağlanışta süreyi "
+                                "kendisi baştan başlatır."),
     step("Programdan kur",
-         ["Programda **Televizyon** sayfasında markayı **LG** seç.",
-          "Developer Mode ekranındaki **IP** adresini ve **Passphrase**'i yaz.",
-          "**Bağlan, kur ve başlat**'a bas."],
-         img="lg-devmode", note="Geliştirici modu en çok 1000 saat açık kalır; program her bağlanışta süreyi kendisi "
-                                "baştan başlatır."),
+         ["Developer Mode ekranındaki **IP**'yi ve **Passphrase**'i programa yaz.",
+          "**Bağlan ve kur**'a bas; uygulama kurulur ve açılır.",
+          "LG başka uygulamanın üstüne yazı çizmeye izin vermez: PS5 görüntüsü bizim uygulamanın içinde açılır. "
+          "Kumandada **◀ ▶** ile PS5'in takılı olduğu HDMI girişini seç."],
+         img="lg-devmode", sid="baglan"),
 ]
 
 SAMSUNG_TV = [
-    step("TV'de Developer mode'u aç",
-         ["TV'de **Uygulamalar** ekranını aç.",
-          "Kumandayla **1 2 3 4 5** yaz; Developer mode penceresi açılır. Kumandanda rakam tuşu yoksa (2021 ve "
-          "sonrası ince akıllı kumanda) **123** tuşuna bas, ekranda çıkan rakamlarla yaz.",
-          "**Developer mode**'u **On** yap, **Host PC IP**'ye bu bilgisayarın IP'sini yaz (program Televizyon "
-          "sayfasında gösterir), **OK**'a bas.",
-          "TV'yi güç tuşuna yaklaşık 2 saniye basılı tutarak yeniden başlat."],
-         img="samsung-devmode", note="Tizen Studio gerekmez."),
+    step("Uygulamalar sayfasını aç",
+         ["Kumandada **ev** tuşuna (evcik simgesi) bas.",
+          "Alttaki şeritte **Uygulamalar**'a gel ve **OK**'a bas.",
+          "Uygulamaların büyük kareler halinde dizildiği **tam sayfa** açılmalı."],
+         img="samsung-uygulamalar",
+         note="Şeritte Uygulamalar'ın üstünde dururken yazarsan çalışmaz; sayfanın içine girmiş olmalısın."),
+    step("1 2 3 4 5 yaz",
+         ["Kumandanda rakam tuşları varsa sırayla **1 2 3 4 5**'e bas.",
+          "İnce akıllı kumandada rakam yok: üstünde **123** ya da **4 renkli nokta** olan tuşa bas, ekranda rakamlar "
+          "çıkar. Önce bir menü gelirse rakam tuş takımını seç.",
+          "Yön tuşlarıyla **1**'e gel, **OK**'a bas. Sonra **2** → OK, **3** → OK, **4** → OK, **5** → OK. Arada "
+          "başka tuşa basma.",
+          "Doğru yazınca **Developer mode** penceresi açılır."],
+         img="samsung-123",
+         note="Olmazsa Uygulamalar sayfasından çıkıp yeniden gir ve baştan yaz."),
+    step("Kumandayla olmazsa: telefondan yaz",
+         ["Telefona Samsung'un ücretsiz **SmartThings** uygulamasını kur.",
+          "Telefon ve TV aynı Wi-Fi'de olsun. Uygulamada **+** ile TV'yi ekle, TV'de çıkan onaya **İzin ver** de.",
+          "SmartThings'te TV'ye dokun; kumanda ekranında **123**'e bas, gerçek rakam tuşları çıkar.",
+          "TV'de Uygulamalar sayfası açıkken telefondan **1 2 3 4 5**'e bas."],
+         img="samsung-telefon",
+         note="USB klavye de olur: TV'nin USB girişine tak, Uygulamalar sayfası açıkken üst sıradaki rakamlarla "
+              "12345 yaz."),
+    step("Developer mode'u aç",
+         ["Açılan pencerede **Developer mode**'u **On** yap.",
+          "**Host PC IP**'ye bu bilgisayarın IP'sini yaz (program sihirbazda ve Televizyon sayfasında gösterir), "
+          "**OK**'a bas.",
+          "TV'yi kapatıp açmak yetmez: kumandadaki **güç** tuşunu yaklaşık **2 saniye basılı** tut. TV kapanıp "
+          "kendiliğinden yeniden açılır.",
+          "Açılınca Uygulamalar sayfasının üstünde genelde **Developer mode** yazar."],
+         img="samsung-devmode", sid="pcip"),
+    step("HDMI'ya kendiliğinden geçişi kapat",
+         ["TV'de **Ayarlar › Genel › Harici Aygıt Yöneticisi**'ne gir.",
+          "**Anynet+ (HDMI-CEC)**'yi **Kapalı** yap.",
+          "Aynı yerde **Otomatik Kaynak Değiştirme** varsa onu da kapat."],
+         img="samsung-anynet",
+         note="Kapatmazsan PS5 açılınca TV bizim uygulamadan çıkıp doğrudan HDMI'ya geçer ve altyazı görünmez."),
     step("Programdan kur",
-         ["Programda **Televizyon** sayfasında markayı **Samsung** seç ve **Bağlan, kur ve başlat**'a bas.",
-          "İlk seferde tarayıcıda bir kez **Samsung hesabınla** giriş yap; program uygulamayı TV'ne özel imzalatır, "
-          "kurar ve açar."],
-         img="samsung-devmode",
-         note="TV kendiliğinden HDMI'ya geçiyorsa Anynet+ (HDMI-CEC) ve Otomatik Kaynak Değiştirme'yi kapat."),
+         ["Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de "
+          "**Ayarlar › Genel › Ağ › Ağ Durumu › IP Ayarları**'nda yazar.",
+          "**Bağlan ve kur**'a bas.",
+          "İlk seferde tarayıcıda Samsung hesabı sayfası açılır: gir (hesabın yoksa aynı sayfadan ücretsiz aç). "
+          "Program uygulamayı bu TV'ye özel imzalatır, kurar ve açar. Sonraki seferlerde giriş gerekmez."],
+         img="samsung-devmode", sid="baglan", note="Tizen Studio gerekmez."),
+    step("HDMI girişini seç",
+         ["Samsung başka uygulamanın üstüne yazı çizmeye izin vermez: PS5 görüntüsü bizim uygulamanın içinde açılır.",
+          "Kumandada **◀ ▶** ile PS5'in takılı olduğu HDMI girişini seç.",
+          "Altyazı yeri kaymışsa **Yeşil** tuşla ayar panelini aç (ince kumandada **123** / renkli nokta tuşundan "
+          "renkli tuşlara geç)."],
+         img="samsung-hdmi"),
 ]
+
+TV_STEPS = {"android": GOOGLE_TV, "lg": LG_TV, "samsung": SAMSUNG_TV}
+TV_BRANDS = [("android", "Google TV / Android TV (TCL, Sony, Philips, Xiaomi, Hisense...)"),
+             ("lg", "LG (webOS)"), ("samsung", "Samsung (Tizen)")]
+
+
+def brief_html(steps: list[dict]) -> str:
+    """Adımların resimsiz, kısa özeti (Televizyon sayfası için): ① Başlık: ilk madde..."""
+    out = []
+    for i, st in enumerate(steps):
+        n = NUMS[i] if i < len(NUMS) else f"{i + 1}."
+        out.append(f"{n} <b>{st['title']}</b>: " + " ".join(_bold_html(x) for x in st["items"]))
+    return "<br>".join(out)
+
 
 # ---------------------------------------------------------------------------------------------- yayın ve ayar
 DISCORD = [

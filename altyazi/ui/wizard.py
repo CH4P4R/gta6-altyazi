@@ -213,8 +213,13 @@ class Wizard(QDialog):
     def _tv(self) -> QWidget:
         w, lay = self._page("Televizyon",
                             "Türkçe altyazıyı TV'de oyunun üstünde göstermek için TV'ye küçük bir uygulama kurulur. "
-                            "Bunu bilgisayar ağ üzerinden kendisi yapar. Aşağıdaki adımlar Google TV / Android TV "
-                            "(TCL, Sony, Philips...) için; LG ve Samsung için Televizyon sayfasına bak.")
+                            "Bunu bilgisayar ağ üzerinden kendisi yapar. Önce TV'nin markasını seç, sonra resimli "
+                            "adımları sırayla izle.")
+        self.tv_brand = QComboBox()
+        for key, text in rehber.TV_BRANDS:
+            self.tv_brand.addItem(text, key)
+        self.tv_brand.setCurrentIndex(max(0, self.tv_brand.findData(self.cfg.tv.marka)))
+        lay.addLayout(hbox(label("TV markası", "h3"), self.tv_brand, None, spacing=12))
         self.tv_ip = QLineEdit(self.cfg.tv.ip)
         self.tv_ip.setPlaceholderText("TV'nin IP adresi")
         self.tv_scan_btn = button("Ağda ara", None, self._scan)
@@ -223,6 +228,8 @@ class Wizard(QDialog):
         self.tv_found.currentIndexChanged.connect(lambda i: self.tv_ip.setText(self.tv_found.itemData(i) or
                                                                                self.tv_ip.text()))
         self.tv_conn_btn = button("Bağlan ve kur", "primary", self._tv_connect)
+        self.lg_pass = QLineEdit(self.cfg.tv.lg_parola)
+        self.lg_pass.setPlaceholderText("LG Passphrase (Developer Mode ekranında, ör. A1B2C3)")
         self.pair_addr = QLineEdit()
         self.pair_addr.setPlaceholderText("Eşleştirme adresi (ör. 192.168.1.40:37123)")
         self.pair_code = QLineEdit()
@@ -231,16 +238,35 @@ class Wizard(QDialog):
         self.tv_dot = Dot("off")
         self.tv_msg = label("", "muted", wrap=True)
         conn = QWidget()
+        self.pair_row = QWidget()
+        self.pair_row.setLayout(hbox(self.pair_addr, self.pair_code,
+                                     button("Eşleştir", None, lambda: self.ctl.tv_pair(self.pair_addr.text().strip(),
+                                                                                       self.pair_code.text().strip())),
+                                     spacing=10))
         conn.setLayout(vbox(hbox(self.tv_ip, self.tv_scan_btn, self.tv_found, self.tv_conn_btn, spacing=10),
-                            hbox(self.pair_addr, self.pair_code,
-                                 button("Eşleştir", None, lambda: self.ctl.tv_pair(self.pair_addr.text().strip(),
-                                                                                   self.pair_code.text().strip())),
-                                 spacing=10),
+                            self.lg_pass, self.pair_row,
                             hbox(self.tv_dot, self.tv_msg, 1, spacing=6), spacing=8))
+        self.tv_conn = conn
+        from ..tv import local_ip
+        try:
+            pc_ip = local_ip()
+        except OSError:
+            pc_ip = "ağ bağlantısı yok"
+        self.pc_ip = label(f"Bu bilgisayarın IP'si: <b>{pc_ip}</b> (Host PC IP'ye bunu yaz)", "h3")
+        self.pc_ip.setTextFormat(Qt.RichText)
         self.tv_guide = Guide()
-        self.tv_guide.set_steps(rehber.GOOGLE_TV, {"baglan": conn})
         lay.addWidget(self.tv_guide, 1)
+        self.tv_brand.currentIndexChanged.connect(self._tv_brand_changed)
+        self._tv_brand_changed()
         return w
+
+    def _tv_brand_changed(self, *_a) -> None:  # noqa: ANN002
+        brand = self.tv_brand.currentData()
+        self.cfg.tv.marka = brand
+        self.lg_pass.setVisible(brand == "lg")
+        self.pair_row.setVisible(brand == "android")
+        self.tv_guide.index = 0
+        self.tv_guide.set_steps(rehber.TV_STEPS[brand], {"baglan": self.tv_conn, "pcip": self.pc_ip})
 
     def _translation(self) -> QWidget:
         w, lay = self._page("Çeviri",
@@ -416,6 +442,9 @@ class Wizard(QDialog):
 
     # ------------------------------------------------------------------ TV
     def _scan(self) -> None:
+        self.cfg.tv.marka = self.tv_brand.currentData()      # tarama markanın portuna göre yapılır
+        self.ctl.apply_config(self.cfg)
+        self.cfg = self.ctl.edit_config()
         self.tv_scan_btn.setEnabled(False)
         self.tv_scan_btn.setText("Aranıyor...")
         self.ctl.tv_scan()
@@ -436,6 +465,8 @@ class Wizard(QDialog):
             self.tv_msg.setText("TV'nin IP adresini yaz ya da Ağda ara'ya bas.")
             return
         self.cfg.tv.ip = ip
+        self.cfg.tv.marka = self.tv_brand.currentData()
+        self.cfg.tv.lg_parola = self.lg_pass.text().strip()
         self.ctl.apply_config(self.cfg)
         self.cfg = self.ctl.edit_config()
         self.ctl.tv_connect(ip, force_install=True)

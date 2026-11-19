@@ -61,6 +61,26 @@ def test_main_window_and_wizard_build(tmp_path, monkeypatch):
         wiz.next.click()                       # rehber bitti: sonraki ana adım
         assert wiz.stack.currentIndex() == (P_TV if where != "monitor" else P_TV + 1)
     assert all((REHBER / f"{st['img']}.png").exists() for st in wiz.tv_guide.steps)
+    # TV adımı: marka seçince o markanın resimli adımları gelir, LG parolası yalnız LG'de görünür
+    wiz._go(P_TV)
+    for brand, first in (("samsung", "Uygulamalar"), ("lg", "LG geliştirici"), ("android", "TV'de geliştirici")):
+        wiz.tv_brand.setCurrentIndex(wiz.tv_brand.findData(brand))
+        app.processEvents()
+        g = wiz.tv_guide
+        assert g.index == 0 and g.steps[0]["title"].startswith(first)
+        assert all((REHBER / f"{st['img']}.png").exists() for st in g.steps if st.get("img"))
+        assert (not wiz.lg_pass.isHidden()) == (brand == "lg")      # bağlan adımında görünür
+        assert wiz.cfg.tv.marka == brand
+    wiz.tv_brand.setCurrentIndex(wiz.tv_brand.findData("samsung"))
+    g = wiz.tv_guide
+    g.show_step(next(i for i, st in enumerate(g.steps) if st.get("id") == "pcip"))
+    assert "IP" in wiz.pc_ip.text() and wiz.pc_ip.isVisibleTo(wiz)
+    tvp = win.pages["tv"]
+    tvp.brand.setCurrentIndex(tvp.brand.findData("samsung"))
+    assert "123" in tvp.howto.text() and "Host PC IP" in tvp.howto.text()
+    tvp._open_guide()
+    assert win.pages["guide"].guides[win.pages["guide"].group.checkedId()]["key"] == "samsung" \
+        if win.pages["guide"].group.checkedId() >= 0 else True
     # ayar kaydetme: kullanıcı klasörüne yazılır ve geri okunur
     new = ctl.edit_config()
     new.tv.ip = "192.168.1.40"

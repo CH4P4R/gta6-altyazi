@@ -447,12 +447,14 @@ class TvPage(QWidget):
         root.addLayout(page_header("Televizyon", "Türkçe altyazı TV'de oyunun üstünde görünür. Sen HDMI'dan "
                                    "gecikmesiz oynarsın, bilgisayar arka planda okur ve TV'ye gönderir."))
         steps = Card()
-        self.brand = combo([("android", "Google TV / Android TV (TCL, Sony, Philips, Xiaomi, Hisense...)"),
-                            ("lg", "LG (webOS)"), ("samsung", "Samsung (Tizen)")], ctl.cfg.tv.marka)
+        from .. import rehber
+        self.brand = combo(rehber.TV_BRANDS, ctl.cfg.tv.marka)
         self.brand.currentIndexChanged.connect(self._brand_changed)
         steps.add(hbox(label("TV markası", "h2"), self.brand, None, spacing=14))
-        steps.add(label("1 · TV'de bir kerelik hazırlık", "h2"))
+        steps.add(hbox(label("1 · TV'de bir kerelik hazırlık", "h2"), None,
+                       button("Resimli anlat", None, self._open_guide), spacing=10))
         self.howto = label("", "muted", wrap=True)
+        self.howto.setTextFormat(Qt.RichText)
         steps.add(self.howto)
         root.addWidget(steps)
 
@@ -527,42 +529,36 @@ class TvPage(QWidget):
         self._fwText.connect(self.fw_state.setText)
         self._fw_refresh()
 
-    HOWTO = {
-        "android": "① Ayarlar › Sistem › Hakkında › <b>Android TV OS derlemesi</b> satırına art arda 7 kez bas.<br>"
-                   "② Ayarlar › Sistem › <b>Geliştirici seçenekleri</b>'ne gir.<br>"
-                   "③ <b>USB hata ayıklama</b> varsa aç. Yoksa ya da TV bulunamazsa <b>Kablosuz hata ayıklama</b>'yı aç "
-                   "ve aşağıdaki eşleştirme kısmını kullan.",
-        "lg": "① TV'de <b>LG Content Store</b>'dan ücretsiz <b>Developer Mode</b> uygulamasını kur.<br>"
-              "② Uygulamayı aç, LG hesabınla gir (hesabı developer.lge.com'dan ücretsiz açabilirsin).<br>"
-              "③ <b>Dev Mode Status</b>'u aç, TV yeniden başlayınca uygulamada <b>Key Server</b>'ı da aç.<br>"
-              "④ Ekrandaki <b>IP</b>'yi ve <b>Passphrase</b>'i aşağıya yaz, Bağlan'a bas.<br>"
-              "<i>Not: Geliştirici modu bir süre sonra kapanır; uygulamadaki EXTEND ile uzatırsın.</i><br>"
-              "LG TV'ler başka uygulamaların üstüne çizmeye izin vermez: PS5'in HDMI görüntüsü bizim TV uygulamasının "
-              "içinde açılır ve altyazı üstüne çizilir. Kumandada ◀ ▶ ile doğru HDMI girişini seç.",
-        "samsung": "<b>Tizen Studio gerekmez.</b><br>"
-                   "① TV'de <b>Uygulamalar</b> ekranını aç, kumandayla <b>1-2-3-4-5</b> yaz; <b>Developer mode</b>'u "
-                   "<b>On</b> yap, <b>Host PC IP</b> olarak bu bilgisayarın IP'sini (<b>{pc_ip}</b>) yaz ve TV'yi "
-                   "güç tuşuna <b>2 sn basılı tutarak</b> yeniden başlat.<br>"
-                   "② TV ayarlarında <b>Anynet+ (HDMI-CEC)</b> ve <b>Otomatik Kaynak Değiştirme</b>'yi kapat; yoksa TV "
-                   "uygulamamızdan kendiliğinden HDMI'a geçebilir.<br>"
-                   "③ TV'nin IP'sini yaz, Bağlan'a bas. <b>İlk seferde</b> tarayıcıda Samsung hesabı giriş sayfası "
-                   "açılır; bir kez gir (hesap ücretsiz). Program bu TV'ye özel imza sertifikasını Samsung'dan alır, "
-                   "uygulamayı imzalar, kurar ve açar. Sonraki kurulumlarda giriş gerekmez.<br>"
-                   "Samsung TV'ler de başka uygulamaların üstüne çizmeye izin vermez: HDMI görüntüsü bizim uygulamanın "
-                   "içinde açılır. Kumandada ◀ ▶ ile doğru HDMI girişini seç.<br>"
-                   "<i>Gelişmiş: Tizen Studio'yla kurmak istersen klasörünü ve sertifika profilini aşağıya yaz.</i>",
+    EXTRA = {
+        "android": "",
+        "lg": "<i>LG ve Samsung başka uygulamanın üstüne çizmeye izin vermez: PS5'in HDMI görüntüsü bizim TV "
+              "uygulamasının içinde açılır ve altyazı üstüne çizilir.</i>",
+        "samsung": "<i>Gelişmiş: Tizen Studio'yla kurmak istersen klasörünü ve sertifika profilini aşağıya yaz.</i>",
     }
+    GUIDE_KEYS = {"android": "google-tv", "lg": "lg", "samsung": "samsung"}
+
+    def _open_guide(self) -> None:
+        win = self.window()
+        win.go("guide")
+        page = win.pages.get("guide")
+        key = self.GUIDE_KEYS[self.brand.currentData()]
+        if page is not None:
+            idx = next((i for i, g in enumerate(page.guides) if g["key"] == key), 0)
+            page.show_guide(idx)
 
     def _brand_changed(self, *_a) -> None:  # noqa: ANN002
+        from .. import rehber
+        from ..tv import local_ip
         b = self.brand.currentData()
-        text = self.HOWTO[b]
-        if "{pc_ip}" in text:
-            from ..tv import local_ip
+        text = rehber.brief_html(rehber.TV_STEPS[b])
+        if b == "samsung":
             try:
                 ip = local_ip()
             except OSError:
                 ip = "ağ bağlantısı yok"
-            text = text.replace("{pc_ip}", ip)
+            text = f"Bu bilgisayarın IP'si (Host PC IP): <b>{ip}</b><br>" + text
+        if self.EXTRA[b]:
+            text += "<br>" + self.EXTRA[b]
         self.howto.setText(text)
         self.mode_w.setVisible(b == "android")
         self.pair_card.setVisible(b == "android")

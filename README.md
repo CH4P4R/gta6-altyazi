@@ -417,7 +417,9 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 <img src="altyazi/ui/rehber/tv-gelistirici.png" alt="TV'de geliştirici seçeneklerini aç" width="640">
 
 1. TV kumandasıyla **Ayarlar › Sistem › Hakkında**'ya gir.
-2. **Android TV OS derlemesi** satırına arka arkaya **7 kez** bas. "Artık geliştiricisiniz" yazar.
+2. **Android TV OS derlemesi** satırına gel ve **OK**'a arka arkaya **7 kez** bas. "Artık geliştiricisiniz" yazar.
+
+> TCL'de menü adları biraz farklı olabilir: Ayarlar › Sistem › Hakkında › Derleme / Yapı numarası.
 
 #### Adım 2: USB hata ayıklamayı aç
 
@@ -432,10 +434,11 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 
 <img src="altyazi/ui/rehber/tv-izin.png" alt="Bağlan ve izin ver" width="640">
 
-1. Programda **Televizyon** sayfasında **Ağda ara**'ya bas (ya da TV'nin IP'sini yaz), sonra **Bağlan, kur ve başlat**'a bas.
-2. TV'de çıkan soruda **Bu bilgisayardan her zaman izin ver**'i işaretle, **İzin ver**'e bas.
+1. Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de **Ayarlar › Ağ ve İnternet**'te bağlı olduğun Wi-Fi'ye gir, IP adresi orada yazar.
+2. **Bağlan ve kur**'a bas.
+3. TV'de çıkan soruda **Bu bilgisayardan her zaman izin ver**'i işaretle, **İzin ver**'e bas.
 
-> TV uygulaması PS5'in HDMI'ını kendisi bulur. TV HDMI'yı öne alırsa ya da görüntü siyah kalırsa kendiliğinden katman moduna geçer.
+> TV ile bilgisayar aynı modeme bağlı olmalı. TV uygulaması PS5'in HDMI'ını kendisi bulur; TV HDMI'yı öne alırsa ya da görüntü siyah kalırsa kendiliğinden katman moduna geçer.
 
 </details>
 
@@ -443,23 +446,41 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 <details>
 <summary><b>📺 TV uygulaması: LG (webOS)</b> · LG Developer Mode ile kurulum.</summary>
 
-#### Adım 1: TV'de Developer Mode'u aç
+#### Adım 1: LG geliştirici hesabı aç (ücretsiz)
 
-<img src="altyazi/ui/rehber/lg-devmode.png" alt="TV'de Developer Mode'u aç" width="640">
+<img src="altyazi/ui/rehber/lg-devmode.png" alt="LG geliştirici hesabı aç (ücretsiz)" width="640">
 
-1. TV'de **LG Content Store**'dan ücretsiz **Developer Mode** uygulamasını kur ve LG hesabınla gir.
+1. Bilgisayarda LG'nin geliştirici sitesini aç ve **Sign Up** ile ücretsiz hesap aç.
+2. E-postana gelen onayı tamamla. Bu kullanıcı adı ve şifreyi TV'de kullanacaksın.
+
+🔗 [LG geliştirici sitesi](https://webostv.developer.lge.com/)
+
+> Normal LG hesabın değil, geliştirici sitesinden açılan hesap gerekir.
+
+#### Adım 2: TV'ye Developer Mode uygulamasını kur
+
+<img src="altyazi/ui/rehber/lg-store.png" alt="TV'ye Developer Mode uygulamasını kur" width="640">
+
+1. TV'de **LG Content Store**'u (Uygulamalar) aç.
+2. Aramaya **Developer Mode** yaz, ücretsiz uygulamayı **Yükle**.
+
+#### Adım 3: Developer Mode'u aç
+
+<img src="altyazi/ui/rehber/lg-devmode.png" alt="Developer Mode'u aç" width="640">
+
+1. **Developer Mode** uygulamasını aç, geliştirici hesabınla gir.
 2. **Dev Mode Status**'u aç; TV yeniden başlar.
-3. Uygulamayı tekrar aç ve **Key Server**'ı aç.
+3. Uygulamayı tekrar aç ve **Key Server**'ı da aç. Ekranda **IP** ve **Passphrase** görünür.
 
-#### Adım 2: Programdan kur
+> Geliştirici modu en çok 1000 saat açık kalır; program her bağlanışta süreyi kendisi baştan başlatır.
+
+#### Adım 4: Programdan kur
 
 <img src="altyazi/ui/rehber/lg-devmode.png" alt="Programdan kur" width="640">
 
-1. Programda **Televizyon** sayfasında markayı **LG** seç.
-2. Developer Mode ekranındaki **IP** adresini ve **Passphrase**'i yaz.
-3. **Bağlan, kur ve başlat**'a bas.
-
-> Geliştirici modu en çok 1000 saat açık kalır; program her bağlanışta süreyi kendisi baştan başlatır.
+1. Developer Mode ekranındaki **IP**'yi ve **Passphrase**'i programa yaz.
+2. **Bağlan ve kur**'a bas; uygulama kurulur ve açılır.
+3. LG başka uygulamanın üstüne yazı çizmeye izin vermez: PS5 görüntüsü bizim uygulamanın içinde açılır. Kumandada **◀ ▶** ile PS5'in takılı olduğu HDMI girişini seç.
 
 </details>
 
@@ -467,25 +488,74 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 <details>
 <summary><b>📺 TV uygulaması: Samsung (Tizen)</b> · Tizen Studio olmadan, Samsung hesabıyla kurulum.</summary>
 
-#### Adım 1: TV'de Developer mode'u aç
+#### Adım 1: Uygulamalar sayfasını aç
 
-<img src="altyazi/ui/rehber/samsung-devmode.png" alt="TV'de Developer mode'u aç" width="640">
+<img src="altyazi/ui/rehber/samsung-uygulamalar.png" alt="Uygulamalar sayfasını aç" width="640">
 
-1. TV'de **Uygulamalar** ekranını aç.
-2. Kumandayla **1 2 3 4 5** yaz; Developer mode penceresi açılır. Kumandanda rakam tuşu yoksa (2021 ve sonrası ince akıllı kumanda) **123** tuşuna bas, ekranda çıkan rakamlarla yaz.
-3. **Developer mode**'u **On** yap, **Host PC IP**'ye bu bilgisayarın IP'sini yaz (program Televizyon sayfasında gösterir), **OK**'a bas.
-4. TV'yi güç tuşuna yaklaşık 2 saniye basılı tutarak yeniden başlat.
+1. Kumandada **ev** tuşuna (evcik simgesi) bas.
+2. Alttaki şeritte **Uygulamalar**'a gel ve **OK**'a bas.
+3. Uygulamaların büyük kareler halinde dizildiği **tam sayfa** açılmalı.
 
-> Tizen Studio gerekmez.
+> Şeritte Uygulamalar'ın üstünde dururken yazarsan çalışmaz; sayfanın içine girmiş olmalısın.
 
-#### Adım 2: Programdan kur
+#### Adım 2: 1 2 3 4 5 yaz
+
+<img src="altyazi/ui/rehber/samsung-123.png" alt="1 2 3 4 5 yaz" width="640">
+
+1. Kumandanda rakam tuşları varsa sırayla **1 2 3 4 5**'e bas.
+2. İnce akıllı kumandada rakam yok: üstünde **123** ya da **4 renkli nokta** olan tuşa bas, ekranda rakamlar çıkar. Önce bir menü gelirse rakam tuş takımını seç.
+3. Yön tuşlarıyla **1**'e gel, **OK**'a bas. Sonra **2** → OK, **3** → OK, **4** → OK, **5** → OK. Arada başka tuşa basma.
+4. Doğru yazınca **Developer mode** penceresi açılır.
+
+> Olmazsa Uygulamalar sayfasından çıkıp yeniden gir ve baştan yaz.
+
+#### Adım 3: Kumandayla olmazsa: telefondan yaz
+
+<img src="altyazi/ui/rehber/samsung-telefon.png" alt="Kumandayla olmazsa: telefondan yaz" width="640">
+
+1. Telefona Samsung'un ücretsiz **SmartThings** uygulamasını kur.
+2. Telefon ve TV aynı Wi-Fi'de olsun. Uygulamada **+** ile TV'yi ekle, TV'de çıkan onaya **İzin ver** de.
+3. SmartThings'te TV'ye dokun; kumanda ekranında **123**'e bas, gerçek rakam tuşları çıkar.
+4. TV'de Uygulamalar sayfası açıkken telefondan **1 2 3 4 5**'e bas.
+
+> USB klavye de olur: TV'nin USB girişine tak, Uygulamalar sayfası açıkken üst sıradaki rakamlarla 12345 yaz.
+
+#### Adım 4: Developer mode'u aç
+
+<img src="altyazi/ui/rehber/samsung-devmode.png" alt="Developer mode'u aç" width="640">
+
+1. Açılan pencerede **Developer mode**'u **On** yap.
+2. **Host PC IP**'ye bu bilgisayarın IP'sini yaz (program sihirbazda ve Televizyon sayfasında gösterir), **OK**'a bas.
+3. TV'yi kapatıp açmak yetmez: kumandadaki **güç** tuşunu yaklaşık **2 saniye basılı** tut. TV kapanıp kendiliğinden yeniden açılır.
+4. Açılınca Uygulamalar sayfasının üstünde genelde **Developer mode** yazar.
+
+#### Adım 5: HDMI'ya kendiliğinden geçişi kapat
+
+<img src="altyazi/ui/rehber/samsung-anynet.png" alt="HDMI'ya kendiliğinden geçişi kapat" width="640">
+
+1. TV'de **Ayarlar › Genel › Harici Aygıt Yöneticisi**'ne gir.
+2. **Anynet+ (HDMI-CEC)**'yi **Kapalı** yap.
+3. Aynı yerde **Otomatik Kaynak Değiştirme** varsa onu da kapat.
+
+> Kapatmazsan PS5 açılınca TV bizim uygulamadan çıkıp doğrudan HDMI'ya geçer ve altyazı görünmez.
+
+#### Adım 6: Programdan kur
 
 <img src="altyazi/ui/rehber/samsung-devmode.png" alt="Programdan kur" width="640">
 
-1. Programda **Televizyon** sayfasında markayı **Samsung** seç ve **Bağlan, kur ve başlat**'a bas.
-2. İlk seferde tarayıcıda bir kez **Samsung hesabınla** giriş yap; program uygulamayı TV'ne özel imzalatır, kurar ve açar.
+1. Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de **Ayarlar › Genel › Ağ › Ağ Durumu › IP Ayarları**'nda yazar.
+2. **Bağlan ve kur**'a bas.
+3. İlk seferde tarayıcıda Samsung hesabı sayfası açılır: gir (hesabın yoksa aynı sayfadan ücretsiz aç). Program uygulamayı bu TV'ye özel imzalatır, kurar ve açar. Sonraki seferlerde giriş gerekmez.
 
-> TV kendiliğinden HDMI'ya geçiyorsa Anynet+ (HDMI-CEC) ve Otomatik Kaynak Değiştirme'yi kapat.
+> Tizen Studio gerekmez.
+
+#### Adım 7: HDMI girişini seç
+
+<img src="altyazi/ui/rehber/samsung-hdmi.png" alt="HDMI girişini seç" width="640">
+
+1. Samsung başka uygulamanın üstüne yazı çizmeye izin vermez: PS5 görüntüsü bizim uygulamanın içinde açılır.
+2. Kumandada **◀ ▶** ile PS5'in takılı olduğu HDMI girişini seç.
+3. Altyazı yeri kaymışsa **Yeşil** tuşla ayar panelini aç (ince kumandada **123** / renkli nokta tuşundan renkli tuşlara geç).
 
 </details>
 

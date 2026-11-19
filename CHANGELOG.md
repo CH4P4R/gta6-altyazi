@@ -3,6 +3,18 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.14
+- **Kurulum sihirbazında TV markası seçimi:** Televizyon adımında Google TV / LG / Samsung seçilir, o markanın
+  resimli adımları gelir (önceden sihirbaz yalnız Google TV'yi anlatıyordu). LG parolası ve bilgisayarın IP'si
+  ilgili adımda gösterilir.
+- **Samsung rehberi baştan, ayrıntılı ve resimli:** Uygulamalar sayfasına doğru giriş; rakam tuşu olmayan ince
+  kumandada **123** tuşuyla ekrandaki rakamları tek tek seçme; olmazsa telefondan **SmartThings** kumandası ya da USB
+  klavye; Developer mode, güç tuşuyla yeniden başlatma; Anynet+ ve Otomatik Kaynak Değiştirme'yi kapatma; TV'nin
+  IP'sini bulma; HDMI girişini seçme.
+- LG rehberi de ayrıntılandı (geliştirici hesabı, Content Store, Dev Mode, Key Server); Google TV'de TV'nin IP'sini
+  bulma eklendi. Televizyon sayfasındaki anlatım artık rehberle aynı kaynaktan geliyor ve **Resimli anlat** düğmesi
+  doğrudan o markanın rehberini açıyor.
+
 ## 0.4.13
 - **Claude harcama sayacı:** ana ekranda gecikmenin altında "Claude: bu oturum 0,37 $ · saatte ~0,90 $" ve
   "Bu ay … · toplam …". Claude'un her yanıtta bildirdiği token sayısıyla Anthropic liste fiyatından hesaplanır
