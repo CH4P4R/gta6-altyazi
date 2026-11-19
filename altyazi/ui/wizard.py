@@ -348,7 +348,9 @@ class Wizard(QDialog):
                      "<b>Uzaktan Oynatmayı Etkinleştir</b> açık olsun.<br>② <b>Cihazı Bağla</b>'ya bas; 8 haneli bir kod "
                      "çıkar (ekranda bırak).<br>③ Ayrıca <b>Ayarlar › Sistem › Güç Tasarrufu › Dinlenme Modunda "
                      "Kullanılabilir Özellikler</b>: <b>İnternete Bağlı Kal</b> ve <b>Ağ Üzerinden PS5'i Açmayı "
-                     "Etkinleştir</b>'i aç."},
+                     "Etkinleştir</b>'i aç.<br>④ TV'de oynayacaksan: Uzaktan Oynatma ayarlarındaki <b>bağlantı durumu "
+                     "açılır penceresini gizle</b> seçeneğini aç; yoksa chiaki bağlanınca TV ekranında \"bağlandı\" "
+                     "yazısı çıkar."},
             {"img": "chiaki-kayit", "title": "PS5'i chiaki-ng'ye kaydet",
              "text": "① chiaki-ng ana ekranında PS5'in kutusuna tıkla (görünmüyorsa PS5 ve bilgisayar aynı modeme "
                      "bağlı mı bak; sağ üstteki <b>+</b> ile IP'siyle de eklenir).<br>② <b>PIN</b> kutusuna PS5'teki "

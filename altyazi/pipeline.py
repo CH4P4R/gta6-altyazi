@@ -102,17 +102,10 @@ def worse_reread(old: str, new: str) -> bool:
 _SENT_END = re.compile(r"[.!?…:\"')\]]\s*$")
 
 
-def group_blocks(boxes: list[tuple[int, int, int, int]], texts: list[str], line_h: float,
-                 gap_ratio: float = 0.45) -> list[tuple[str, tuple[int, int, int, int]]]:
-    """Satırları paragraflara ayır: [(metin, kutu)], yukarıdan aşağı.
-
-    GTA'da görev yazısı ("Arabaya git") altta dururken diyalog altyazısı onun üstüne çıkar. İkisi tek metin gibi
-    çevrilirse anlamsız bir cümle çıkıyordu. Satırlar arası boşluk büyükse ayrı paragraf sayılır.
-    Kutular OCR için yazının çevresine lh/4 pay eklenmiş hâldedir; boşluk bu payla birlikte ölçülür.
-    """
+def rows_of(boxes: list[tuple[int, int, int, int]], texts: list[str]) -> list[tuple[str, tuple[int, int, int, int]]]:
+    """OCR parçalarını satırlara topla (dikeyde örtüşen parçalar aynı satır, soldan sağa): [(metin, kutu)]."""
     items = [(b, t) for b, t in zip(boxes, texts) if t]
     items.sort(key=lambda bt: (bt[0][1], bt[0][0]))
-    # aynı satırdaki parçalar (dikeyde örtüşen) tek satır
     rows: list[list] = []
     for b, t in items:
         if rows:
@@ -123,20 +116,141 @@ def group_blocks(boxes: list[tuple[int, int, int, int]], texts: list[str], line_
                 rows[-1][1].append((b[0], t))
                 continue
         rows.append([b, [(b[0], t)]])
+    return [(" ".join(t for _, t in sorted(parts)), rb) for rb, parts in rows]
+
+
+def blocks_of(rows: list[tuple[str, tuple[int, int, int, int]]], line_h: float, gap_ratio: float = 0.45,
+              separate: set[int] | None = None) -> list[tuple[str, tuple[int, int, int, int], int]]:
+    """Satırları paragraflara ayır: [(metin, kutu, satır sayısı)], yukarıdan aşağı.
+
+    GTA'da görev yazısı ("Arabaya git") altta dururken diyalog altyazısı onun üstüne çıkar. İkisi tek metin gibi
+    çevrilirse anlamsız bir cümle çıkıyordu. Satırlar arası boşluk büyükse ayrı paragraf sayılır. 'separate'teki
+    satırlar (ekranda sabit duran görev/HUD satırları) her zaman kendi paragrafıdır.
+    Kutular OCR için yazının çevresine lh/4 pay eklenmiş hâldedir; boşluk bu payla birlikte ölçülür.
+    """
+    separate = separate or set()
     blocks: list[list] = []
-    for rb, parts in rows:
-        text = " ".join(t for _, t in sorted(parts))
+    prev_sep = False
+    for i, (text, rb) in enumerate(rows):
         gap = rb[1] - blocks[-1][1][3] if blocks else 0
         # Cümle bitmeden satır kırıldıysa ("Hurry up, they are right" / "behind us!") boşluk biraz geniş olsa da
         # aynı paragraftır; görev yazısı hep bitmiş bir cümlenin altında durur
         unfinished = bool(blocks) and not _SENT_END.search(blocks[-1][0])
-        if blocks and (gap <= gap_ratio * line_h or (unfinished and gap <= 1.2 * line_h)):
+        sep = i in separate
+        if blocks and not sep and not prev_sep and (gap <= gap_ratio * line_h or (unfinished and gap <= 1.2 * line_h)):
             bb = blocks[-1][1]
             blocks[-1][0] += " " + text
             blocks[-1][1] = (min(bb[0], rb[0]), bb[1], max(bb[2], rb[2]), max(bb[3], rb[3]))
+            blocks[-1][2] += 1
         else:
-            blocks.append([text, rb])
-    return [(t, b) for t, b in blocks]
+            blocks.append([text, rb, 1])
+        prev_sep = sep
+    return [(t, b, n) for t, b, n in blocks]
+
+
+def group_blocks(boxes: list[tuple[int, int, int, int]], texts: list[str], line_h: float,
+                 gap_ratio: float = 0.45) -> list[tuple[str, tuple[int, int, int, int]]]:
+    return [(t, b) for t, b, _n in blocks_of(rows_of(boxes, texts), line_h, gap_ratio)]
+
+
+# --------------------------------------------------------------------- GTA 6'da görülen ve çevrilmemesi gerekenler
+# (CouchSubs'ın GTA 6 oynanırken bulduğu düzeltmelerden: #424 tuş ipuçları, #406 kısa HUD yazıları, #394 sabit görev
+# satırı. https://github.com/yorulmazsinan/couchsubs, AGPL-3.0, Sinan Yorulmaz)
+_PROMPT_VERBS = {"press", "hold", "tap", "use", "mash", "release", "push", "click", "toggle", "pull"}
+_KEY_NAMES = {"rb", "lb", "rt", "lt", "r1", "r2", "r3", "l1", "l2", "l3", "x", "a", "b", "y", "options", "touchpad",
+              "share", "space", "enter", "esc", "tab", "shift", "ctrl", "alt", "lmb", "rmb", "mmb"}
+_REAL_UPPER = {"ON", "UP", "IT", "IN", "OF", "TO", "AT", "OR", "AND", "GO", "NO", "OK", "MY", "ME", "US", "BE", "DO",
+               "SO", "AN", "IS", "THE", "YOU", "HIM", "HER"}
+_DETERMINERS = {"your", "the", "my", "his", "her", "our", "their", "its", "it", "me", "him", "us", "them", "a", "an",
+                "this", "that", "you"}
+
+
+def is_button_prompt(text: str) -> bool:
+    """"Press [△] to take cover" gibi tuş ipucu mu? Tuş simgesi resim olduğu için OCR ya hiç okumuyor ("Press to
+    threaten the teller") ya da kalıntı okuyor ("Press @ to", "Hold I LI to"). Çevirip üstünü kapatırsak hangi tuşa
+    basılacağı kayboluyordu; bu satırlar çevrilmez, oyunun kendi yazısı (simgesiyle) görünür kalır."""
+    t = text.strip()
+    if not t or any(c in t for c in "!?\"“”:"):
+        return False
+    words = t.split()
+    if len(words) < 3 or words[0].lower().strip(",") not in _PROMPT_VERBS:
+        return False
+    idx = next((i for i in range(1, min(len(words), 5)) if words[i].lower() == "to"), None)
+    if idx is None or idx + 1 >= len(words):
+        return False
+    residue = words[1:idx]
+    for w in residue:
+        core = w.strip("[]()<>{}.,")
+        if not any(ch.isalpha() for ch in w) or len(core) <= 1 or core.lower() in _KEY_NAMES or w.lower() in ("and", "or"):
+            continue
+        if core.isupper() and len(core) <= 3 and core not in _REAL_UPPER:
+            continue
+        return False
+    if not residue and words[idx + 1].lower().strip(",.") in _DETERMINERS:
+        return False                             # "Hold to your course" konuşmadır
+    return True
+
+
+def is_short_hud(text: str) -> bool:
+    """Tek satır, en çok üç sözcük, hiç küçük harf yok, cümle sonu noktalaması yok: "TAKE AMMO PACK (0/3)", "SIT",
+    "• ADD TO TRUNK". Bunlar etkileşim/HUD yazısıdır, altyazı değil ("OKAY.", "WHAT?" altyazıdır)."""
+    t = text.strip()
+    letters = [ch for ch in t if ch.isalpha()]
+    if not letters or any(ch.islower() for ch in letters) or _SENT_END_STRICT.search(t):
+        return False
+    return sum(1 for w in t.split() if any(ch.isalpha() for ch in w)) <= 3
+
+
+_SENT_END_STRICT = re.compile(r"[.!?…]\W*$")
+
+
+class StickyRows:
+    """Konuşma değişirken ekranda sabit duran satırı (GTA 6'da konuşmanın hemen altında dakikalarca duran görev yazısı)
+    bulur. En az 6 sn ekranda kalan ve yanında ondan en az 3 sn sonra gelmiş başka satır bulunan satır sabittir.
+    Sabit satır diyalogla birleştirilmez, kendi paragrafı olarak bir kez çevrilir ve yerinde kalır."""
+
+    STICKY_S = 6.0
+    YOUNGER_S = 3.0
+
+    def __init__(self):
+        self.rows: list[dict] = []
+
+    def reset(self) -> None:
+        self.rows = []
+
+    def update(self, texts: list[str], now: float) -> set[int]:
+        from rapidfuzz import fuzz
+
+        used: set[int] = set()
+        matched: list[dict | None] = []
+        for text in texts:
+            key = normalize_text(text)
+            if len(key) < 3:
+                matched.append(None)
+                continue
+            row = None
+            for j, r in enumerate(self.rows):
+                if j not in used and fuzz.ratio(key, r["key"]) >= 85:
+                    row = r
+                    used.add(j)
+                    break
+            if row is None:
+                row = {"key": key, "since": now, "sticky": False}
+                self.rows.append(row)
+                used.add(len(self.rows) - 1)
+            matched.append(row)
+        present = [r for r in matched if r is not None]
+        for r in present:
+            if not r["sticky"] and now - r["since"] >= self.STICKY_S and \
+                    any(o["since"] - r["since"] >= self.YOUNGER_S for o in present):
+                r["sticky"] = True
+        # Her okuma bölgenin tamamıdır: bu okumada olmayan satır ekrandan kalkmıştır
+        self.rows = present
+        return {i for i, r in enumerate(matched) if r is not None and r["sticky"]}
+
+
+def normalize_text(text: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^\w']+", " ", text.lower())).strip()
 
 
 def match_keys(zone: str, prev: dict[str, tuple[int, int]], spans: list[tuple[int, int]]) -> list[str]:
@@ -178,6 +292,7 @@ class Pipeline:
         self._seq = 0
         self._current: dict[str, tuple[int, str, int]] = {}   # bölge -> (seq, ingilizce, gösterilen kalite)
         self._blocks: dict[str, dict[str, tuple[int, int]]] = {}   # bölge -> {paragraf adı: (y0, y1)}
+        self._sticky: dict[str, StickyRows] = {}                     # bölge -> sabit (görev/HUD) satır izleyici
         self._lock = threading.Lock()
         self.frames = 0
         self.last_frame: np.ndarray | None = None
@@ -252,6 +367,7 @@ class Pipeline:
 
     def _clear_all(self) -> None:
         self._blocks.clear()
+        self._sticky.clear()
         with self._lock:
             zones = list(self._current)
             self._current.clear()
@@ -387,6 +503,7 @@ class Pipeline:
             if ev is None:
                 continue
             if ev.kind == "clear":
+                self._sticky.pop(zcfg.ad, None)
                 self._drop_keys(list(self._blocks.pop(zcfg.ad, {}) or [zcfg.ad]))
                 continue
 
@@ -394,9 +511,11 @@ class Pipeline:
             results = self.rec.recognize([ln.image for ln in ev.lines])
             ocr_ms = (time.perf_counter() - t_ocr) * 1000
             texts = [r.text if (r.score >= zcfg.min_skor and r.text) else "" for r in results]
-            blocks = [(clean_ocr(tx), b) for tx, b in group_blocks([ln.box for ln in ev.lines], texts,
-                                                                    ev.line_height, zcfg.paragraf_boslugu)]
-            blocks = [(tx, b) for tx, b in blocks if tx and looks_like_text(tx)]
+            rows = [(clean_ocr(tx), b) for tx, b in rows_of([ln.box for ln in ev.lines], texts)]
+            rows = [(tx, b) for tx, b in rows if tx and not is_button_prompt(tx)]
+            sticky = self._sticky.setdefault(zcfg.ad, StickyRows()).update([tx for tx, _ in rows], t)
+            blocks = [(tx, b) for tx, b, n in blocks_of(rows, ev.line_height, zcfg.paragraf_boslugu, sticky)
+                      if tx and looks_like_text(tx) and not (zcfg.tur == "altyazi" and n == 1 and is_short_hud(tx))]
             if not blocks:
                 det.reject()
                 continue

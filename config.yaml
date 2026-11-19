@@ -80,6 +80,20 @@ ceviri:
     Raul Bautista: Raul Bautista
     Brian Heder: Brian Heder
     Lifeinvader: Lifeinvader
+    Los Santos: Los Santos
+    Liberty City: Liberty City
+    San Andreas: San Andreas
+    Rockstar: Rockstar
+    FIB: FIB
+    IAA: IAA
+    LSPD: LSPD
+    VCPD: VCPD
+    Ammu-Nation: Ammu-Nation
+    "Pay 'n' Spray": "Pay 'n' Spray"
+    "Cluckin' Bell": "Cluckin' Bell"
+    Burger Shot: Burger Shot
+    Sprunk: Sprunk
+    eCola: eCola
 
 sunucu:
   acik: true                     # http://localhost:8787 (OBS: /obs)

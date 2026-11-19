@@ -241,6 +241,11 @@ SCREEN_SCHEMA = {
 
 
 def _glossary_text(sozluk: dict[str, str]) -> str:
+    from .gta_terms import style_guide
+    return _required_terms(sozluk) + style_guide()
+
+
+def _required_terms(sozluk: dict[str, str]) -> str:
     if not sozluk:
         return ""
     return "\n\nRequired terms (English -> Turkish):\n" + "\n".join(f"- {k} -> {v}" for k, v in sozluk.items())

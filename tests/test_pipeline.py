@@ -310,3 +310,38 @@ def test_fuzzy_cache_does_not_mix_different_sentences(tmp_path):
     assert c.get("Go to the bar.") is None
     assert c.get("You have $5000.") is None
     assert c.get("Get in the car, Frank1in.")[0] == "Arabaya bin Franklin."
+
+
+def test_gta6_button_prompts_and_short_hud_are_not_subtitles():
+    """CouchSubs'ın GTA 6'da bulduğu: simgesi okunmayan tuş ipuçları ve kısa büyük harfli HUD yazıları çevrilmez."""
+    from altyazi.pipeline import is_button_prompt, is_short_hud
+    assert is_button_prompt("Press to threaten the teller.")
+    assert is_button_prompt("Press [RB] to take cover")
+    assert is_button_prompt("Hold I LI to aim")
+    assert not is_button_prompt("Hold to your course.")
+    assert not is_button_prompt("Press the button, Jason!")
+    assert is_short_hud("TAKE AMMO PACK (0/3)") and is_short_hud("• ADD TO TRUNK")
+    assert not is_short_hud("OKAY.") and not is_short_hud("Go to the car.")
+
+
+def test_gta6_sticky_objective_row_gets_its_own_paragraph():
+    """GTA 6'da görev yazısı konuşmanın hemen altında dakikalarca durur. Boşluk küçük olsa da 6 sn'den uzun duran
+    ve yanına sonradan konuşma gelen satır ayrı paragraf olur; konuşmayla birleştirilip çevrilmez."""
+    from altyazi.pipeline import StickyRows, blocks_of
+    lh, pad = 30, 7
+    def box(y):
+        return (300 - pad, y - pad, 900 + pad, y + lh + pad)
+    st = StickyRows()
+    assert st.update(["Get in the sea plane."], 0.0) == set()
+    assert st.update(["Get in the sea plane."], 2.0) == set()
+    # 7 sn sonra konuşma görev yazısının hemen üstünde belirdi
+    texts = ["Thought I was flying solo. Come on.", "Get in the sea plane."]
+    sticky = st.update(texts, 7.0)
+    assert sticky == {1}
+    rows = [(texts[0], box(100)), (texts[1], box(100 + lh + 2))]      # aradaki boşluk çok küçük
+    blocks = blocks_of(rows, lh, 0.45, sticky)
+    assert [t for t, _b, _n in blocks] == ["Thought I was flying solo. Come on.", "Get in the sea plane."]
+    # birlikte beliren iki satırlık konuşma sabit sayılmaz
+    st2 = StickyRows()
+    st2.update(["Hurry up, they are right", "behind us!"], 0.0)
+    assert st2.update(["Hurry up, they are right", "behind us!"], 8.0) == set()
