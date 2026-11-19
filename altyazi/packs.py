@@ -214,7 +214,8 @@ def couchsubs_catalog(timeout: float = 8, fetch=None) -> list[dict]:  # noqa: AN
     for p in data.get("packs") or []:
         if isinstance(p, dict) and _PACK_ID.match(str(p.get("id", ""))) and p.get("sha256"):
             out.append({"id": p["id"], "title": str(p.get("title") or p["id"]), "entries": int(p.get("entries") or 0),
-                        "sha256": str(p["sha256"]).lower(), "version": p.get("version", 0)})
+                        "sha256": str(p["sha256"]).lower(), "version": p.get("version", 0),
+                        "auto": bool(p.get("auto"))})
     return out
 
 

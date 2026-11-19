@@ -759,7 +759,8 @@ class TranslationPage(QWidget):
         cat = sorted(cat, key=lambda p: (0 if "6" in p["id"] or "vi" in p["id"].split("-") else 1, p["title"]))
         for k, p in enumerate(cat):
             n = f"{p['entries']:,}".replace(",", ".")
-            self.pack_combo.insertItem(k, f"{p['title']} · CouchSubs ({n} satır)", f"cs:{p['id']}")
+            extra = " · ek satırlar" if p.get("auto") else ""
+            self.pack_combo.insertItem(k, f"{p['title']}{extra} · CouchSubs ({n} satır)", f"cs:{p['id']}")
         if cat:
             self.pack_combo.setCurrentIndex(0)
 
