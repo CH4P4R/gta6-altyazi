@@ -3,6 +3,42 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.17 · Ayrıntılı TV denetimi
+Programın TV kısmı baştan sona CouchSubs'ın gerçek TV'lerde denenmiş koduyla satır satır karşılaştırıldı; bulunan
+hatalar düzeltildi.
+
+**Bütün TV'ler**
+- "TV hazır" artık TV uygulaması bu bilgisayara gerçekten bağlanınca yazıyor. Bağlanamazsa sebebi söyleniyor: Windows
+  ağı "Ortak" sayıyor, güvenlik duvarı engelliyor ya da modemde misafir ağı / AP izolasyonu açık.
+- Türkçe Windows'ta güvenlik duvarı durumu hiç görünmüyordu (karakter kodlaması hatası); düzeldi.
+- Altyazı, İngilizcesi ekrandayken TV'de 15 saniye sonra kayboluyordu; artık yazı gidince kalkıyor.
+- Wi-Fi kısa kopunca TV'de eski yazılar takılı kalıyordu; yeniden bağlanınca temizleniyor.
+- Çeviri durdurulduktan sonra gelen geç çeviri TV'de takılı kalıyordu; artık basılmıyor.
+- Aynı cümlenin düzelen okuması TV'de iki kez (üst üste) görünüyordu; artık yerini alıyor.
+- Yardım, bildirim ve telefon kutularında çok satırlı İngilizce yazının alt satırları görünüyordu; Türkçe kutu artık
+  tamamını örtüyor.
+- Program iki kez açılırsa (ya da CouchSubs açıksa) sunucu portu sessizce paylaşılıyordu; artık açıkça uyarıyor.
+- "Ağda ara" bilgisayarın bütün ev ağlarında arıyor; internet yokken takılı kalmıyor.
+- chiaki penceresi program adına göre bulunuyor; tarayıcıda açık "chiaki-ng" sayfası yanlışlıkla yakalanmıyor.
+
+**Google TV / Android TV**
+- TV uygulaması CouchSubs'ın güncel koduyla eşitlendi: bazı TV'lerde katman moduna geçerken uygulamanın kapanması ve
+  kumandadan açınca kapanması düzeldi.
+- TV'de kaldırılmış ama kaydı kalmış eski kopya temizlenip yeniden kuruluyor; açılmayan uygulama bir kez yeniden
+  kuruluyor.
+- Hatalar Türkçe ve ne yapılacağıyla (Play Protect, yer yok, bağlantı koptu...).
+- Kablosuz hata ayıklama ekranındaki IP:PORT yazılırsa onunla bağlanıyor; aynı anda iki bağlantı başlamıyor.
+
+**Samsung**
+- TV uygulamasına bu bilgisayarın adresi kurulumda yazılıyor (ağda aramadan bulur).
+- TV'deki Host PC IP yanlışsa ne yazılması gerektiği söyleniyor.
+- Ekran koruyucuyu kapatan Samsung kütüphanesi yükleniyor; TV uygulaması sürümü programla birlikte güncelleniyor.
+
+**LG**
+- Kurulum her seferinde 15 saniye sonra boş bir hatayla düşüyordu; kurulum komutu CouchSubs'tan birebir alındı.
+- Eski webOS'lara bağlanılamıyordu (SSH algoritmaları); düzeldi. SFTP'si olmayan TV'lere de yükleniyor.
+- TV anahtarı reddederse yenisi alınıyor; hatalar Türkçe. Ekran koruyucu oyunun üstüne çıkmıyor.
+
 ## 0.4.16
 - **Google TV / Android TV'ye adb'siz, eşleştirmesiz bağlantı:** program artık TV'ye kendi ADB istemcisiyle bağlanıyor
   (CouchSubs'ın yöntemi). TV'de yalnız **USB hata ayıklama** açık olsun; eşleştirme kodu, Kablosuz hata ayıklama ve
