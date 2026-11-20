@@ -37,3 +37,11 @@ def test_firewall_scripts_parse_in_powershell():
 def test_firewall_status_reads_without_crashing():
     assert winutil.firewall_ok() in (True, False, None)
     assert winutil.network_is_public() in (True, False, None)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="PowerShell yalnız Windows'ta")
+def test_update_script_parses_in_powershell(tmp_path):
+    from altyazi import updater
+    s = updater.update_script(tmp_path / "GTA6Altyazi-Setup-0.4.20.exe", r"C:\Users\a b\GTA6Altyazi.exe", 1234,
+                              tmp_path / "guncelleme.log")
+    assert _parse_errors(s) == 0

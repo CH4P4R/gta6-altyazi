@@ -230,6 +230,9 @@ class AppController(QObject):
     # ------------------------------------------------------------------ güncellemeler
     def _check_updates(self) -> None:
         from . import updater
+        problem = updater.last_update_problem()
+        if problem:
+            self.notice.emit(problem)
         o = self.cfg.otomatik
         if o.paket_guncelle:
             try:
@@ -257,7 +260,8 @@ class AppController(QObject):
             try:
                 setup = updater.download_setup(rel, lambda f: self.updateProgress.emit(min(f, 0.99)))
                 self.updateProgress.emit(1.0)
-                updater.run_setup(setup)
+                self.notice.emit("Güncelleme kuruluyor: program kapanıp 1 dakika içinde yeni sürümle açılacak.")
+                updater.run_setup(setup, rel.get("version", ""))
                 self._uiCommand.emit("cik")
             except Exception as e:  # noqa: BLE001
                 log.warning("Güncelleme kurulamadı: %s", e)

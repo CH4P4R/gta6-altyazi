@@ -45,3 +45,28 @@ def test_latest_release_picks_newest_version_with_setup():
     assert updater.newer_than_current(rel, "0.4.9")
     assert not updater.newer_than_current(rel, "0.4.10")
     assert updater.latest_release(fetch=lambda url: (_ for _ in ()).throw(OSError())) is None
+
+
+def test_update_script_waits_for_app_and_reports(tmp_path):
+    from altyazi import updater
+    s = updater.update_script(tmp_path / "Setup.exe", r"C:\Program Files\O'X\GTA6Altyazi.exe", 4242, tmp_path / "g.log")
+    lines = [ln for ln in s.splitlines() if ln.strip()]
+    assert lines[1].startswith("Wait-Process -Id 4242")            # önce program kapanır
+    assert "Stop-Process -Id 4242 -Force" in s
+    assert s.index("Wait-Process") < s.index("Start-Process -FilePath")  # kurulum ancak sonra başlar
+    assert "'/VERYSILENT'" in s and "/LOG=" in s and "-Wait" in s
+    assert r"'C:\Program Files\O''X\GTA6Altyazi.exe'" in s            # yol güvenle tırnaklanır
+    assert "if ($code -ne 0)" in s                                  # başarısızsa eski program yeniden açılır
+
+
+def test_failed_update_is_reported_once(tmp_path, monkeypatch):
+    import json
+    monkeypatch.setenv("ALTYAZI_DATA", str(tmp_path))
+    from altyazi import updater
+    (tmp_path / "guncelleme.json").write_text(json.dumps({"hedef": "99.0.0", "eski": "0.1.0"}))
+    (tmp_path / "guncelleme.sonuc").write_text("5")
+    msg = updater.last_update_problem()
+    assert "99.0.0" in msg and "kod 5" in msg
+    assert updater.last_update_problem() is None                     # bir kez söylenir
+    (tmp_path / "guncelleme.json").write_text(json.dumps({"hedef": "0.0.1"}))
+    assert updater.last_update_problem() is None                     # güncelleme olmuş: sessiz

@@ -115,10 +115,73 @@ def download_setup(rel: dict, progress=None) -> Path:  # noqa: ANN001
     return dest
 
 
-def run_setup(setup: Path) -> None:
-    """Sessiz kur; kurulum bitince uygulamayı kendisi açar (installer.iss: WizardSilent)."""
+def _q(s: str) -> str:
+    return "'" + str(s).replace("'", "''") + "'"
+
+
+def update_script(setup: Path, exe: str, pid: int, log_file: Path) -> str:
+    """Program TAMAMEN kapandıktan sonra kurulumu çalıştıran PowerShell betiği.
+
+    Eskiden kurulum program kapanmadan başlıyordu: dosyalar kullanımdayken sessiz kurulum hiçbir şey demeden iptal
+    oluyor, eski sürüm kalıyordu. Şimdi: programın bitmesi beklenir (gerekirse kapatılır), kurulum günlükle çalışır,
+    başarılıysa kurulum programı yeni sürümü açar (installer.iss), başarısızsa eski program yeniden açılır ve
+    açılışta neden kurulamadığı gösterilir.
+    """
+    return f"""
+$ErrorActionPreference = 'SilentlyContinue'
+Wait-Process -Id {int(pid)} -Timeout 45
+Stop-Process -Id {int(pid)} -Force
+Get-Process | Where-Object {{ $_.Path -eq {_q(exe)} }} | Stop-Process -Force
+Start-Sleep -Seconds 1
+$p = Start-Process -FilePath {_q(setup)} -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOCANCEL','/CLOSEAPPLICATIONS','/LOG={log_file}' -PassThru -Wait
+$code = $p.ExitCode
+Set-Content -Path {_q(log_file.with_suffix('.sonuc'))} -Value $code
+if ($code -ne 0) {{ Start-Process -FilePath {_q(exe)} }}
+"""
+
+
+def run_setup(setup: Path, version: str = "") -> None:
+    """Programdan bağımsız bir PowerShell, program kapanınca sessiz kurulumu yapar; bkz. update_script."""
     if sys.platform != "win32":
         raise RuntimeError("Güncelleme yalnız Windows'ta kurulabilir.")
-    flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    subprocess.Popen([str(setup), "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS"],
-                     creationflags=flags, close_fds=True)
+    import base64
+    import os
+
+    log_file = paths.data("guncelleme.log")
+    for f in (log_file, log_file.with_suffix(".sonuc")):
+        f.unlink(missing_ok=True)
+    paths.data("guncelleme.json").write_text(json.dumps({"hedef": version, "eski": __version__}), encoding="utf-8")
+    script = update_script(setup, sys.executable, os.getpid(), log_file)
+    enc = base64.b64encode(script.encode("utf-16-le")).decode()
+    flags = (getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+             | getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0))
+    args = ["powershell", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-EncodedCommand", enc]
+    try:
+        subprocess.Popen(args, creationflags=flags, close_fds=True)
+    except OSError:      # iş nesnesi ayrılmaya izin vermiyorsa bayraksız dene
+        subprocess.Popen(args, creationflags=flags & ~getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0),
+                         close_fds=True)
+
+
+def last_update_problem() -> str | None:
+    """Önceki güncelleme denemesi başarısız olduysa (program hâlâ eski sürümdeyse) kullanıcıya gösterilecek metin."""
+    marker = paths.data("guncelleme.json")
+    if not marker.exists():
+        return None
+    try:
+        info = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        info = {}
+    marker.unlink(missing_ok=True)
+    target = info.get("hedef") or ""
+    if not target or _ver(__version__) >= _ver(target):
+        return None
+    code = ""
+    try:
+        code = paths.data("guncelleme.sonuc").read_text(encoding="utf-8").strip()
+    except OSError:
+        pass
+    log.warning("Güncelleme %s kurulamadı (kurulum çıkış kodu %s); ayrıntı: %s", target, code or "?",
+                paths.data("guncelleme.log"))
+    return (f"{target} sürümüne güncelleme kurulamadı (kod {code or '?'}). Yeniden 'Güncelle'ye bas; yine olmazsa "
+            f"kurulum dosyasını GitHub'daki Releases sayfasından indirip elle kur.")

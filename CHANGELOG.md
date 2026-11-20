@@ -3,6 +3,15 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.20
+- **Uygulama içi güncelleme düzeltildi:** program kapanmadan kurulum başlıyordu; dosyalar kullanımdayken sessiz kurulum
+  hiçbir şey demeden iptal oluyor, eski sürüm kalıyor ve program yeniden açılmıyordu. Artık kurulum program tamamen
+  kapandıktan sonra çalışıyor, bitince yeni sürüm kendiliğinden açılıyor. Kurulamazsa eski program yeniden açılıp
+  nedenini söylüyor.
+- **Bu düzeltme bir kereliğine elle kurulum ister:** eski sürümdeki güncelleme düğmesi hâlâ eski yöntemi kullanır.
+  Releases sayfasından GTA6Altyazi-Setup.exe'yi indirip kur (ayarlar ve anahtarlar korunur); sonraki güncellemeler
+  düğmeyle sorunsuz gelir.
+
 ## 0.4.19
 - **API anahtarları artık kaybolmuyor:** boş bir kayıt dolu anahtarın üstüne yazamıyor (yalnız anahtar alanını kendin
   boşaltırsan silinir); anahtarlar ayrıca ayrı bir yedek dosyada tutuluyor ve ayar dosyasında yoksa oradan geri
