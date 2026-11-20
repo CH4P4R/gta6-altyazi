@@ -69,7 +69,7 @@ def update_packs(folder: Path | None = None, bundled: Path | None = None, catalo
 
 
 # ------------------------------------------------------------------------------------------- uygulama
-def latest_release(fetch=None) -> dict | None:  # noqa: ANN001
+def latest_release(fetch=None, name: str | None = None) -> dict | None:  # noqa: ANN001
     """{'version': '0.5.0', 'url': kurulum dosyası, 'size': bayt, 'notes': metin} ya da None."""
     try:
         if fetch is None:
@@ -87,7 +87,8 @@ def latest_release(fetch=None) -> dict | None:  # noqa: ANN001
         tag = str(r.get("tag_name", ""))
         if not _TAG.match(tag) or r.get("draft"):
             continue
-        asset = next((a for a in r.get("assets") or [] if a.get("name") == asset_name()), None)
+        want = name or asset_name()
+        asset = next((a for a in r.get("assets") or [] if a.get("name") == want), None)
         if not asset:
             continue
         if best is None or _ver(tag) > _ver("v" + best["version"]):

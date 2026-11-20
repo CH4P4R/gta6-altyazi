@@ -11,7 +11,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 def _font(size: int) -> ImageFont.FreeTypeFont:
     for pat in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "C:/Windows/Fonts/arialbd.ttf", "/usr/share/fonts/**/*Bold*.ttf"):
+                "C:/Windows/Fonts/arialbd.ttf",
+                "/System/Library/Fonts/Supplemental/Arial Bold.ttf", "/Library/Fonts/Arial Bold.ttf",   # macOS
+                "/System/Library/Fonts/Supplemental/Verdana Bold.ttf",
+                "/usr/share/fonts/**/*Bold*.ttf"):
         for p in glob.glob(pat, recursive=True):
             return ImageFont.truetype(p, size)
     return ImageFont.load_default()

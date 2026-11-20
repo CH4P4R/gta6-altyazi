@@ -40,7 +40,7 @@ def test_latest_release_picks_newest_version_with_setup():
             {"tag_name": "v0.4.10", "assets": [{"name": "GTA6Altyazi-Setup.exe", "browser_download_url": "u410",
                                                 "size": 11}], "body": "notlar"},
             {"tag_name": "v0.5.0", "assets": []}]                      # kurulum dosyası henüz yüklenmemiş
-    rel = updater.latest_release(fetch=lambda url: rels)
+    rel = updater.latest_release(fetch=lambda url: rels, name=updater.SETUP_NAME)
     assert rel["version"] == "0.4.10" and rel["url"] == "u410"
     assert updater.newer_than_current(rel, "0.4.9")
     assert not updater.newer_than_current(rel, "0.4.10")
