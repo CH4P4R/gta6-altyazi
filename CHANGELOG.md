@@ -3,6 +3,10 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.5.1
+- Program açılışta bazı ağlarda (özellikle Mac'te) bilgisayarın adını sorarken bir dakikaya kadar bekleyebiliyordu
+  (Mac denemesinde 70 sn görüldü); artık hemen açılıyor. Mac denemesi açılışın 30 saniyeden kısa sürdüğünü de denetliyor.
+
 ## 0.5.0 · macOS
 - **Mac sürümü (Apple Silicon, M1 ve sonrası):** GTA6Altyazi-mac.dmg. chiaki-ng penceresi ScreenCaptureKit ile
   okunur, Türkçe tam ekranda da chiaki'nin üstünde görünür; kısayol tuşları, TV kurulumları (Google TV, LG, Samsung),

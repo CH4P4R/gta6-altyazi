@@ -162,9 +162,12 @@ def step_translate(new_dmg: Path, new_version: str) -> None:
     if bundle_version() != new_version:
         check("yeni sürüm .dmg'den kuruldu", install_from_dmg(new_dmg) and bundle_version() == new_version,
               str(bundle_version()))
+    t0 = time.time()
     launch()
-    hello = wait(lambda: http("/hello"), 120)
+    hello = wait(lambda: http("/hello"), 120, 0.5)
+    took = time.time() - t0
     check("program açıldı, sunucu yanıt veriyor (/hello)", hello and hello.get("app") == "gta6altyazi", str(hello))
+    check("program 30 saniyeden kısa sürede açıldı", took < 30, f"{took:.0f} sn")
     ready = wait(lambda: http("/komut/durum", "POST").get("durum") in ("hazir", "calisiyor"), 240, 2)
     check("çeviri motorları hazır", bool(ready))
     events: list[tuple[str, dict]] = []

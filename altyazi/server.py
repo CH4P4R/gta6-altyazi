@@ -379,7 +379,11 @@ class EventServer:
             def server_bind(self):  # noqa: ANN202
                 if sys.platform == "win32" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
                     self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-                super().server_bind()
+                # HTTPServer.server_bind bilgisayarın adını ters DNS ile sorar (socket.getfqdn); macOS'ta bazı ağlarda
+                # bu 70 sn'ye kadar bekletiyordu (Mac denemesinde görüldü). Ada gerek yok: doğrudan bağla.
+                import socketserver
+                socketserver.TCPServer.server_bind(self)
+                self.server_name, self.server_port = "localhost", self.server_address[1]
 
         httpd = Server(("0.0.0.0", self.port), H)
         httpd.daemon_threads = True
