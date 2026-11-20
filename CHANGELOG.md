@@ -11,8 +11,9 @@ sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 - **Bu düzeltme bir kereliğine elle kurulum ister:** eski sürümdeki güncelleme düğmesi hâlâ eski yöntemi kullanır.
   Releases sayfasından GTA6Altyazi-Setup.exe'yi indirip kur (ayarlar ve anahtarlar korunur); sonraki güncellemeler
   düğmeyle sorunsuz gelir.
-
-## 0.4.19
+- Her kurulum dosyası artık yayınlanmadan önce gerçek bir Windows makinesinde baştan sona deneniyor: eski sürümü
+  kurup uygulama içi güncellemeyle yenisine geçiyor, altyazılı oyun karesinden çeviriyi TV akışında görüyor,
+  güvenlik duvarı iznini yazıp doğruluyor. Bunlardan biri bozuksa kurulum dosyası yayınlanmıyor.
 - **API anahtarları artık kaybolmuyor:** boş bir kayıt dolu anahtarın üstüne yazamıyor (yalnız anahtar alanını kendin
   boşaltırsan silinir); anahtarlar ayrıca ayrı bir yedek dosyada tutuluyor ve ayar dosyasında yoksa oradan geri
   geliyor. Çeviri sayfası her açılışta anahtar alanlarını güncel ayardan dolduruyor (sihirbazda girilen anahtar orada

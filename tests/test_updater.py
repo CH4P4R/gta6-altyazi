@@ -50,11 +50,10 @@ def test_latest_release_picks_newest_version_with_setup():
 def test_update_script_waits_for_app_and_reports(tmp_path):
     from altyazi import updater
     s = updater.update_script(tmp_path / "Setup.exe", r"C:\Program Files\O'X\GTA6Altyazi.exe", 4242, tmp_path / "g.log")
-    lines = [ln for ln in s.splitlines() if ln.strip()]
-    assert lines[1].startswith("Wait-Process -Id 4242")            # önce program kapanır
+    assert "Wait-Process -Id 4242" in s                               # önce program kapanır
     assert "Stop-Process -Id 4242 -Force" in s
     assert s.index("Wait-Process") < s.index("Start-Process -FilePath")  # kurulum ancak sonra başlar
-    assert "'/VERYSILENT'" in s and "/LOG=" in s and "-Wait" in s
+    assert "/VERYSILENT" in s and '"/LOG=' in s and "WaitForExit()" in s and "-Wait " not in s
     assert r"'C:\Program Files\O''X\GTA6Altyazi.exe'" in s            # yol güvenle tırnaklanır
     assert "if ($code -ne 0)" in s                                  # başarısızsa eski program yeniden açılır
 

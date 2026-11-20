@@ -136,13 +136,10 @@ def step_update(new_setup: Path, old_setup: Path | None, new_version: str) -> No
         return
     from altyazi import updater
     log_file = DATA / "guncelleme.log"
-    for f in (log_file, log_file.with_suffix(".sonuc")):
+    for f in (log_file, log_file.with_suffix(".sonuc"), log_file.with_suffix(".adim")):
         f.unlink(missing_ok=True)
-    script = updater.update_script(new_setup, str(EXE), pid, log_file)
-    import base64
-    enc = base64.b64encode(script.encode("utf-16-le")).decode()
-    subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-EncodedCommand", enc],
-                     creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
+    # uygulamanın kullandığı başlatıcının aynısı
+    updater.launch_script(updater.update_script(new_setup, str(EXE), pid, log_file))
     # uygulama içi güncellemede program kendini kapatır; burada aynısı: kapatma isteği (kısa gecikmeyle)
     time.sleep(3)
     subprocess.run(["taskkill", "/PID", str(pid)], capture_output=True)
@@ -153,8 +150,13 @@ def step_update(new_setup: Path, old_setup: Path | None, new_version: str) -> No
     new_pid = wait(lambda: [p for p in app_pids() if p != pid], 60)
     check("program güncellemeden sonra kendiliğinden açıldı", bool(new_pid), f"pid {new_pid}")
     check("Claude anahtarı güncellemeden sonra duruyor", key_in_config())
-    if log_file.exists() and not (done and code == "0"):
-        print(log_file.read_text(encoding="utf-8", errors="replace")[-3000:])
+    if not (done and code == "0"):
+        for f in (log_file.with_suffix(".adim"), log_file):
+            if f.exists():
+                print(f"  --- {f.name} ---")
+                print(f.read_text(encoding="utf-8", errors="replace")[-3000:])
+            else:
+                print(f"  ({f.name} yok)")
 
 
 def step_translate(new_setup: Path, new_version: str) -> None:

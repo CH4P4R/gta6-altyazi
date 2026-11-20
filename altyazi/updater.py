@@ -127,14 +127,25 @@ def update_script(setup: Path, exe: str, pid: int, log_file: Path) -> str:
     başarılıysa kurulum programı yeni sürümü açar (installer.iss), başarısızsa eski program yeniden açılır ve
     açılışta neden kurulamadığı gösterilir.
     """
+    trace = _q(log_file.with_suffix(".adim"))
+    # /LOG yolunda boşluk olabilir (C:\Users\Ali Veli\...): argüman tırnaklı tek metin olarak verilir.
+    # Start-Process -Wait kurulumun açtığı programı da beklerdi (bitmezdi): yalnız kurulum süreci beklenir.
     return f"""
 $ErrorActionPreference = 'SilentlyContinue'
+function Adim($m) {{ Add-Content -Path {trace} -Value ((Get-Date -Format 'HH:mm:ss') + ' ' + $m) }}
+Adim 'basladi'
 Wait-Process -Id {int(pid)} -Timeout 45
 Stop-Process -Id {int(pid)} -Force
 Get-Process | Where-Object {{ $_.Path -eq {_q(exe)} }} | Stop-Process -Force
 Start-Sleep -Seconds 1
-$p = Start-Process -FilePath {_q(setup)} -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOCANCEL','/CLOSEAPPLICATIONS','/LOG={log_file}' -PassThru -Wait
-$code = $p.ExitCode
+Adim 'program kapandi, kurulum basliyor'
+$code = -1
+try {{
+  $p = Start-Process -FilePath {_q(setup)} -ArgumentList {_q('/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /NOCANCEL /CLOSEAPPLICATIONS "/LOG=' + str(log_file) + '"')} -PassThru -ErrorAction Stop
+  $p.WaitForExit()
+  $code = $p.ExitCode
+}} catch {{ Adim ('kurulum baslatilamadi: ' + $_) }}
+Adim ('kurulum bitti, kod ' + $code)
 Set-Content -Path {_q(log_file.with_suffix('.sonuc'))} -Value $code
 if ($code -ne 0) {{ Start-Process -FilePath {_q(exe)} }}
 """
@@ -144,23 +155,30 @@ def run_setup(setup: Path, version: str = "") -> None:
     """Programdan bağımsız bir PowerShell, program kapanınca sessiz kurulumu yapar; bkz. update_script."""
     if sys.platform != "win32":
         raise RuntimeError("Güncelleme yalnız Windows'ta kurulabilir.")
-    import base64
     import os
 
     log_file = paths.data("guncelleme.log")
-    for f in (log_file, log_file.with_suffix(".sonuc")):
+    for f in (log_file, log_file.with_suffix(".sonuc"), log_file.with_suffix(".adim")):
         f.unlink(missing_ok=True)
     paths.data("guncelleme.json").write_text(json.dumps({"hedef": version, "eski": __version__}), encoding="utf-8")
-    script = update_script(setup, sys.executable, os.getpid(), log_file)
+    launch_script(update_script(setup, sys.executable, os.getpid(), log_file))
+
+
+def launch_script(script: str) -> subprocess.Popen:
+    """Betiği programdan bağımsız, gizli konsollu PowerShell'de başlat (program kapanınca da sürer).
+
+    DETACHED_PROCESS kullanılmaz: konsolsuz PowerShell betiği çalıştırmadan çıkabiliyor (uçtan uca denemede görüldü).
+    """
+    import base64
+
     enc = base64.b64encode(script.encode("utf-16-le")).decode()
-    flags = (getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-             | getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0))
-    args = ["powershell", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-EncodedCommand", enc]
+    args = ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", enc]
+    base = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    breakaway = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
     try:
-        subprocess.Popen(args, creationflags=flags, close_fds=True)
-    except OSError:      # iş nesnesi ayrılmaya izin vermiyorsa bayraksız dene
-        subprocess.Popen(args, creationflags=flags & ~getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0),
-                         close_fds=True)
+        return subprocess.Popen(args, creationflags=base | breakaway, close_fds=True)
+    except OSError:      # iş nesnesi ayrılmaya izin vermiyorsa onsuz
+        return subprocess.Popen(args, creationflags=base, close_fds=True)
 
 
 def last_update_problem() -> str | None:
