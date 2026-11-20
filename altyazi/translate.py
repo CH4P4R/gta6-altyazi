@@ -231,7 +231,8 @@ Numbered boxes drawn on the image mark text regions an OCR engine found; each nu
 - Text inside a numbered box: use that number as id and box [0, 0, 0, 0].
 - Text with no box (stylized titles, small print the OCR missed): id -1 and its box as [x0, y0, x1, y1] in 0-1000 coordinates of the whole image.
 - Merge lines that belong to the same message, menu entry or sentence into one item; if one item spans several numbered boxes, use the first box's id.
-- Skip HUD numbers, money, ammo, clock, map place names, vehicle license plates (and the state name on them), button glyphs, logos and text that is not English.
+- Skip HUD numbers, money, ammo, clock, map place names, vehicle license plates (and the state name on them), logos, standalone button icons with no text next to them, and text that is not English.
+- Controller button icons inside a sentence ("Press [icon] to enter") are part of it: write PlayStation face buttons as △ ○ □ ✕ and others by name (L1, R2, L3, OPTIONS, TOUCHPAD, D-pad as ↑ ↓ ← →) in both english and turkish, at the same place, e.g. "Press △ to enter" → "Binmek için △ tuşuna bas".
 
 Translation style: dialogue and messages in natural spoken Turkish (keep slang and tone, "sen" between characters); menus, objectives and notifications in concise standard Turkish game UI style, objectives in the imperative. Keep button names (X, O, L2, R1, Options) and proper names (Jason, Lucia, Vice City, Leonida...) unchanged; add Turkish suffixes with an apostrophe.{glossary}"""
 
@@ -385,7 +386,56 @@ class GeminiMT:
         self.s.headers.update({"x-goog-api-key": key, "Content-Type": "application/json"})
         self.models = list(dict.fromkeys([cfg.gemini_model, "gemini-flash-latest", "gemini-2.5-flash"]))
         self.system = SYSTEM_PROMPT.format(glossary=_glossary_text(cfg.sozluk))
+        self.screen_system = SCREEN_PROMPT.format(glossary=_glossary_text(cfg.sozluk))
         self.thinking_off = True
+
+    def _call(self, body: dict, timeout: float = 8) -> str | None:
+        """generateContent; eskimiş model adında sıradakine, düşünme ayarını tanımayan modelde ayarsız geçer."""
+        for _ in range(len(self.models) + 1):
+            gen = body.setdefault("generationConfig", {})
+            if self.thinking_off:
+                gen["thinkingConfig"] = {"thinkingBudget": 0}
+            else:
+                gen.pop("thinkingConfig", None)
+            r = self.s.post(self.URL.format(model=self.models[0]), json=body, timeout=timeout)
+            if r.status_code == 404 and len(self.models) > 1:
+                log.warning("Gemini modeli bulunamadı (%s), %s deneniyor", self.models[0], self.models[1])
+                self.models.pop(0)
+                continue
+            if r.status_code == 400 and self.thinking_off and "thinking" in r.text.lower():
+                self.thinking_off = False
+                continue
+            r.raise_for_status()
+            cands = r.json().get("candidates") or []
+            parts = (cands[0].get("content") or {}).get("parts") or [] if cands else []
+            return "".join(p.get("text", "") for p in parts).strip() or None
+        return None
+
+    def read_screen(self, jpeg: bytes, regions: list[tuple[int, str]]) -> list[dict]:
+        """Ekran (ya da tuş simgeli satır) görüntüsünü Gemini okusun ve çevirsin (Claude'daki read_screen ile aynı)."""
+        import base64
+        import json
+
+        listing = "\n".join(f"{i}: {t}" for i, t in regions) or "(OCR found no text regions)"
+        schema = {"type": "object", "properties": {"items": {"type": "array", "items": {
+            "type": "object", "properties": {"id": {"type": "integer"}, "english": {"type": "string"},
+                                             "turkish": {"type": "string"},
+                                             "box": {"type": "array", "items": {"type": "integer"}}},
+            "required": ["id", "english", "turkish", "box"]}}}, "required": ["items"]}
+        body = {"systemInstruction": {"parts": [{"text": self.screen_system}]},
+                "contents": [{"role": "user", "parts": [
+                    {"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(jpeg).decode("ascii")}},
+                    {"text": f"OCR regions (id: text as read by OCR):\n{listing}"}]}],
+                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 4096,
+                                     "responseMimeType": "application/json", "responseSchema": schema}}
+        text = self._call(body, timeout=20)
+        if not text:
+            return []
+        try:
+            return json.loads(text).get("items", [])
+        except ValueError:
+            log.warning("Gemini ekran yanıtı okunamadı: %s", text[:200])
+            return []
 
     def _body(self, text: str, kind: str, context) -> dict:  # noqa: ANN001
         gen = {"temperature": 0.3, "maxOutputTokens": 512}
@@ -396,20 +446,7 @@ class GeminiMT:
                 "generationConfig": gen}
 
     def translate(self, text: str, kind: str = "", context=None) -> str | None:
-        for _ in range(len(self.models) + 1):
-            r = self.s.post(self.URL.format(model=self.models[0]), json=self._body(text, kind, context), timeout=8)
-            if r.status_code == 404 and len(self.models) > 1:      # model adı eskimiş: sıradakini dene
-                log.warning("Gemini modeli bulunamadı (%s), %s deneniyor", self.models[0], self.models[1])
-                self.models.pop(0)
-                continue
-            if r.status_code == 400 and self.thinking_off and "thinking" in r.text.lower():
-                self.thinking_off = False                           # bu model düşünme ayarını tanımıyor
-                continue
-            r.raise_for_status()
-            cands = r.json().get("candidates") or []
-            parts = (cands[0].get("content") or {}).get("parts") or [] if cands else []
-            return "".join(p.get("text", "") for p in parts).strip() or None
-        return None
+        return self._call(self._body(text, kind, context))
 
 
 class LocalAIMT:
@@ -525,6 +562,35 @@ class TranslationEngine:
     @property
     def can_read_screen(self) -> bool:
         return self.refine is not None and hasattr(self.refine, "read_screen")
+
+    @property
+    def can_read_images(self) -> bool:
+        """Kalite katmanı resim okuyabiliyor mu (Claude): tuş simgeli satırlar için."""
+        return self.refine is not None and hasattr(self.refine, "read_screen")
+
+    def submit_image(self, text: str, jpeg: bytes, kind: str, on_result: Callable[[Result], None]) -> None:
+        """OCR'ın tuş simgesini okuyamadığı satır ("Press [△] to enter"): satırın küçük resmini Claude okur ve simgeyi
+        çeviride korur ("Binmek için △ tuşuna bas"). Aynı satır önbellekten gelir; Claude'a bir kez sorulur."""
+        t0 = time.perf_counter()
+        hit = self.cache.get(text)
+        if hit:
+            on_result(Result(hit[0], f"önbellek/{hit[2]}", (time.perf_counter() - t0) * 1000, hit[1]))
+            return
+
+        def run() -> None:
+            try:
+                items = self.refine.read_screen(jpeg, [])
+            except Exception as e:  # noqa: BLE001
+                log.warning("Tuş simgeli satır okunamadı: %s", e)
+                return
+            tr = " ".join(str(i.get("turkish") or "").strip() for i in items if i.get("turkish")).strip()
+            if not tr:
+                return
+            self.cache.put(text, tr, REFINED, "claude-görsel")
+            self._remember(kind, text, tr)
+            on_result(Result(tr, "claude-görsel", (time.perf_counter() - t0) * 1000, REFINED))
+
+        self.refine_pool.submit(run)
 
     def submit(self, text: str, kind: str, on_result: Callable[[Result], None], refine: bool = True) -> None:
         """Sonuçlar on_result ile (başka iş parçacığından) gelir: önce hızlı, sonra kaliteli."""

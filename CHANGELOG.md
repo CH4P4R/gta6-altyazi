@@ -3,6 +3,13 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.21
+- **Tuş simgeli yazılar artık çevriliyor:** "Press △ to enter" gibi ipuçlarında tuş bir resim olduğu için OCR okuyamıyordu
+  ve bu satırlar çevrilmiyordu. Artık o satırın küçük resmi yapay zekâya (Claude ya da Gemini) gösteriliyor; simgeyi
+  görüp çeviride yerinde bırakıyor: "Binmek için △ tuşuna bas". Aynı yazı önbelleğe girdiği için yapay zekâya bir kez
+  sorulur. Claude ya da Gemini seçili değilse bu satırlar eskisi gibi oyunun kendi yazısıyla kalır.
+- "Ekranı çevir" artık Gemini ile de ekranın resmine bakarak okuyor (ücretsiz).
+
 ## 0.4.20
 - **Uygulama içi güncelleme düzeltildi:** program kapanmadan kurulum başlıyordu; dosyalar kullanımdayken sessiz kurulum
   hiçbir şey demeden iptal oluyor, eski sürüm kalıyor ve program yeniden açılmıyordu. Artık kurulum program tamamen

@@ -173,6 +173,22 @@ def _clean_key(w: str) -> bool:
     return bool(_KEY_TOKEN.match(w)) and not (w.isalpha() and w.upper() in _REAL_UPPER)
 
 
+def _crop_jpeg(zone_img: np.ndarray, box: tuple[int, int, int, int], line_h: float) -> bytes | None:
+    """Satırın (tuş simgesiyle) küçük resmi: biraz pay, küçükse büyütülmüş JPEG."""
+    import cv2
+    h, w = zone_img.shape[:2]
+    pad = int(max(4, line_h * 0.6))
+    x0, y0, x1, y1 = box
+    crop = zone_img[max(0, y0 - pad):min(h, y1 + pad), max(0, x0 - pad):min(w, x1 + pad)]
+    if crop.size == 0:
+        return None
+    if crop.shape[0] < 64:
+        f = 64 / crop.shape[0]
+        crop = cv2.resize(crop, None, fx=f, fy=f, interpolation=cv2.INTER_CUBIC)
+    ok, buf = cv2.imencode(".jpg", crop, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    return buf.tobytes() if ok else None
+
+
 def is_button_prompt(text: str) -> bool:
     """"Press [△] to take cover" gibi, tuş simgesi OKUNAMAMIŞ tuş ipucu mu? Simge resim olduğu için OCR ya hiç okumuyor
     ("Press to threaten the teller") ya da kalıntı okuyor ("Press @ to", "Hold I LI to"). Bunları çevirip üstünü
@@ -457,7 +473,7 @@ class Pipeline:
             if blocks:
                 self._show_fullscreen(blocks, t, quick=vision)
             if vision:
-                self._say("Claude ekranı okuyor...")
+                self._say(f"{getattr(self.engine.refine, 'name', 'yapay zekâ').capitalize()} ekranı okuyor...")
                 items = self._vision(frame, blocks, t)
                 if items:
                     self._say(f"Ekrandaki {len(items)} yazı Claude ile çevrildi")
@@ -556,8 +572,11 @@ class Pipeline:
             texts = [r.text if (r.score >= zcfg.min_skor and r.text) else "" for r in results]
             rows = [(clean_ocr(tx), b) for tx, b in rows_of([ln.box for ln in ev.lines], texts)]
             names = set(self.cfg.ceviri.sozluk)
+            # Tuş simgesi okunamamış ipuçları: Claude varsa satırın resmi okunup simgeyle çevrilir, yoksa atlanır
+            vision = getattr(self.engine, "can_read_images", False)
+            prompts = {tx for tx, _ in rows if tx and is_button_prompt(tx)}
             rows = [(tx, b) for tx, b in rows
-                    if tx and not is_button_prompt(tx) and not is_plate_or_name(tx, names)]
+                    if tx and (vision or tx not in prompts) and not is_plate_or_name(tx, names)]
             sticky = self._sticky.setdefault(zcfg.ad, StickyRows()).update([tx for tx, _ in rows], t)
             blocks = [(tx, b) for tx, b, n in blocks_of(rows, ev.line_height, zcfg.paragraf_boslugu, sticky)
                       if tx and looks_like_text(tx) and not (zcfg.tur == "altyazi" and n == 1 and is_short_hud(tx))]
@@ -584,7 +603,13 @@ class Pipeline:
                     english=text, text="", align=zcfg.hizalama, anchor=zcfg.capa,
                     box_opacity=zcfg.kutu_opaklik, font_scale=zcfg.yazi_olcek, ocr_ms=ocr_ms, seq=seq,
                 )
-                self.engine.submit(text, zcfg.tur, lambda r, b=base, t0=t: self._on_translation(b, t0, r))
+                cb = (lambda r, b=base, t0=t: self._on_translation(b, t0, r))
+                if prompts and any(p in text for p in prompts):
+                    jpeg = _crop_jpeg(frame[y0:y1, x0:x1], (bx0, by0, bx1, by1), ev.line_height)
+                    if jpeg:
+                        self.engine.submit_image(text, jpeg, zcfg.tur, cb)
+                        continue
+                self.engine.submit(text, zcfg.tur, cb)
 
     def _drop_keys(self, keys: list[str]) -> None:
         if not keys:

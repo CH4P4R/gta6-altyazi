@@ -378,3 +378,63 @@ def test_long_guns_not_long_sleeved():
     from altyazi.slang import normalize
     assert normalize("Long guns can be stored in and retrieved from your trunk.") == \
         "Rifles can be stored in and retrieved from your trunk."
+
+
+def test_button_prompt_with_unreadable_icon_goes_to_image_reading(tmp_path):
+    """OCR tuş simgesini okuyamadıysa ("Press to enter") Claude varsa satırın resmi okunur; yoksa satır atlanır."""
+    import sys as _s
+    _s.path.insert(0, "tests")
+    from synth import background, draw_help_box
+
+    from altyazi.config import BolgeCfg, Config
+    from altyazi.pipeline import Pipeline
+    from altyazi.translate import REFINED, Result
+
+    class Eng:
+        def __init__(self, vision):
+            self.can_read_images, self.images, self.texts = vision, [], []
+
+        def submit(self, text, kind, cb, *a, **k):
+            self.texts.append(text)
+
+        def submit_image(self, text, jpeg, kind, cb):
+            self.images.append((text, jpeg[:2]))
+            cb(Result("Araca binmek için △ tuşuna bas", "claude-görsel", 900, REFINED))
+
+    frame = draw_help_box(background(1920, 1080, seed=2), ["Press  [ ]  to enter the vehicle"])
+    zone = BolgeCfg(ad="yardim", alan=[0.0, 0.0, 0.36, 0.32], tur="arayuz", hizalama="sol", capa="ust")
+    for vision in (True, False):
+        sink = Sink()
+        eng = Eng(vision)
+        p = Pipeline(Config(bolgeler=[zone]), sink, FakeRec("Press to enter the vehicle"), eng, None)
+        p._running = True
+        for i in range(6):
+            p.process(frame, i * 0.2)
+        if vision:
+            assert eng.images and eng.images[0][1] == b"\xff\xd8"            # JPEG gönderildi
+            assert any("△" in it.text for it in sink.items)
+        else:
+            assert not eng.images and not eng.texts and not sink.items       # eskisi gibi atlanır
+
+
+def test_image_prompt_asks_claude_once_then_cache(tmp_path):
+    class Vision:
+        name = "claude"
+
+        def __init__(self):
+            self.calls = 0
+
+        def read_screen(self, jpeg, regions):
+            self.calls += 1
+            return [{"id": -1, "english": "Press △ to enter", "turkish": "Binmek için △ tuşuna bas", "box": [0, 0, 0, 0]}]
+
+    v = Vision()
+    eng = make_engine(tmp_path, None, v)
+    assert eng.can_read_images
+    got = []
+    done = threading.Event()
+    eng.submit_image("Press to enter", b"\xff\xd8x", "arayuz", lambda r: (got.append(r), done.set()))
+    assert done.wait(3) and got[0].text == "Binmek için △ tuşuna bas"
+    eng.submit_image("Press to enter", b"\xff\xd8x", "arayuz", got.append)
+    assert v.calls == 1 and got[-1].source.startswith("önbellek")
+    assert not make_engine(tmp_path / "b", None, Echo("gemini")).can_read_images if (tmp_path / "b").mkdir() is None else True
