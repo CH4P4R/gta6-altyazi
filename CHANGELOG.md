@@ -3,6 +3,20 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.6.0 · PS5'i TV'de oyna, chiaki gerekmez
+- **Yerleşik Remote Play:** Oyunu TV'de, HDMI'dan oynarsın; bilgisayar PS5'e arka planda **ikinci PSN hesabıyla**
+  bağlanıp yalnız altyazıyı okur, Türkçesini TV'ye gönderir. chiaki-ng penceresi açmak gerekmez (CouchSubs'ın
+  yöntemi; libchiaki ile). Ana ekranda PS5 kartındaki **TV'de oynuyorum (chiaki'siz)** ya da Ayarlar › Görüntü
+  kaynağı › **PS5'i bağla**: ikinci hesapla Sony girişi ve PS5'teki 8 haneli kodla bir kez eşleme.
+  - PS5 açılınca çeviri kendiliğinden başlar; PS5 dinlenmedeyse çeviri başlarken uyandırılır, kapatınca bağlantı
+    bekler ve PS5 açılınca yeniden bağlanır. PS5'in adresi değişirse adıyla yeniden bulunur.
+  - Bağlantı kablosuz ağda sık koparsa görüntü 720p'ye düşürülür; görüntü takılırsa oturum yeniden kurulur.
+  - Hatalar Türkçe ve sebebiyle: Uzaktan Oynatma kapalı, başka cihazda açık, eşleme geçersiz, giriş şifresi...
+  - "TV'de oynuyorum" seçiliyken bilgisayar ekranına katman açılmaz; Türkçe yalnız TV'de görünür.
+- **Pencere kapatılınca program kapanmıyordu:** Çeviri sürerken ana pencere kapatılınca program penceresiz açık kalıp
+  port 8787'yi tutuyordu (yeniden açınca "port başka bir programda"). Artık kesin kapanıyor (Windows denemesi yakaladı).
+- Rehber'e "TV'de oyna (chiaki'siz)" konusu eklendi.
+
 ## 0.5.2
 - **"Port 8787 başka bir programda" hatası düzeltildi.** Sebepleri:
   - Program zaten açıkken (ör. Windows açılışında simge durumunda açılmışken) yeniden açılınca ikinci bir kopya

@@ -368,7 +368,39 @@ SORUNLAR = [
 ]
 
 # ---------------------------------------------------------------------------------------------- liste
+TV_ARKA_PLAN = [
+    step("İkinci PSN hesabı (bir kez)",
+         ["playstation.com'da **farklı bir e-postayla** ücretsiz yeni hesap aç (PS Plus gerekmez).",
+          "PS5'te **Kullanıcı Ekle** de, yeni hesapla bir kez oturum aç.",
+          "Hâlâ yeni kullanıcıyken: **Ayarlar › Sistem › Uzaktan Oynatma › Uzaktan Oynatmayı Etkinleştir**'i aç.",
+          "Aynı yerde **Uzaktan Oynatma Bağlantı Durumu Açılır Penceresini Gizle**'yi aç (iki hesapta da), ekranda "
+          "\"bağlandı\" yazısı çıkmasın."],
+         note="Neden ikinci hesap? Bilgisayar oyunu Remote Play'den izler. Kendi hesabınla bağlansaydı PS5 kolunu "
+              "kapatırdı; ikinci hesapla sen oynamaya devam edersin."),
+    step("Programda ikinci hesapla giriş",
+         ["Ana ekranda PS5 kartındaki **TV'de oynuyorum (chiaki'siz)**'e bas (ya da Ayarlar › Görüntü kaynağı › "
+          "**PS5'i bağla**).",
+          "**Sony giriş sayfasını aç**'a bas, **ikinci hesapla** giriş yap.",
+          "Giriş bitince tarayıcı yalnız *redirect* yazan bir sayfada kalır (bu normal). Adres çubuğundaki adresin "
+          "**tamamını** kopyala; program kendisi alır."]),
+    step("PS5'i eşle (bir kez)",
+         ["PS5'te **ikinci kullanıcıya geç**.",
+          "**Ayarlar › Sistem › Uzaktan Oynatma › Cihazı Eşleştir**'i aç; ekranda 8 haneli kod çıkar.",
+          "Programda PS5'ini seç, kodu yaz, **Eşle**'ye bas (30 saniyeye kadar sürer).",
+          "Bitince PS5'te **kendi kullanıcına geri dön**."]),
+    step("Oyna",
+         ["PS5'i aç, kolu açınca **kendi (ana) hesabını** seç ve oyna.",
+          "Program PS5'in açıldığını görür, arka planda bağlanır ve çeviriyi kendisi başlatır; Türkçe TV'de çıkar.",
+          "TV uygulaması kurulu değilse önce Rehber › TV uygulaması adımlarını yap."],
+         note="PS5'i kapatınca (dinlenme modu) bağlantı bekler; PS5 açılınca kendiliğinden yeniden bağlanır. "
+              "Kablosuz ağda görüntü sık koparsa program kendiliğinden 720p'ye geçer; kalıcı çözüm PS5'i modeme "
+              "kabloyla bağlamak."),
+]
+
 GUIDES: list[dict] = [
+    {"key": "tv-arka-plan", "icon": "tv", "title": "TV'de oyna (chiaki'siz, önerilen)",
+     "summary": "PS5 HDMI ile TV'de; bilgisayar PS5'e arka planda ikinci hesapla bağlanır, Türkçe TV'de çıkar.",
+     "steps": TV_ARKA_PLAN},
     {"key": "monitor", "icon": "ps", "title": "Bilgisayar monitöründe oyna",
      "summary": "chiaki-ng ile PS5'i bilgisayarda oyna; Türkçe chiaki'nin üstünde çıksın.",
      "steps": chiaki_steps("monitor") + [START_STEP]},

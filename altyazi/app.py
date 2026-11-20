@@ -61,6 +61,9 @@ class AppController(QObject):
     frameGrabbed = Signal(object)         # numpy kare ya da None
     testResult = Signal(object)           # translate.Result
     ps5Found = Signal(list)               # [ps5.Console]
+    ps5Status = Signal(str, str)          # yerleşik Remote Play: baglaniyor | bagli | kopuk | durdu, mesaj
+    ps5Paired = Signal(bool, str)         # PSN girişi / PS5 eşlemesi sonucu (başarılı mı, mesaj)
+    ps5Consoles = Signal(list)            # remoteplay.ConsoleInfo listesi (eşleme ekranı)
     packProgress = Signal(str, float)     # (paket kimliği, 0..1; 1 bitti, -1 hata)
     packCatalog = Signal(list)            # CouchSubs paket sunucusundaki paketler [{id, title, entries, ...}]
     updateAvailable = Signal(dict)        # uygulamanın yeni sürümü: {version, url, size, notes}
@@ -88,6 +91,7 @@ class AppController(QObject):
         self._last_launch = 0.0
         self._ps5_busy = False
         self.ps5_state: str = ""          # "acik" | "uykuda" | "" (bilinmiyor)
+        self.rp_state = ("durdu", "")     # yerleşik Remote Play oturumunun durumu
         self._uiCommand.connect(self._run_ui_command, Qt.QueuedConnection)
         from . import harcama, paths
         harcama.tracker.load(paths.data("harcama.json"))
@@ -223,18 +227,23 @@ class AppController(QObject):
             return False
         from .capture import make_source
         try:
-            source = make_source(self.cfg)
+            source = make_source(self.cfg, on_state=self._rp_state, on_moved=self._rp_moved)
         except Exception as e:  # noqa: BLE001
             self._notice(str(e))
+            if self.cfg.kaynak.tur == "remoteplay":
+                self.ps5Status.emit("kopuk", str(e))
             return False
         painter = Painter(self.cfg.gosterim.yazi_tipi, self.cfg.gosterim.gecikme_goster)
         frame_sink = None
-        if self.cfg.gosterim.mod == "pencere":
+        if self.tv_only():
+            self.window = None            # oyun TV'de: Türkçe yalnız TV'de (bilgisayar ekranına katman açılmaz)
+        elif self.cfg.gosterim.mod == "pencere":
             self.window = VideoWindow(painter, self.bridge, self.cfg.gosterim.tam_ekran)
             frame_sink = self.window.push_frame
         else:
             self.window = OverlayWindow(painter, self.bridge, source.hwnd)
-        self.window.show()
+        if self.window is not None:
+            self.window.show()
         self.pipe = Pipeline(self.cfg, MultiSink(self, self.server), self.rec, self.engine, source,
                              frame_sink=frame_sink)
         self.pipe.notice = self._notice
@@ -247,6 +256,85 @@ class AppController(QObject):
                 and self.tv_state[0] not in ("baglaniyor", "onay"):
             self.tv_connect()
         return True
+
+    def tv_only(self) -> bool:
+        """Oyun TV'de, görüntü yerleşik Remote Play'den: bilgisayar ekranında katman gerekmez."""
+        return self.cfg.kaynak.tur == "remoteplay" and self.cfg.kaynak.oyun_yeri == "tv"
+
+    # ------------------------------------------------------------------ yerleşik Remote Play
+    def ps5_paired(self) -> bool:
+        from . import remoteplay as rp
+        return rp.RegisteredConsole.from_cfg(self.cfg.ps5) is not None and bool(rp.account_from_b64(self.cfg.ps5.hesap))
+
+    def _rp_state(self, state: str, msg: str) -> None:
+        self.rp_state = (state, msg)
+        self.ps5Status.emit(state, msg)
+
+    def _rp_moved(self, console) -> None:  # noqa: ANN001
+        self._rp_new_host = console.host
+        self._uiCommand.emit("ps5_tasindi")
+
+    def psn_login_url(self) -> str:
+        from . import remoteplay as rp
+        return rp.PSN_LOGIN_URL
+
+    def psn_finish(self, text: str) -> None:
+        """Tarayıcıdan kopyalanan yönlendirme adresiyle (ya da elle yazılan hesap kimliğiyle) ikinci hesabı kaydet."""
+        from . import remoteplay as rp
+        text = (text or "").strip()
+
+        def run() -> None:
+            try:
+                manual = rp.account_from_b64(text) if rp.PSN_REDIRECT not in text.lower() else None
+                if manual is not None:
+                    account = manual
+                else:
+                    url = rp.redirect_from_text(text)
+                    if not url:
+                        raise rp.PsnError("Bu bir Sony giriş adresi değil. Girişten sonra açılan "
+                                          "remoteplay.dl.playstation.net sayfasının adresini kopyala.")
+                    account = rp.account_id_from_redirect(url)
+                self._psn_account = rp.account_b64(account)
+                self._uiCommand.emit("psn_kaydet")
+                self.ps5Paired.emit(True, "İkinci hesapla giriş tamam.")
+            except Exception as e:  # noqa: BLE001
+                log.warning("PSN girişi: %s", e)
+                self.ps5Paired.emit(False, str(e))
+        threading.Thread(target=run, daemon=True, name="psn").start()
+
+    def ps5_search(self) -> None:
+        def run() -> None:
+            from . import remoteplay as rp
+            try:
+                self.ps5Consoles.emit(rp.discover(None, 3.0))
+            except Exception as e:  # noqa: BLE001
+                self._notice(f"PS5 aranamadı: {e}")
+                self.ps5Consoles.emit([])
+        threading.Thread(target=run, daemon=True, name="ps5-ara").start()
+
+    def ps5_pair(self, host: str, pin_text: str) -> None:
+        from . import remoteplay as rp
+        pin = rp.parse_pin(pin_text)
+        account = rp.account_from_b64(self.cfg.ps5.hesap)
+        if account is None:
+            self.ps5Paired.emit(False, "Önce ikinci hesapla giriş yap (1. adım).")
+            return
+        if pin is None:
+            self.ps5Paired.emit(False, "Kod 8 haneli olmalı (PS5 ekranındaki sayı).")
+            return
+        if not host.strip():
+            self.ps5Paired.emit(False, "PS5'i seç ya da IP adresini yaz.")
+            return
+
+        def run() -> None:
+            try:
+                console = rp.register(host.strip(), account, pin)
+                self._paired_console = console
+                self._uiCommand.emit("ps5_eslendi")
+                self.ps5Paired.emit(True, f"PS5 eşlendi: {console.name}")
+            except Exception as e:  # noqa: BLE001
+                self.ps5Paired.emit(False, str(e))
+        threading.Thread(target=run, daemon=True, name="ps5-esle").start()
 
     def stop(self) -> None:
         winutil.keep_awake(False)
@@ -331,6 +419,27 @@ class AppController(QObject):
             cfg.otomatik.ps5_adi, cfg.otomatik.ps5_ip = self._found_ps5.name, self._found_ps5.ip
             self.apply_config(cfg)
             self._notice(f"PS5 kaydedildi: {self._found_ps5.name}")
+        elif name == "psn_kaydet" and getattr(self, "_psn_account", None):
+            cfg = self.edit_config()
+            cfg.ps5.hesap = self._psn_account
+            self.apply_config(cfg)
+        elif name == "ps5_eslendi" and getattr(self, "_paired_console", None):
+            cfg = self.edit_config()
+            for k, v in self._paired_console.to_cfg().items():
+                setattr(cfg.ps5, k, v)
+            cfg.kaynak.tur = "remoteplay"
+            cfg.kaynak.oyun_yeri = "tv"
+            self.apply_config(cfg)
+            self._notice(f"PS5 eşlendi: {self._paired_console.name}. Görüntü artık arka planda alınacak.")
+            self._check_source()
+        elif name == "ps5_tasindi" and getattr(self, "_rp_new_host", None):
+            cfg = self.edit_config()
+            cfg.ps5.ip = self._rp_new_host
+            self.apply_config(cfg)
+        elif name == "ps5_baslat":
+            if self.state == "hazir" and not self._user_stopped:
+                self._notice("PS5 açık, çeviri kendiliğinden başlıyor")
+                self.start()
         elif name == "baglan_oto":
             self._notice("PS5 açık, chiaki kendiliğinden bağlanıyor...")
             self.launch_chiaki(stream=True)
@@ -358,7 +467,9 @@ class AppController(QObject):
             self._uiCommand.emit("baglan")
             return {"mesaj": "chiaki-ng açılıyor..."}
         if name == "durum":
+            from . import remoteplay
             return {"durum": self.state, "ps5": self.ps5_state, "duraklatildi": bool(pipe and pipe.paused),
+                    "remoteplay": remoteplay.available(),
                     "mesaj": {"calisiyor": "Çeviri açık", "hazir": "Çeviri kapalı",
                               "hazirlaniyor": "Hazırlanıyor"}.get(self.state, self.state)}
         return {"mesaj": f"Bilinmeyen komut: {name}"}
@@ -433,6 +544,17 @@ class AppController(QObject):
     # ------------------------------------------------------------------ PS5 / chiaki
     def _check_source(self) -> None:
         k = self.cfg.kaynak
+        if k.tur == "remoteplay":
+            if self.state != "calisiyor":
+                if self.ps5_paired():
+                    st = getattr(self, "ps5_state", "")
+                    msg = {"acik": "PS5 açık. Çeviri başlayınca arka planda bağlanılır.",
+                           "uykuda": "PS5 dinlenme modunda. Açılınca çeviri kendiliğinden başlar."}.get(
+                        st, f"{self.cfg.ps5.ad or 'PS5'} eşli. Çeviri başlayınca arka planda bağlanılır.")
+                    self.ps5Status.emit("durdu", msg)
+                else:
+                    self.ps5Status.emit("yok", "")
+            return
         if k.tur != "pencere":
             self.sourceStatus.emit(True, {"capture": "Capture kart", "video": "Video dosyası",
                                           "resim": "Resim"}.get(k.tur, k.tur))
@@ -454,7 +576,10 @@ class AppController(QObject):
             self.start()
 
     def _auto_connect_tick(self) -> None:
-        """PS5 açılınca chiaki'yi kendiliğinden bağla."""
+        """PS5 açılınca chiaki'yi kendiliğinden bağla; yerleşik Remote Play'de çeviriyi kendiliğinden başlat."""
+        if self.cfg.kaynak.tur == "remoteplay":
+            self._auto_rp_tick()
+            return
         o = self.cfg.otomatik
         if not o.ps5_acilinca_baglan or self._ps5_busy or self.cfg.kaynak.tur != "pencere":
             return
@@ -478,6 +603,28 @@ class AppController(QObject):
             finally:
                 self._ps5_busy = False
         threading.Thread(target=run, daemon=True, name="ps5").start()
+
+    def _auto_rp_tick(self) -> None:
+        """TV günleri: PS5 açılınca çeviri kendiliğinden başlasın (kasada kimse yok). Elle durdurulduysa başlatma."""
+        if self._ps5_busy or self.state == "calisiyor" or not self.ps5_paired():
+            return
+
+        def run() -> None:
+            from . import remoteplay as rp
+            self._ps5_busy = True
+            try:
+                found = rp.discover(self.cfg.ps5.ip, 1.5)
+                mine = [c for c in found if not self.cfg.ps5.ad or c.name == self.cfg.ps5.ad] or found
+                self.ps5_state = ("acik" if any(c.awake for c in mine) else "uykuda") if mine else ""
+                if self.ps5_state == "uykuda":
+                    self._user_stopped = False        # ertesi gün PS5 açılınca yine kendiliğinden başlasın
+                if self.ps5_state == "acik" and self.cfg.ps5.acilinca_baslat:
+                    self._uiCommand.emit("ps5_baslat")
+            except Exception:  # noqa: BLE001
+                log.debug("PS5 araması başarısız", exc_info=True)
+            finally:
+                self._ps5_busy = False
+        threading.Thread(target=run, daemon=True, name="ps5-oto").start()
 
     def find_ps5(self, save: bool = False) -> None:
         """PS5'i ağda ara; save=True ise bulunanın adını ve IP'sini ayarlara yaz."""
@@ -692,7 +839,7 @@ class AppController(QObject):
             try:
                 src = make_source(self.cfg)
                 src.start(on_frame)
-                ev.wait(4)
+                ev.wait(30 if self.cfg.kaynak.tur == "remoteplay" else 4)
                 src.stop()
             except Exception as e:  # noqa: BLE001
                 self._notice(str(e))

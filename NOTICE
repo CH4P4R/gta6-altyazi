@@ -21,6 +21,14 @@ penceresinden okumaya ve bu projenin çeviri hattına göre değiştirilmiştir.
 Değişikliklerin listesi bu deponun git geçmişindedir; CouchSubs'tan alınan her
 dosyanın başında kaynağı belirtilir.
 
+Yerleşik Remote Play (native/): CouchSubs'ın couchsubs_native kütüphanesi ve
+chiaki-ng yamaları olduğu gibi alınmıştır; Python karşılığı altyazi/remoteplay.py.
+Kütüphane şunlarla derlenir:
+  chiaki-ng (libchiaki) - AGPL-3.0 - https://github.com/chiaki-ng/chiaki-ng
+  FFmpeg (yalnız h264 çözücü ve swscale, statik) - LGPL-2.1 - https://ffmpeg.org
+  OpenSSL - Apache-2.0; json-c - MIT; libevent - BSD-3; miniupnpc - BSD-3;
+  curl - curl lisansı; nanopb - zlib; jerasure / gf-complete - BSD-3
+
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU Affero General Public License version 3 (see LICENSE).
 This notice and the license notices must be kept intact in copies and modified

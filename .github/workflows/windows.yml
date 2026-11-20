@@ -56,10 +56,75 @@ jobs:
           Expand-Archive pt.zip tools -Force
           Remove-Item pt.zip
 
+      # Yerleşik Remote Play (chiaki penceresi olmadan PS5): couchsubs_native.dll = libchiaki + FFmpeg, MSYS2 ile
+      # statik derlenir (CouchSubs'ın windows.yml'si gibi). native/ değişmedikçe önbellekten gelir.
+      - name: Remote Play kütüphanesi önbelleği
+        id: native-cache
+        uses: actions/cache@v4
+        with:
+          path: native/bin/couchsubs_native.dll
+          key: native-win-${{ hashFiles('native/*.c', 'native/*.h', 'native/CMakeLists.txt', 'native/CHIAKI_COMMIT', 'native/patches/*') }}
+
+      - name: chiaki-ng kaynakları
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          bash native/fetch-chiaki.sh
+
+      - uses: msys2/setup-msys2@v2
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        with:
+          msystem: mingw64
+          update: true
+          install: make diffutils tar xz
+          pacboy: >-
+            cc:p
+            cmake:p
+            ninja:p
+            pkgconf:p
+            nasm:p
+            python:p
+            python-protobuf:p
+            protobuf:p
+            openssl:p
+            json-c:p
+            libevent:p
+            miniupnpc:p
+
+      - name: Remote Play kütüphanesi (libchiaki + FFmpeg)
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        shell: msys2 {0}
+        run: |
+          set -e
+          PREFIX="$PWD/ffmpeg-prefix"
+          mkdir -p ffmpeg-src
+          if curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.xz"; then
+            tar -xJf ffmpeg.tar.xz -C ffmpeg-src --strip-components=1
+          else
+            curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o ffmpeg.tar.gz "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n7.1.2.tar.gz"
+            tar -xzf ffmpeg.tar.gz -C ffmpeg-src --strip-components=1
+          fi
+          (cd ffmpeg-src && ./configure --prefix="$PREFIX" --enable-static --disable-shared --disable-debug \
+            --disable-everything --disable-autodetect --enable-w32threads --disable-programs --disable-doc \
+            --disable-network --disable-avdevice --disable-avformat --disable-avfilter --disable-swresample \
+            --enable-avcodec --enable-avutil --enable-swscale --enable-decoder=h264 --enable-parser=h264 >/dev/null \
+            && make -j"$(nproc)" >/dev/null && make install >/dev/null)
+          cmake -S native -B build/native -G Ninja -DCMAKE_BUILD_TYPE=Release -DFFMPEG_PREFIX="$PREFIX"
+          cmake --build build/native
+          build/native/couchsubs_native_test.exe native/fixtures/sample-1080p.h264
+          DLL=build/native/couchsubs_native.dll
+          objdump -p "$DLL" | grep 'DLL Name' | tee deps.txt
+          allowed='^(kernel32|user32|advapi32|shell32|ole32|oleaut32|gdi32|ws2_32|wsock32|iphlpapi|bcrypt|bcryptprimitives|crypt32|secur32|normaliz|msvcrt|ntdll|api-ms-win-.*|ucrtbase|dbghelp)\.dll$'
+          bad=$(awk '{print tolower($3)}' deps.txt | grep -Ev "$allowed" || true)
+          if [ -n "$bad" ]; then echo "İzin verilmeyen bağımlılık: $bad"; exit 1; fi
+          mkdir -p native/bin && cp "$DLL" native/bin/
+          ls -l native/bin
+
       - name: Testler
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m pytest -q tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py
+        run: python -m pytest -q tests/test_remoteplay.py tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py
 
       - name: TV kurulum testleri (Windows'ta)
         continue-on-error: true

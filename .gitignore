@@ -15,3 +15,6 @@ build/
 dist/
 tv-web/build/
 paketler/
+native/chiaki-ng/
+native/build/
+native/bin/

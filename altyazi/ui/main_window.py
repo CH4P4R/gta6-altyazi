@@ -103,7 +103,10 @@ class HomePage(QWidget):
         # --- durum kartları
         grid = QGridLayout()
         grid.setSpacing(14)
-        self.c_ps = StatusCard("ps", "PS5 / chiaki-ng", "chiaki-ng'yi aç", ctl.launch_chiaki)
+        self.c_ps = StatusCard("ps", "PS5", "chiaki-ng'yi aç", self._ps_action)
+        self.tv_play_btn = button("TV'de oynuyorum (chiaki'siz)", None, self._open_ps5,
+                                  "Oyunu TV'de oynarsın; bilgisayar PS5'e arka planda ikinci hesapla bağlanır")
+        self.c_ps.add(self.tv_play_btn)
         self.c_tv = StatusCard("tv", "Televizyon", "TV'yi bağla", lambda: self.window().go("tv"))
         self.c_eng = StatusCard("bolt", "Çeviri motoru")
         phone = Card(margins=16, spacing=6)
@@ -139,6 +142,7 @@ class HomePage(QWidget):
         ctl.stateChanged.connect(self.on_state)
         ctl.historyChanged.connect(self.on_item)
         ctl.sourceStatus.connect(self.on_source)
+        ctl.ps5Status.connect(self.on_ps5)
         ctl.tvStatus.connect(self.on_tv)
         ctl.enginesReady.connect(self.on_engines)
         ctl.spendChanged.connect(self.on_spend)
@@ -158,7 +162,9 @@ class HomePage(QWidget):
     def on_state(self, s: str) -> None:
         texts = {
             "hazirlaniyor": ("Hazırlanıyor", "Çeviri modelleri ve OCR yükleniyor, birkaç saniye sürer.", "Motorlar hazırlanıyor..."),
-            "hazir": ("Çeviriyi başlat", "chiaki-ng'de PS5'e bağlandıysan başlat düğmesine bas.", "Hazır"),
+            "hazir": ("Çeviriyi başlat", "Başlat'a bas; PS5'e arka planda bağlanılır." if
+                      self.ctl.cfg.kaynak.tur == "remoteplay" else
+                      "chiaki-ng'de PS5'e bağlandıysan başlat düğmesine bas.", "Hazır"),
             "calisiyor": ("Çeviri açık", "Oyundaki yazılar okunuyor ve çevriliyor. Durdurmak için tekrar bas.",
                           "Çeviri çalışıyor"),
             "hata": ("Bir sorun var", "Motorlar yüklenemedi. Çeviri sayfasından ayarları kontrol et.", "Hata"),
@@ -211,7 +217,34 @@ class HomePage(QWidget):
         else:
             self.upd_btn.setText(f"İndiriliyor %{int(f * 100)}")
 
+    def _ps_action(self) -> None:
+        if self.ctl.cfg.kaynak.tur == "remoteplay":
+            self._open_ps5()
+        else:
+            self.ctl.launch_chiaki()
+
+    def _open_ps5(self) -> None:
+        from .ps5_dialog import Ps5Dialog
+        Ps5Dialog(self.ctl, self).exec()
+        self.ctl._check_source()
+
+    def on_ps5(self, state: str, msg: str) -> None:
+        if self.ctl.cfg.kaynak.tur != "remoteplay":
+            return
+        self.tv_play_btn.hide()
+        self.c_ps.action.show()
+        self.c_ps.action.setEnabled(True)
+        if state == "yok":
+            self.c_ps.set("off", "PS5 eşli değil. Bir kez bağla: ikinci PSN hesabıyla giriş ve PS5'teki 8 haneli kod.")
+            self.c_ps.action.setText("PS5'i bağla")
+            return
+        self.c_ps.set({"bagli": "ok", "baglaniyor": "warn", "kopuk": "bad"}.get(state, "off"), msg)
+        self.c_ps.action.setText("PS5 ayarları")
+
     def on_source(self, ok: bool, title: str) -> None:
+        if self.ctl.cfg.kaynak.tur == "remoteplay":
+            return
+        self.tv_play_btn.setVisible(self.ctl.cfg.kaynak.tur == "pencere" and not ok)
         if self.ctl.cfg.kaynak.tur != "pencere":
             self.c_ps.set("ok", f"Kaynak: {title}")
             self.c_ps.action.hide()
@@ -985,8 +1018,14 @@ class SettingsPage(QWidget):
 
         src = Card()
         src.add(label("Görüntü kaynağı", "h2"))
-        self.src = combo([("pencere", "chiaki-ng / Remote Play penceresi"), ("capture", "Capture kart"),
+        self.src = combo([("remoteplay", "PS5'e arka planda bağlan (TV'de oynarken; chiaki gerekmez)"),
+                          ("pencere", "chiaki-ng / Remote Play penceresi"), ("capture", "Capture kart"),
                           ("video", "Video dosyası (test)")], cfg.kaynak.tur)
+        self.where = combo([("tv", "TV'de oynuyorum (Türkçe yalnız TV'de)"),
+                            ("ikisi", "TV'de ve bilgisayarda"), ("monitor", "Bilgisayar ekranında")],
+                           cfg.kaynak.oyun_yeri)
+        self.ps5_auto = QCheckBox("PS5 açılınca çeviri kendiliğinden başlasın (PS5'e arka planda bağlanırken)")
+        self.ps5_auto.setChecked(cfg.ps5.acilinca_baslat)
         self.win_name = QLineEdit(cfg.kaynak.pencere_adi)
         self.chiaki = QLineEdit(cfg.kaynak.chiaki_yolu)
         self.chiaki.setPlaceholderText(ctl.chiaki_path() or "chiaki-ng bulunamadı")
@@ -995,6 +1034,10 @@ class SettingsPage(QWidget):
         self.cap_idx.setValue(cfg.kaynak.capture_cihaz)
         self.video = QLineEdit(cfg.kaynak.dosya)
         src.add(field("Kaynak", self.src))
+        src.add(field("Oyunu nerede oynuyorsun", hbox(self.where, button("PS5'i bağla", None, self._open_ps5),
+                                                      spacing=10),
+                      "TV'de oynarken bilgisayar PS5'e ikinci PSN hesabıyla arka planda bağlanıp yalnız altyazıyı okur."))
+        src.add(self.ps5_auto)
         src.add(field("Pencere başlığında geçen", self.win_name, "chiaki-ng için \"chiaki\", resmi uygulama için "
                                                                   "\"PS Remote Play\", Veyra için \"Veyra\"."))
         src.add(field("chiaki-ng programı", hbox(self.chiaki, button("Gözat", None, self._browse),
@@ -1089,6 +1132,23 @@ class SettingsPage(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(scroll_page(content))
 
+    def _open_ps5(self) -> None:
+        from .ps5_dialog import Ps5Dialog
+        Ps5Dialog(self.ctl, self).exec()
+        self._sync_source()
+        self.ctl._check_source()
+
+    def _sync_source(self) -> None:
+        """Ayarlar başka yerden değiştiyse (PS5 eşlendi) seçimleri güncelle; eski seçim Kaydet'le geri yazılmasın."""
+        for w, value in ((self.src, self.ctl.cfg.kaynak.tur), (self.where, self.ctl.cfg.kaynak.oyun_yeri)):
+            i = w.findData(value)
+            if i >= 0:
+                w.setCurrentIndex(i)
+
+    def showEvent(self, e) -> None:  # noqa: ANN001, N802
+        self._sync_source()
+        super().showEvent(e)
+
     def _browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "chiaki-ng programını seç", "/Applications" if sys.platform == "darwin" else "",
                                                   "Program (*.app *.exe);;Tümü (*)")
@@ -1123,6 +1183,8 @@ class SettingsPage(QWidget):
     def save(self) -> None:
         cfg = self.ctl.edit_config()
         cfg.kaynak.tur = self.src.currentData()
+        cfg.kaynak.oyun_yeri = self.where.currentData()
+        cfg.ps5.acilinca_baslat = self.ps5_auto.isChecked()
         cfg.kaynak.pencere_adi = self.win_name.text().strip() or "chiaki"
         cfg.kaynak.chiaki_yolu = self.chiaki.text().strip()
         cfg.kaynak.capture_cihaz = self.cap_idx.value()
@@ -1297,6 +1359,10 @@ class MainWindow(QMainWindow):
     def closeEvent(self, e) -> None:  # noqa: ANN001, N802
         self.ctl.shutdown()
         super().closeEvent(e)
+        # Ana pencere kapanınca program kesin kapansın. Çeviri sürerken katman penceresi de açık olduğundan Qt "son
+        # pencere kapandı" demiyor, program penceresiz açık kalıp port 8787'yi tutuyordu (Windows denemesinde görüldü).
+        from PySide6.QtWidgets import QApplication
+        QApplication.quit()
 
 
 def app_icon() -> QIcon:

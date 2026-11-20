@@ -47,7 +47,7 @@ class BolgeCfg:
 
 @dataclass
 class KaynakCfg:
-    tur: str = "pencere"          # pencere | capture | video | resim
+    tur: str = "pencere"          # pencere | remoteplay (yerleşik, chiaki penceresi gerekmez) | capture | video | resim
     pencere_adi: str = "chiaki"   # başlıkta geçen metin (ör. "chiaki", "PS Remote Play")
     chiaki_yolu: str = ""         # chiaki-ng programının yeri (boşsa bilinen yerlerde aranır)
     oyun_yeri: str = "ikisi"      # monitor (chiaki ile kasada oynar) | tv (TV'de oynar, kasa izler) | ikisi
@@ -133,6 +133,18 @@ class OtomatikCfg:
 
 
 @dataclass
+class Ps5Cfg:
+    """Yerleşik Remote Play: PS5 görüntüsü ikinci PSN hesabıyla arka planda alınır (chiaki penceresi gerekmez)."""
+    ip: str = ""
+    ad: str = ""                  # PS5'in adı (eşlemede PS5 verir)
+    anahtar: str = ""             # eşleme anahtarı (onaltılık, 16 bayt)
+    morning: str = ""             # eşlemenin ikinci anahtarı (onaltılık, 16 bayt)
+    hesap: str = ""               # ikinci PSN hesabının kimliği (base64, 8 bayt)
+    giris_sifresi: str = ""       # PS5 bu hesap için giriş şifresi istiyorsa 4 hane
+    acilinca_baslat: bool = True  # PS5 açılınca çeviri kendiliğinden başlasın (TV günleri)
+
+
+@dataclass
 class TvCfg:
     marka: str = "android"        # android (Google TV, TCL, Sony...) | lg (webOS) | samsung (Tizen)
     ip: str = ""                  # TV'nin adresi
@@ -157,6 +169,7 @@ class Config:
     tv: TvCfg = field(default_factory=TvCfg)
     kisayol: KisayolCfg = field(default_factory=KisayolCfg)
     otomatik: OtomatikCfg = field(default_factory=OtomatikCfg)
+    ps5: Ps5Cfg = field(default_factory=Ps5Cfg)
     gocler: list[str] = field(default_factory=list)   # uygulanmış ayar göçleri (yeni sürümün getirdiği varsayılanlar)
 
 

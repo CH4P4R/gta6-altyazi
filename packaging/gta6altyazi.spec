@@ -31,6 +31,15 @@ if IS_WIN:
     except ImportError:
         print("UYARI: nvidia-cublas-cu12 yok, çeviri modeli CPU'da çalışacak")
 
+# Yerleşik Remote Play (PS5'e chiaki penceresi olmadan bağlanma): CI'da native/ klasöründen derlenir
+_rp = ROOT / "native" / "bin" / ("couchsubs_native.dll" if IS_WIN else "couchsubs_native.dylib")
+if _rp.exists():
+    binaries.append((str(_rp), "."))
+elif os.environ.get("CI"):
+    raise SystemExit(f"HATA: Remote Play kütüphanesi yok: {_rp}")
+else:
+    print(f"UYARI: Remote Play kütüphanesi yok ({_rp}); PS5'e arka planda bağlanma çalışmayacak")
+
 hidden = collect_submodules("anthropic") + collect_submodules("paramiko") + [
     "sounddevice", "segno", "rapidfuzz.fuzz", "rapidfuzz.process"]
 if IS_WIN:

@@ -203,8 +203,33 @@ class ImageSource(_ThreadSource):
             time.sleep(self.period)
 
 
-def make_source(cfg) -> Source:  # noqa: ANN001
+class RemotePlaySource(Source):
+    """PS5 görüntüsü yerleşik Remote Play ile (ikinci PSN hesabı, chiaki penceresi gerekmez)."""
+
+    def __init__(self, ps5_cfg, on_state=None, on_moved=None):  # noqa: ANN001
+        from . import remoteplay as rp
+        console = rp.RegisteredConsole.from_cfg(ps5_cfg)
+        account = rp.account_from_b64(ps5_cfg.hesap)
+        if console is None or account is None:
+            raise RuntimeError("PS5 henüz eşlenmedi. Ana ekranda PS5 kartındaki 'PS5'i bağla' düğmesine bas.")
+        if not rp.available():
+            raise RuntimeError("Remote Play bileşeni bu kurulumda yok. Programı yeniden kur.")
+        self.title = console.name or console.host
+        self.session = rp.StreamSession(console, account, ps5_cfg.giris_sifresi, on_state=on_state, on_moved=on_moved)
+
+    def start(self, on_frame: FrameCallback) -> None:
+        self.session.on_frame = on_frame
+        self.session.start()
+
+    def stop(self) -> None:
+        self.session.on_frame = None
+        self.session.stop()
+
+
+def make_source(cfg, on_state=None, on_moved=None) -> Source:  # noqa: ANN001
     k = cfg.kaynak
+    if k.tur == "remoteplay":
+        return RemotePlaySource(cfg.ps5, on_state, on_moved)
     if k.tur == "pencere":
         import sys
         if sys.platform == "darwin":

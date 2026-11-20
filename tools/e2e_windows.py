@@ -170,6 +170,8 @@ def step_translate(new_setup: Path, new_version: str) -> None:
     check("program sunucusu yanıt veriyor (/hello)", hello and hello.get("app") == "gta6altyazi", str(hello))
     ready = wait(lambda: http("/komut/durum", "POST").get("durum") in ("hazir", "calisiyor"), 180, 2)
     check("çeviri motorları hazır", bool(ready), str(http("/komut/durum", "POST")) if hello else "")
+    check("yerleşik Remote Play kütüphanesi yüklenebiliyor (PS5'e chiaki'siz bağlanma)",
+          hello and http("/komut/durum", "POST").get("remoteplay") is True)
     events: list[tuple[str, dict]] = []
 
     def reader() -> None:

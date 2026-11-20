@@ -50,10 +50,26 @@ jobs:
           unzip -qo pt.zip -d tools
           rm pt.zip
 
+      # Yerleşik Remote Play (chiaki penceresi olmadan PS5): couchsubs_native.dylib (libchiaki + FFmpeg, macOS 13+).
+      - name: Remote Play kütüphanesi önbelleği
+        id: native-cache
+        uses: actions/cache@v4
+        with:
+          path: native/bin/couchsubs_native.dylib
+          key: native-mac-${{ hashFiles('native/*.c', 'native/*.h', 'native/CMakeLists.txt', 'native/CHIAKI_COMMIT', 'native/patches/*', 'native/build-mac.sh') }}
+
+      - name: Remote Play kütüphanesi (libchiaki + FFmpeg)
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        run: |
+          brew list cmake >/dev/null 2>&1 || brew install cmake
+          brew list ninja >/dev/null 2>&1 || brew install ninja
+          bash native/fetch-chiaki.sh
+          bash native/build-mac.sh
+
       - name: Testler
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m pytest -q tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py tests/test_adb_native.py tests/test_samsung_direct.py tests/test_updater.py tests/test_harcama.py tests/test_tv_brands.py tests/test_auto.py
+        run: python -m pytest -q tests/test_remoteplay.py tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py tests/test_adb_native.py tests/test_samsung_direct.py tests/test_updater.py tests/test_harcama.py tests/test_tv_brands.py tests/test_auto.py
 
       - name: macOS platform denemesi (pencere listesi, Quartz, kısayol ayrıştırma)
         run: |

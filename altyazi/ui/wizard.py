@@ -63,7 +63,8 @@ def check_row(title: str, text: str, *buttons) -> Card:  # noqa: ANN002
 CHOICES = [("monitor", "tv", "🖥️  Bilgisayar monitöründe",
             "chiaki-ng ile PS5'i bilgisayarda oynarım. Türkçe, chiaki penceresinin üstünde çıkar."),
            ("tv", "tv", "📺  TV'de",
-            "PS5 HDMI ile TV'de, ben TV'den oynarım. Bilgisayar arka planda izler, Türkçe TV'de çıkar."),
+            "PS5 HDMI ile TV'de, ben TV'den oynarım. Bilgisayar PS5'e arka planda bağlanıp izler (chiaki "
+            "gerekmez), Türkçe TV'de çıkar."),
            ("ikisi", "tv", "🔁  Bazen monitörde, bazen TV'de",
             "İkisini de kurarız; o gün hangisinde oynuyorsan o çalışır.")]
 
@@ -177,8 +178,12 @@ class Wizard(QDialog):
     def _set_where(self, key: str) -> None:
         self.where = key
         self.cfg.kaynak.oyun_yeri = key
+        if key == "monitor" and self.cfg.kaynak.tur == "remoteplay":
+            self.cfg.kaynak.tur = "pencere"
         self.ps5_guide.set_steps(self._ps5_steps(), self._ps5_extras())
         self.ps5_guide.show_step(0)
+        if hasattr(self, "rp_card"):
+            self._refresh_rp()
 
     def _ps5(self) -> QWidget:
         w, lay = self._page("PS5 ve chiaki-ng",
@@ -200,11 +205,45 @@ class Wizard(QDialog):
         self.act_conn = QWidget()
         self.act_conn.setLayout(hbox(self.conn_dot, self.conn_state, 1, spacing=6))
         self.act_chiaki = act1
+        # TV'de oynarken chiaki gerekmez: PS5'e arka planda ikinci hesapla bağlanılır (CouchSubs gibi)
+        self.rp_card = Card(margins=16, spacing=8)
+        self.rp_card.setStyleSheet(f"#card {{ border: 2px solid {T.A1}; }}")
+        self.rp_state = label("Oyunu TV'de oynuyorsan chiaki-ng'ye gerek yok: bilgisayar PS5'e arka planda ikinci "
+                              "PSN hesabıyla bağlanıp yalnız altyazıyı okur. Bir kez eşlersin, sonra hep kendiliğinden "
+                              "çalışır.", "muted", wrap=True)
+        self.rp_btn = button("PS5'i arka planda bağla (önerilen)", "primary", self._open_rp)
+        self.rp_card.add(label("TV'de oynuyorum", "h2"))
+        self.rp_card.add(self.rp_state)
+        self.rp_card.add(hbox(self.rp_btn, None))
+        lay.addWidget(self.rp_card)
         self.ps5_guide = Guide()
         lay.addWidget(self.ps5_guide, 1)
         self.ps5_guide.set_steps(self._ps5_steps(), self._ps5_extras())
         self._refresh_chiaki()
+        self._refresh_rp()
         return w
+
+    def _refresh_rp(self) -> None:
+        tv = self.where in ("tv", "ikisi")
+        self.rp_card.setVisible(tv)
+        self.ps5_guide.setVisible(not (tv and self.ctl.ps5_paired() and self.cfg.kaynak.tur == "remoteplay"))
+        if self.ctl.ps5_paired():
+            self.rp_state.setText(f"✓ PS5 eşli ({self.ctl.cfg.ps5.ad or self.ctl.cfg.ps5.ip}). Görüntü arka planda "
+                                  "alınacak; chiaki-ng adımlarını atlayabilirsin.")
+            self.rp_state.setStyleSheet(f"color: {T.OK};")
+            self.rp_btn.setText("PS5 ayarları")
+
+    def _open_rp(self) -> None:
+        import copy
+
+        from .ps5_dialog import Ps5Dialog
+        Ps5Dialog(self.ctl, self).exec()
+        # Sihirbazın kendi ayar kopyası, eşlemeyi Bitir'de geri silmesin
+        self.cfg.ps5 = copy.deepcopy(self.ctl.cfg.ps5)
+        if self.ctl.ps5_paired():
+            self.cfg.kaynak.tur = "remoteplay"
+            self.cfg.kaynak.oyun_yeri = self.where if self.where in ("tv", "ikisi") else "tv"
+        self._refresh_rp()
 
     def _ps5_steps(self) -> list[dict]:
         return rehber.chiaki_steps(self.where)

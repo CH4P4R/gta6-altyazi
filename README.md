@@ -184,6 +184,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 
 | Konu | Ne anlatıyor |
 |---|---|
+| • [TV'de oyna (chiaki'siz, önerilen)](#rehber-tv-arka-plan) | PS5 HDMI ile TV'de; bilgisayar PS5'e arka planda ikinci hesapla bağlanır, Türkçe TV'de çıkar. |
 | 🖥️ [Bilgisayar monitöründe oyna](#rehber-monitor) | chiaki-ng ile PS5'i bilgisayarda oyna; Türkçe chiaki'nin üstünde çıksın. |
 | 📺 [TV'de oyna, bilgisayar izlesin](#rehber-tv-izle) | Sen TV'den HDMI ile oyna; bilgisayar ikinci hesapla izleyip Türkçeyi TV'ye göndersin. |
 | • [Mac'te kullanım (Apple Silicon)](#rehber-mac) | M1 ve sonrası Mac'lerde kurulum, chiaki-ng ve macOS izinleri. |
@@ -197,6 +198,42 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 | 📦 [Hazır çeviri paketleri](#rehber-paketler) | GTA 6, GTA V, RDR2 ve diğer oyunların paketleri; kendi paketini paylaş. |
 | 🔄 [Güncellemeler](#rehber-guncelleme) | Paketler sessizce, uygulama tek tıkla güncellenir; yeniden kurmak gerekmez. |
 | 🧰 [Sorun giderme](#rehber-sorunlar) | TV bağlanmıyor, altyazı çıkmıyor, yazı kayık... |
+
+<a name="rehber-tv-arka-plan"></a>
+<details>
+<summary><b>• TV'de oyna (chiaki'siz, önerilen)</b> · PS5 HDMI ile TV'de; bilgisayar PS5'e arka planda ikinci hesapla bağlanır, Türkçe TV'de çıkar.</summary>
+
+#### Adım 1: İkinci PSN hesabı (bir kez)
+
+1. playstation.com'da **farklı bir e-postayla** ücretsiz yeni hesap aç (PS Plus gerekmez).
+2. PS5'te **Kullanıcı Ekle** de, yeni hesapla bir kez oturum aç.
+3. Hâlâ yeni kullanıcıyken: **Ayarlar › Sistem › Uzaktan Oynatma › Uzaktan Oynatmayı Etkinleştir**'i aç.
+4. Aynı yerde **Uzaktan Oynatma Bağlantı Durumu Açılır Penceresini Gizle**'yi aç (iki hesapta da), ekranda "bağlandı" yazısı çıkmasın.
+
+> Neden ikinci hesap? Bilgisayar oyunu Remote Play'den izler. Kendi hesabınla bağlansaydı PS5 kolunu kapatırdı; ikinci hesapla sen oynamaya devam edersin.
+
+#### Adım 2: Programda ikinci hesapla giriş
+
+1. Ana ekranda PS5 kartındaki **TV'de oynuyorum (chiaki'siz)**'e bas (ya da Ayarlar › Görüntü kaynağı › **PS5'i bağla**).
+2. **Sony giriş sayfasını aç**'a bas, **ikinci hesapla** giriş yap.
+3. Giriş bitince tarayıcı yalnız *redirect* yazan bir sayfada kalır (bu normal). Adres çubuğundaki adresin **tamamını** kopyala; program kendisi alır.
+
+#### Adım 3: PS5'i eşle (bir kez)
+
+1. PS5'te **ikinci kullanıcıya geç**.
+2. **Ayarlar › Sistem › Uzaktan Oynatma › Cihazı Eşleştir**'i aç; ekranda 8 haneli kod çıkar.
+3. Programda PS5'ini seç, kodu yaz, **Eşle**'ye bas (30 saniyeye kadar sürer).
+4. Bitince PS5'te **kendi kullanıcına geri dön**.
+
+#### Adım 4: Oyna
+
+1. PS5'i aç, kolu açınca **kendi (ana) hesabını** seç ve oyna.
+2. Program PS5'in açıldığını görür, arka planda bağlanır ve çeviriyi kendisi başlatır; Türkçe TV'de çıkar.
+3. TV uygulaması kurulu değilse önce Rehber › TV uygulaması adımlarını yap.
+
+> PS5'i kapatınca (dinlenme modu) bağlantı bekler; PS5 açılınca kendiliğinden yeniden bağlanır. Kablosuz ağda görüntü sık koparsa program kendiliğinden 720p'ye geçer; kalıcı çözüm PS5'i modeme kabloyla bağlamak.
+
+</details>
 
 <a name="rehber-monitor"></a>
 <details>
