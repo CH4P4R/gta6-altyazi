@@ -1,4 +1,4 @@
-"""Gerçek Mac'te uçtan uca deneme (GitHub Actions macos-14, Apple Silicon). Windows'taki e2e_windows.py'nin karşılığı.
+"""Gerçek Mac'te uçtan uca deneme (GitHub Actions macos-latest, Apple Silicon). Windows'taki e2e_windows.py'nin karşılığı.
 
 1. (Önceki Mac sürümü varsa) eski .dmg'den kurar, açar; uygulama içi güncellemenin betiğiyle yeni .dmg'ye geçirir:
    sürüm değişti mi, program yeniden açıldı mı, Claude anahtarı duruyor mu.
