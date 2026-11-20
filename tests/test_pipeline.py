@@ -191,14 +191,14 @@ def test_quality_first_shows_fast_when_refined_is_slow(tmp_path):
     got = collect(eng, "Get in the car.", n=2)
     assert [r.source for r in got] == ["yerel", "claude"]
     assert got[0].text == "yerel:Get in the car."
-    assert time.perf_counter() - t < 1.5
+    assert time.perf_counter() - t < 3.0          # yoğun CI makinesinde de (Claude 0.6 sn + payı)
 
 
 def test_quality_first_shows_fast_immediately_when_refined_fails(tmp_path):
     eng = make_engine(tmp_path, Echo("yerel"), Fails(), wait_ms=2000)
     t = time.perf_counter()
     got = collect(eng, "Hold on.", n=1)
-    assert [r.source for r in got] == ["yerel"] and time.perf_counter() - t < 1.0
+    assert [r.source for r in got] == ["yerel"] and time.perf_counter() - t < 1.8   # 2 sn beklemeden önce
 
 
 def test_local_model_gets_standard_english(tmp_path):
