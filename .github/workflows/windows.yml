@@ -110,6 +110,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup hatası" }
           Get-Item dist\GTA6Altyazi-Setup.exe | Format-List Name, Length
 
+      - name: Uçtan uca deneme (gerçek Windows - kurulum, güncelleme, çeviri, güvenlik duvarı)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = python -c "import altyazi; print(altyazi.__version__)"
+          $prev = (gh release list --limit 30 --json tagName | ConvertFrom-Json | Where-Object { $_.tagName -like 'v*' -and $_.tagName -ne "v$v" } | Select-Object -First 1).tagName
+          $old = ""
+          if ($prev) {
+            gh release download $prev -p GTA6Altyazi-Setup.exe -D eski --clobber
+            if ($LASTEXITCODE -eq 0) { $old = "eski\GTA6Altyazi-Setup.exe" }
+          }
+          Write-Host "Önceki sürüm: $prev"
+          python tools/e2e_windows.py dist\GTA6Altyazi-Setup.exe $old
+          if ($LASTEXITCODE -ne 0) { throw "Uçtan uca deneme başarısız: kurulum dosyası yayınlanmadı" }
+
       - name: Sürümler sayfasına koy
         env:
           GH_TOKEN: ${{ github.token }}
