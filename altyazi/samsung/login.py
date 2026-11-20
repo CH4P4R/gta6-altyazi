@@ -202,7 +202,16 @@ class Listener:
 def sign_in(open_browser: Callable[[str], object] | None = None, timeout: float = 300,
             port: int = CALLBACK_PORT, cancel: threading.Event | None = None) -> SamsungAccount:
     """Dinleyiciyi açar, sayfayı tarayıcıda açtırır ve girişi bekler (en çok ``timeout`` sn)."""
-    listener = Listener(port)
+    # Windows'ta kapanan dinleyicinin portu bir süre (TIME_WAIT) yeniden açılamayabilir: ikinci girişte biraz bekle
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            listener = Listener(port)
+            break
+        except SamsungInstallError:
+            if time.monotonic() > deadline or (cancel is not None and cancel.is_set()):
+                raise
+            time.sleep(2)
     url = authorize_url(port)
     log.info("Samsung girişi tarayıcıda açılıyor: %s", url)
     try:

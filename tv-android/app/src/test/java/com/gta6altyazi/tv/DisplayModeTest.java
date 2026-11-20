@@ -20,6 +20,25 @@ public class DisplayModeTest {
     }
 
     @Test
+    public void relaunchFromRemoteOpensTheAppInsteadOfClosing() {
+        // Kumandadan açıldı (parametre yok): katman kapanır, GTA6 Altyazı ekranı açılır.
+        assertEquals(DisplayMode.Relaunch.OPEN_APP, DisplayMode.whileOverlay(""));
+        assertEquals(DisplayMode.Relaunch.OPEN_APP, DisplayMode.whileOverlay(null));
+        // Bilgisayar yeni adresle açtı: katman sürer.
+        assertEquals(DisplayMode.Relaunch.FORWARD_TO_OVERLAY, DisplayMode.whileOverlay("server=http://192.168.1.4:8787"));
+    }
+
+    @Test
+    public void leavingOverlayStaysInAppEvenIfOverlayIsPreferred() {
+        assertEquals(DisplayMode.Start.IN_APP, DisplayMode.atLaunch("overlay", true, null, true));
+        assertEquals(DisplayMode.Start.OVERLAY, DisplayMode.atLaunch("overlay", true, null, false));
+        // Diğer durumlar değişmez.
+        assertEquals(DisplayMode.Start.IN_APP_NEEDS_PERMISSION, DisplayMode.atLaunch("overlay", false, null, true));
+        assertEquals(DisplayMode.Start.IN_APP_OVERLAY_FAILED,
+                DisplayMode.atLaunch("overlay", true, DisplayMode.FAILED_WINDOW, true));
+    }
+
+    @Test
     public void overlayStartsOnlyWithPermission() {
         assertEquals(DisplayMode.Start.OVERLAY, DisplayMode.atLaunch("overlay", true));
         assertEquals(DisplayMode.Start.IN_APP_NEEDS_PERMISSION, DisplayMode.atLaunch("overlay", false));
@@ -27,6 +46,23 @@ public class DisplayModeTest {
         // Kayıt yok ya da tanınmıyor: uygulama içinde.
         assertEquals(DisplayMode.Start.IN_APP, DisplayMode.atLaunch(null, true));
         assertEquals(DisplayMode.Start.IN_APP, DisplayMode.atLaunch("garbage", true));
+    }
+
+    @Test
+    public void failedOverlayDoesNotReopenOverlay() {
+        // #275: katman açılamayıp uygulamayı geri açtıysa, kayıtlı tercih katman olsa da yeniden katmana geçilmez;
+        // yoksa uygulama ile servis birbirini açıp kapatır ve kullanıcı yalnız uygulamanın kapandığını görür.
+        assertEquals(DisplayMode.Start.IN_APP_OVERLAY_FAILED,
+                DisplayMode.atLaunch("overlay", true, DisplayMode.FAILED_WINDOW));
+        assertEquals(DisplayMode.Start.IN_APP_OVERLAY_FAILED,
+                DisplayMode.atLaunch("overlay", true, DisplayMode.FAILED_FOREGROUND));
+        assertEquals(DisplayMode.Start.IN_APP_OVERLAY_FAILED,
+                DisplayMode.atLaunch("inApp", true, DisplayMode.FAILED_WINDOW));
+        // İzin geri alındıysa iznin nasıl verileceği gösterilir.
+        assertEquals(DisplayMode.Start.IN_APP_NEEDS_PERMISSION,
+                DisplayMode.atLaunch("overlay", true, DisplayMode.FAILED_PERMISSION));
+        // Neden yoksa eski davranış.
+        assertEquals(DisplayMode.Start.OVERLAY, DisplayMode.atLaunch("overlay", true, null));
     }
 
     @Test

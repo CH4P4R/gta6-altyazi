@@ -758,6 +758,7 @@ def test_app_dispatches_samsung_direct_or_tizen_studio(tmp_path, monkeypatch):
     from altyazi.app import AppController
     QApplication.instance() or QApplication([])
     monkeypatch.setattr(AppController, "warmup", lambda self: None)
+    monkeypatch.setattr(AppController, "_tv_wait_client", lambda self, server, before, timeout=30.0: None)
     calls = []
 
     def fake_direct(host, on_login_needed=None, **kw):
@@ -792,3 +793,16 @@ def test_app_dispatches_samsung_direct_or_tizen_studio(tmp_path, monkeypatch):
     finally:
         c._src_timer.stop()
         c._ps5_timer.stop()
+
+
+def test_developer_ip_hint_explains_wrong_host_pc_ip(monkeypatch):
+    from altyazi import tv
+    from altyazi.samsung import installer
+    monkeypatch.setattr(tv, "local_ip", lambda towards="8.8.8.8": "192.168.1.20")
+    wrong = lambda url: json.dumps({"device": {"developerMode": "1", "developerIP": "192.168.1.99"}}).encode()  # noqa: E731
+    assert "192.168.1.99" in installer.developer_ip_hint("tv", wrong) and "192.168.1.20" in installer.developer_ip_hint("tv", wrong)
+    off = lambda url: json.dumps({"device": {"developerMode": "0", "developerIP": "0.0.0.0"}}).encode()  # noqa: E731
+    assert "kapalı" in installer.developer_ip_hint("tv", off)
+    ok = lambda url: json.dumps({"device": {"developerMode": "1", "developerIP": "192.168.1.20"}}).encode()  # noqa: E731
+    assert installer.developer_ip_hint("tv", ok) == ""
+    assert installer.developer_ip_hint("tv", lambda url: (_ for _ in ()).throw(OSError())) == ""

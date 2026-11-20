@@ -16,6 +16,7 @@ import json
 import logging
 import queue
 import socket
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -122,6 +123,20 @@ go();
 </script></body></html>"""
 
 
+def _revision(prev: str, cur: str) -> bool:
+    """Aynı cümlenin düzelen okuması mı? (CouchSubs IsRevision: biri ötekinin başı ya da çok benzer)"""
+    a, b = (prev or "").strip().lower(), (cur or "").strip().lower()
+    if not a or not b:
+        return False
+    if a.startswith(b) or b.startswith(a):
+        return True
+    try:
+        from rapidfuzz import fuzz
+        return fuzz.ratio(a, b) >= 85
+    except ImportError:
+        return False
+
+
 class EventServer:
     def __init__(self, port: int, tv_calibration: list[float] | None = None, on_command=None):  # noqa: ANN001
         self.port = port
@@ -129,7 +144,9 @@ class EventServer:
         x, y, w, h = tv_calibration or [0.0, 0.0, 1.0, 1.0]
         self.tv = {"x": x, "y": y, "w": w, "h": h}
         self.clients: list[queue.Queue] = []
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()     # TV durumu birden çok iş parçacığından değişir; gönderim de aynı kilitle
+        self.screen_ms = 20000            # "Ekranı çevir" kaç ms kalsın (ayar: kisayol.tam_ekran_sure)
+        self._sub_english = ""
         self.state: dict[str, dict] = {}
         # TV uygulamaları (CouchSubs protokolü)
         self.tv_clients: list[queue.Queue] = []
@@ -163,17 +180,23 @@ class EventServer:
     def _tv_show(self, it: DisplayItem) -> None:
         if not it.text:
             return
+        with self.lock:
+            self._tv_show_locked(it)
+
+    def _tv_show_locked(self, it: DisplayItem) -> None:
         if it.zone == MAIN_ZONE:
-            data = {"at": int(time.time() * 1000), "duration": 15000, "text": it.text, "box": _box(it.rect),
+            # Süre uzun: yazı ekrandayken TV'de kaybolmasın; kaldırmayı 'clear' yapar (bağlantı koparsa TV 6 sn'de siler)
+            data = {"at": int(time.time() * 1000), "duration": 3600000, "text": it.text, "box": _box(it.rect),
                     "line": round(it.line_h, 4)}
-            if it.seq == self._sub_seq:          # aynı satırın daha iyi çevirisi: üst üste yığılmasın
-                data["replace"] = True
+            if it.seq == self._sub_seq or _revision(self._sub_english, it.english):
+                data["replace"] = True           # aynı satırın daha iyi çevirisi ya da düzelen okuması: yığılmasın
             self._sub_seq = it.seq
+            self._sub_english = it.english or ""
             f = frame("subtitle", data)
             self._tv_state[MAIN_ZONE] = f
         elif it.zone.startswith("tam"):
             self._screen[it.zone] = {"box": _box(it.rect), "line": round(it.line_h, 4), "text": it.text}
-            f = frame("screen", {"duration": 20000, "items": [self._screen[k] for k in sorted(self._screen)]})
+            f = frame("screen", {"duration": self.screen_ms, "items": [self._screen[k] for k in sorted(self._screen)]})
             self._tv_state["tam"] = f
         else:
             data = {"id": it.zone, "text": it.text, "box": _box(it.rect), "line": round(it.line_h, 4)}
@@ -184,7 +207,12 @@ class EventServer:
         self._tv_send(f)
 
     def _tv_clear(self, zone: str) -> None:
+        with self.lock:
+            self._tv_clear_locked(zone)
+
+    def _tv_clear_locked(self, zone: str) -> None:
         if zone == MAIN_ZONE:
+            self._sub_english = ""
             self._tv_state.pop(MAIN_ZONE, None)
             self._tv_send(frame("clear", {}))
         elif zone.startswith("tam"):
@@ -232,6 +260,9 @@ class EventServer:
                 self.send_response(204)
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "*")
+                # Yeni TV tarayıcıları (Tizen 9+) yerel ağdaki adrese bağlanmadan önce bunu sorar (CouchSubs gibi)
+                self.send_header("Access-Control-Allow-Private-Network", "true")
+                self.send_header("Access-Control-Max-Age", "600")
                 self.end_headers()
 
             def _json(self, code: int, obj: dict) -> None:
@@ -254,9 +285,12 @@ class EventServer:
 
             def _tv_stream(self) -> None:
                 self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                try:   # fişten çekilen / Wi-Fi'ı kopan TV'yi çabuk fark et
+                try:   # fişten çekilen / Wi-Fi'ı kopan TV'yi çabuk fark et (Windows'ta varsayılan 2 saat)
                     self.connection.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-                except OSError:
+                    if hasattr(socket, "SIO_KEEPALIVE_VALS"):
+                        self.connection.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 10000, 5000))
+                    self.connection.settimeout(30)      # yazma takılırsa (TV kapandı) iş parçacığı serbest kalsın
+                except (OSError, AttributeError):
                     pass
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -264,10 +298,12 @@ class EventServer:
                 self.send_header("Connection", "keep-alive")
                 self.end_headers()
                 q: queue.Queue = queue.Queue()
-                q.put("retry: 2000\n\n" + frame("style", srv.tv_style))
-                for f in list(srv._tv_state.values()):
-                    q.put(f)
-                with srv.lock:
+                with srv.lock:      # anlık durum ve listeye ekleme birlikte: arada gönderilen çerçeve kaybolmasın
+                    q.put("retry: 2000\n\n" + frame("style", srv.tv_style))
+                    # Kısa kopmada TV eski yazıları tutar: önce temizle, sonra şu an ekranda olanı gönder
+                    q.put(frame("clear", {}) + frame("region-clear", {}) + frame("screen-clear", {}))
+                    for f in list(srv._tv_state.values()):
+                        q.put(f)
                     srv.tv_clients.append(q)
                 log.info("TV bağlandı: %s", self.client_address[0])
                 try:
@@ -335,7 +371,17 @@ class EventServer:
                 else:
                     self.send_error(404)
 
-        httpd = ThreadingHTTPServer(("0.0.0.0", self.port), H)
+        class Server(ThreadingHTTPServer):
+            # Windows'ta SO_REUSEADDR başka bir programın (ikinci kopya, CouchSubs) aynı portu sessizce paylaşmasına
+            # izin verir; TV yanlış programa bağlanabilir. Port doluysa açıkça hata verilsin.
+            allow_reuse_address = sys.platform != "win32"
+
+            def server_bind(self):  # noqa: ANN202
+                if sys.platform == "win32" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                    self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                super().server_bind()
+
+        httpd = Server(("0.0.0.0", self.port), H)
         httpd.daemon_threads = True
         threading.Thread(target=httpd.serve_forever, daemon=True, name="sunucu").start()
         log.info("Web: http://localhost:%d/  (OBS için /obs)", self.port)

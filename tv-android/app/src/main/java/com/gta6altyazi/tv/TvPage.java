@@ -30,13 +30,16 @@ final class TvPage {
     interface Host {
         void showHdmi(int port);
 
+        /** Konsolun girişi bulunamadı: hiçbir giriş açılmaz, kullanıcıdan girişi seçmesi istenir (#367). */
+        void chooseInput();
+
         void exit();
 
         /** Bilgisayar görüntü modunu değiştirdi (yeni mod kaydedildikten sonra çağrılır). */
         void displayModeChanged(String mode);
     }
 
-    private static final String PREFS = "couchsubs";
+    private static final String PREFS = "couchsubs";   // eski kurulumların kayıtlı ayarları korunsun
     private static final String KEY_DISPLAY_MODE = "displayMode";
 
     final WebView webView;
@@ -146,6 +149,20 @@ final class TvPage {
 
         @JavascriptInterface
         public int consolePort() { return HdmiInputs.consolePort(context); }
+
+        /** Açılışta açılacak giriş (bkz. HdmiInputs.pick): "3:console" gibi; "0:" ise bilinmiyor. */
+        @JavascriptInterface
+        public String pickPort(int saved) {
+            HdmiInputs.Pick pick = HdmiInputs.pick(context, saved);
+            return pick.port + ":" + (pick.reason == null ? "" : pick.reason);
+        }
+
+        @JavascriptInterface
+        public void chooseInput() { ui.post(host::chooseInput); }
+
+        /** Kullanıcı "0" ile elle seçimi bıraktı: uygulamanın kaydettiği giriş de unutulur. */
+        @JavascriptInterface
+        public void forgetInput() { HdmiInputs.forget(context); }
 
         @JavascriptInterface
         public String localAddress() {

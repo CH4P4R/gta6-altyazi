@@ -42,11 +42,41 @@ def list_windows() -> list[tuple[int, str]]:
     return out
 
 
+_NOT_GAME = ("altyazi", "altyazı", "google chrome", "firefox", "microsoft edge", "opera", "brave", "github",
+             "dosya gezgini", "file explorer", "releases", "notepad", "not defteri", "discord")
+
+
+def _exe_name(hwnd: int) -> str:
+    """Pencerenin programının dosya adı (ör. chiaki.exe); okunamazsa boş."""
+    if not IS_WIN:
+        return ""
+    try:
+        pid = wintypes.DWORD()
+        ctypes.windll.user32.GetWindowThreadProcessId(wintypes.HWND(hwnd), ctypes.byref(pid))
+        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid.value)   # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return ""
+        try:
+            buf = ctypes.create_unicode_buffer(520)
+            size = wintypes.DWORD(520)
+            if ctypes.windll.kernel32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
+                return buf.value.replace("/", "\\").rsplit("\\", 1)[-1].lower()
+        finally:
+            ctypes.windll.kernel32.CloseHandle(h)
+    except Exception:  # noqa: BLE001
+        pass
+    return ""
+
+
 def find_window(part: str) -> tuple[int, str] | None:
+    """Başlığında 'part' geçen oyun penceresi. Önce programı gerçekten chiaki olanlar; tarayıcıda açık 'chiaki-ng
+    releases' sayfası, aynı adlı klasör ya da bizim pencerelerimiz yakalanmaz."""
     part = part.lower()
-    matches = [(h, t) for h, t in list_windows() if part in t.lower() and "altyazi" not in t.lower()]
+    matches = [(h, t) for h, t in list_windows() if part in t.lower()]
+    by_exe = [(h, t) for h, t in matches if part in _exe_name(h)]
+    pool = by_exe or [(h, t) for h, t in matches if not any(x in t.lower() for x in _NOT_GAME)]
     # en kısa başlık genelde ana penceredir
-    return min(matches, key=lambda m: len(m[1])) if matches else None
+    return min(pool, key=lambda m: len(m[1])) if pool else None
 
 
 def frame_bounds(hwnd: int) -> tuple[int, int, int, int] | None:
@@ -203,13 +233,20 @@ def firewall_ok() -> bool | None:
         return None
     import subprocess
 
+    # netsh çıktısı konsol kod sayfasında (Türkçe Windows'ta cp857) gelir ve kural adındaki "ı" çözülemiyordu;
+    # PowerShell'in çıkış koduna bakılır, metin okunmaz.
+    name = FIREWALL_RULE.replace("'", "''")
+    ps = (f"if (Get-NetFirewallRule -DisplayName '{name}' -ErrorAction SilentlyContinue | "
+          "Where-Object {{ $_.Enabled -eq 'True' -and $_.Action -eq 'Allow' }}) {{ exit 0 }} else {{ exit 3 }}")
+    ps = ps.replace("{{", "{").replace("}}", "}")
     try:
-        out = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", f"name={FIREWALL_RULE}"],
-                             capture_output=True, text=True, timeout=10,
-                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
-    except (OSError, subprocess.SubprocessError):
+        r = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=20,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except (OSError, subprocess.SubprocessError, ValueError):
         return None
-    return FIREWALL_RULE in out
+    if r.returncode == 0:
+        return True
+    return False if r.returncode == 3 else None
 
 
 def firewall_allow() -> bool:
@@ -243,9 +280,9 @@ def network_is_public() -> bool | None:
     try:
         out = subprocess.run(["powershell", "-NoProfile", "-Command",
                               "(Get-NetConnectionProfile | Where-Object {$_.IPv4Connectivity -ne 'Disconnected'}).NetworkCategory"],
-                             capture_output=True, text=True, timeout=15,
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15,
                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError, ValueError):
         return None
-    cats = out.split()
+    cats = (out or "").split()
     return bool(cats) and all(c == "Public" for c in cats)

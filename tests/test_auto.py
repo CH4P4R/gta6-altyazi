@@ -153,3 +153,21 @@ def test_old_help_zone_moves_down_once(tmp_path, monkeypatch):
     next(b for b in again.bolgeler if b.ad == "yardim").alan = [0.0, 0.0, 0.36, 0.32]   # kullanıcı geri aldı
     config.save(again)
     assert next(b for b in config.load().bolgeler if b.ad == "yardim").alan == [0.0, 0.0, 0.36, 0.32]
+
+
+def test_tv_that_never_connects_back_is_explained(monkeypatch):
+    """TV uygulaması açıldı ama bilgisayara bağlanmadıysa 'TV hazır' denmez; sebebi söylenir."""
+    import types
+
+    import pytest
+
+    from altyazi import app as appmod
+    monkeypatch.setattr(appmod.time, "sleep", lambda s: None)
+    clock = iter(range(0, 1000, 5))
+    monkeypatch.setattr(appmod.time, "time", lambda: next(clock))
+    for status, text in (("ortak", "Özel"), ("eksik", "güvenlik duvarı"), ("tamam", "aynı modemde")):
+        fake = types.SimpleNamespace(server=types.SimpleNamespace(tv_count=0), firewall_status=lambda s=status: s)
+        with pytest.raises(RuntimeError, match=text):
+            appmod.AppController._tv_wait_client(fake, "192.168.1.20:8787", 0, timeout=20)
+    ok = types.SimpleNamespace(server=types.SimpleNamespace(tv_count=1), firewall_status=lambda: "tamam")
+    appmod.AppController._tv_wait_client(ok, "x", 0, timeout=20)

@@ -37,7 +37,7 @@ def verify(n: int, e: int, token: bytes, sig: bytes) -> bool:
 class FakeAdbd:
     """Tek TV: yetkili anahtarlar, kurulu sürüm, gelen komutlar."""
 
-    def __init__(self, approve=True, installed=None, incompatible=False):
+    def __init__(self, approve=True, installed=None, incompatible=False, leftover=False, broken_launch=0):
         self.srv = socket.socket()
         self.srv.bind(("127.0.0.1", 0))
         self.srv.listen(4)
@@ -46,6 +46,8 @@ class FakeAdbd:
         self.approve = approve
         self.installed = installed
         self.incompatible = incompatible
+        self.leftover = leftover              # kaldırılmış ama kaydı kalmış kopya (installed=false)
+        self.broken_launch = broken_launch    # am start kaç kez "Activity does not exist" desin
         self.commands: list[str] = []
         self.received = 0
         self.prompts = 0
@@ -122,14 +124,20 @@ class FakeAdbd:
         if service.startswith("shell:dumpsys package com.gta6altyazi.tv"):
             if "grep" in service:
                 return ""
+            if self.leftover:
+                return "    versionCode=4 minSdk=24\n    User 0: ceDataInode=1 installed=false hidden=false\n"
             return f"    versionCode={self.installed} minSdk=24\n" if self.installed is not None else ""
         if service.startswith("shell:pm uninstall"):
+            self.leftover = False
             self.installed = None
             self.incompatible = False
             return "Success\n"
         if service.startswith("shell:appops get"):
             return "SYSTEM_ALERT_WINDOW: allow\n"
         if service.startswith("shell:am start"):
+            if self.broken_launch:
+                self.broken_launch -= 1
+                return "Error: Activity class {com.gta6altyazi.tv/.MainActivity} does not exist.\n"
             return "Starting: Intent { cmp=com.gta6altyazi.tv/.MainActivity }\n"
         return ""
 
@@ -213,3 +221,50 @@ def test_tv_setup_uses_native_client_without_adb_exe(tmp_path, monkeypatch):
     assert any(c.startswith("shell:appops set com.gta6altyazi.tv SYSTEM_ALERT_WINDOW allow") for c in fake.commands)
     assert any(c.startswith("shell:am start -n com.gta6altyazi.tv/.MainActivity") and "displayMode inApp" in c
                for c in fake.commands)
+
+
+def _native_setup(tmp_path, monkeypatch, fake, force=False):
+    from altyazi import tv as T
+    monkeypatch.delenv("ALTYAZI_ADB", raising=False)
+    monkeypatch.setenv("ALTYAZI_DATA", str(tmp_path))
+    monkeypatch.setenv("ANDROID_USER_HOME", str(tmp_path / "android"))
+    monkeypatch.setattr(T, "ADB_PORT", fake.port)
+    apk = tmp_path / "tv.apk"
+    apk.write_bytes(b"x" * 3000)
+    (tmp_path / "tv.version").write_text("5")
+    monkeypatch.setattr(T, "APK", apk)
+    monkeypatch.setattr(T.NativeAndroidTv.install, "__defaults__", (apk,))
+    monkeypatch.setattr(T, "apk_version", lambda path=None: 5)
+    return T.setup("127.0.0.1", 8787, force_install=force)
+
+
+def test_leftover_record_is_cleaned_and_app_installed(tmp_path, monkeypatch):
+    fake = FakeAdbd(leftover=True)
+    _native_setup(tmp_path, monkeypatch, fake)
+    assert fake.installed == 99                                   # kayıt temizlendi, yeniden kuruldu
+    assert any(c.startswith("shell:pm uninstall") for c in fake.commands)
+
+
+def test_app_that_does_not_open_is_reinstalled_once(tmp_path, monkeypatch):
+    from altyazi import tv as T
+    fake = FakeAdbd(installed=5, broken_launch=1)
+    _native_setup(tmp_path, monkeypatch, fake)
+    assert sum(c.startswith("shell:am start") for c in fake.commands) == 2
+    fake2 = FakeAdbd(installed=5, broken_launch=5)
+    with pytest.raises(T.TvError, match="açılamadı"):
+        _native_setup(tmp_path, monkeypatch, fake2)
+
+
+def test_tv_that_stops_answering_gives_turkish_error(tmp_path, monkeypatch):
+    from altyazi import tv as T
+    fake = FakeAdbd(installed=5)
+    real = fake._run
+
+    def dies(c, service, local, remote):
+        if service.startswith("shell:dumpsys"):
+            c.close()
+            raise OSError("kapandı")
+        return real(c, service, local, remote)
+    fake._run = dies
+    with pytest.raises(T.TvError, match="bağlantı koptu"):
+        _native_setup(tmp_path, monkeypatch, fake)

@@ -91,9 +91,20 @@ def chain(leaf: x509.Certificate, cas: list[x509.Certificate] | None = None) -> 
     """İmzadaki zincir: yaprak ve onu veren Samsung ara sertifikası (kök yok)."""
     for ca in authorities() if cas is None else cas:
         # Ad nesneleri karşılaştırılır (aynı ad farklı ASN.1 dizgi türüyle yazılmış olabilir).
-        if _same_name(ca.subject, leaf.issuer) and not _same_name(ca.subject, ca.issuer):
+        if _same_name(ca.subject, leaf.issuer) and not _same_name(ca.subject, ca.issuer) and _issued_by(leaf, ca):
             return [leaf, ca]
     return [leaf]
+
+
+def _issued_by(leaf: x509.Certificate, ca: x509.Certificate) -> bool:
+    """Aynı adlı iki Samsung ara sertifikası var (farklı anahtar): imzayı gerçekten atanı seç."""
+    try:
+        leaf.verify_directly_issued_by(ca)
+        return True
+    except (ValueError, TypeError, AttributeError):
+        return False
+    except Exception:  # noqa: BLE001 (InvalidSignature vb.)
+        return False
 
 
 def _same_name(a: x509.Name, b: x509.Name) -> bool:

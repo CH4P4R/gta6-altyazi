@@ -11,6 +11,7 @@ bilgisayarın IP'sini yaz ve TV'yi güç tuşuna 2 sn basılı tutarak yeniden b
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import secrets
@@ -89,10 +90,40 @@ def install_with_recovery(install: Callable[[], str], shell: Callable[[str], str
         raise SamsungInstallError(diag.to_error_kind(problem), diag.summary(retry))
 
 
+def developer_ip_hint(host: str, fetch: Callable[[str], bytes] | None = None) -> str:
+    """TV'nin Developer mode ayarını (8001/api/v2) okuyup Host PC IP yanlışsa ne yapılacağını söyler."""
+    from ..tv import local_ip
+
+    def _get(url: str) -> bytes:
+        import urllib.request
+        with urllib.request.urlopen(url, timeout=2) as r:     # noqa: S310 (yerel ağdaki TV)
+            return r.read()
+
+    try:
+        info = json.loads((fetch or _get)(f"http://{host}:8001/api/v2/")).get("device", {})
+    except Exception:  # noqa: BLE001
+        return ""
+    dev_ip = str(info.get("developerIP") or "").strip()
+    mode = str(info.get("developerMode") or "").strip()
+    try:
+        mine = local_ip(host)
+    except OSError:
+        return ""
+    if mode in ("0", "") or dev_ip in ("", "0.0.0.0"):
+        return (f"\nTV'de Developer mode kapalı görünüyor. Uygulamalar sayfasında 1 2 3 4 5 yaz, Developer mode'u On "
+                f"yap, Host PC IP'ye {mine} yaz ve TV'yi güç tuşuna 2 sn basılı tutarak yeniden başlat.")
+    if dev_ip != mine:
+        return (f"\nTV'deki Host PC IP {dev_ip}, ama bu bilgisayarın adresi {mine}. TV'de Developer mode penceresini "
+                f"açıp Host PC IP'yi {mine} yap ve TV'yi güç tuşuna 2 sn basılı tutarak yeniden başlat.")
+    return ""
+
+
 class _Installer:
     def __init__(self, host: str, port: int, data_dir: Path, source: Path,
                  sign_in: Callable[[], certs.SamsungAccount], http: certs.HttpPost,
-                 progress: Callable[[str], None], on_login_needed: Callable[[str], object] | None):
+                 progress: Callable[[str], None], on_login_needed: Callable[[str], object] | None,
+                 server: str | None = None):
+        self.server = server            # TV uygulamasının bağlanacağı adres (http://ip:port); config.js'e yazılır
         self.host = host
         self.port = port
         self.data_dir = data_dir
@@ -108,7 +139,8 @@ class _Installer:
         try:
             conn = sdb.SdbConnection.connect(self.host, key, port=self.port)
         except OSError as e:
-            raise SamsungInstallError(diag.UNREACHABLE, f"sdb {self.host}:{self.port}: {e}") from e
+            raise SamsungInstallError(diag.UNREACHABLE, f"sdb {self.host}:{self.port}: {e}"
+                                      + developer_ip_hint(self.host)) from e
         log.info("sdb bağlantısı kuruldu (%s:%s) %s", self.host, self.port, conn.banner)
         return conn
 
@@ -203,7 +235,13 @@ class _Installer:
 
         self.progress("Uygulama imzalanıyor...")
         key = profile.private_key()
-        signed = signer.sign(signer.folder_entries(self.source),
+        entries = signer.folder_entries(self.source)
+        if self.server:
+            # TV uygulaması bu bilgisayarı ağda taramadan bulsun (port değişse de); imzadan önce yazılır
+            cfg = json.dumps({"server": self.server})
+            entries = [(n, f"window.COUCHSUBS_CONFIG = {cfg};\n".encode() if n == "config.js" else b)
+                       for n, b in entries]
+        signed = signer.sign(entries,
                              signer.Signer(key, certs.chain(profile.author())),
                              signer.Signer(key, certs.chain(profile.distributor())))
         log.info("Paket imzalandı (%d bayt).", len(signed))
@@ -218,7 +256,8 @@ class _Installer:
                 out = "Push complete.\n"
                 out += conn.shell(f"0 vd_appinstall {APP_ID} {remote}")
             except Exception as e:  # noqa: BLE001
-                out += f"\ninstall failed: {type(e).__name__}: {e}\n"
+                # Yerel hata (zaman aşımı, kopan bağlantı): eski kopyayı kaldırmak işe yaramaz, bağlantı koptu say
+                out += f"\nconnection lost: {type(e).__name__}: {e}\n"
             return out
 
         self.progress("Uygulama TV'ye gönderilip kuruluyor...")
@@ -241,7 +280,8 @@ def setup_direct(host: str, on_login_needed: Callable[[str], object] | None = No
                  force_install: bool = True, progress: Callable[[str], None] | None = None,
                  port: int = sdb.PORT, source: Path | None = None, data_dir: Path | None = None,
                  sign_in: Callable[[], certs.SamsungAccount] | None = None, http: certs.HttpPost | None = None,
-                 cancel: threading.Event | None = None, login_timeout: float = 300) -> str:
+                 cancel: threading.Event | None = None, login_timeout: float = 300,
+                 server_port: int | None = None) -> str:
     """Samsung TV'ye GTA6 Altyazı'yı kurar ve açar; bu bilgisayarın ev ağındaki adresini döner.
 
     ``on_login_needed(url)``: Samsung girişi gerektiğinde, tarayıcı açılmadan hemen önce çağrılır.
@@ -256,7 +296,12 @@ def setup_direct(host: str, on_login_needed: Callable[[str], object] | None = No
         http=http or certs.urllib_post,
         progress=progress or (lambda s: log.info("%s", s)),
         on_login_needed=on_login_needed,
+        server=f"http://{_local(host)}:{server_port}" if server_port else None,
     )
     inst.run(force_install)
+    return _local(host)
+
+
+def _local(host: str) -> str:
     from ..tv import local_ip
     return local_ip(host)

@@ -141,6 +141,8 @@ def test_tv_protocol_events():
                 return name, data
 
     assert read_event()[0] == "style"
+    # yeniden bağlanan TV'de eski yazı kalmasın: önce her şey temizlenir
+    assert [read_event()[0] for _ in range(3)] == ["clear", "region-clear", "screen-clear"]
     for _ in range(50):
         if srv.tv_count:
             break
@@ -150,8 +152,14 @@ def test_tv_protocol_events():
     srv.show(DisplayItem(zone="altyazi", text="Arabaya bin.", seq=5, **base))
     name, data = read_event()
     assert name == "subtitle" and data["text"] == "Arabaya bin." and data["box"]["top"] == 0.8 and "replace" not in data
+    assert data["duration"] >= 600000                      # yazı ekrandayken TV'de kendiliğinden kaybolmaz
     srv.show(DisplayItem(zone="altyazi", text="Arabaya bin!", seq=5, **base))
     assert read_event()[1]["replace"] is True
+    # aynı cümlenin düzelen okuması (yeni seq) da üst üste yığılmaz
+    srv.show(DisplayItem(zone="altyazi", text="Arabaya bin hemen!", seq=9, **{**base, "english": "Get in the car now."}))
+    assert read_event()[1]["replace"] is True
+    srv.show(DisplayItem(zone="altyazi", text="Neredesin?", seq=10, **{**base, "english": "Where are you?"}))
+    assert "replace" not in read_event()[1]
     srv.show(DisplayItem(zone="yardim", text="Araca binmek için △", seq=6, **base))
     name, data = read_event()
     assert name == "region" and data["id"] == "yardim"

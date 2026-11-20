@@ -478,8 +478,9 @@
       return;
     }
     el.className = 'region';
-    el.style.minHeight = '';
-    el.style.background = '';
+    // GTA6 Altyazı: kutu İngilizce yazının tamamını örtsün (çok satırlı yardım/bildirim/telefon yazısı alttan görünmesin)
+    el.style.minHeight = Math.round((box.bottom - box.top + 2 * REGION_PAD) * height) + 'px';
+    el.style.background = textBackground;
     el.style.fontSize = Math.max(REGION_MIN_FONT, Math.min(REGION_MAX_FONT, Math.round(line * 0.9))) + 'px';
   }
 
@@ -1306,7 +1307,8 @@
   // Önceki açılışta TV kendiliğinden kaynağa geçtiyse ipucu şimdi gösterilir.
   maybeShowSourceTip();
   var initial = parseParams(platform.launchParams());
-  var address = initial.server || load('server') || config.server;
+  // Kurulumda yazılan adres (Samsung) kayıtlı eski adresten önce gelir; ikisi de olmazsa ağ taranır
+  var address = initial.server || config.server || load('server');
   applyParams(initial);
   if (!server) {
     if (address) connect(address); else $('waiting').className = '';

@@ -29,28 +29,43 @@ class FakeSSH:
     def exec_command(self, cmd, timeout=None):
         self.cmds.append(cmd)
         if "luna-send-pub -i" in cmd and "appInstallService" in cmd:
-            self.started = True
-            return None, FakeOut(""), FakeOut("")
-        if "kurulum.log" in cmd and cmd.startswith("cat"):
-            if getattr(self, "started", False) and "installed" in self.install_reply:
+            # tek komut: başlat, bekle, kurulum günlüğünü bas (CouchSubs InstallCommand)
+            if "installed" in self.install_reply:
                 self.version = self.version_after
-            return None, FakeOut(self.install_reply if getattr(self, "started", False) else ""), FakeOut("")
+            return None, FakeOut(self.install_reply), FakeOut("")
+        if cmd.startswith("wc -c"):
+            return None, FakeOut(str(self.uploaded_size)), FakeOut("")
         if "appinfo.json" in cmd:
             return None, FakeOut(json.dumps({"version": self.version}) if self.version else ""), FakeOut("")
         if "applicationManager/launch" in cmd:
             return None, FakeOut('{"returnValue": true}'), FakeOut("")
         return None, FakeOut(""), FakeOut("")
 
-    def open_sftp(self):
+    uploaded_size = 0
+
+    def get_transport(self):
         ssh = self
 
-        class S:
-            def put(self, local, remote):
-                ssh.uploads.append(remote)
+        class Ch:
+            def settimeout(self, t):
+                pass
+
+            def exec_command(self, cmd):
+                self.remote = cmd.split("'")[1]
+
+            def sendall(self, data):
+                ssh.uploaded_size = len(data)
+
+            def shutdown_write(self):
+                ssh.uploads.append(self.remote)
+
+            def recv_exit_status(self):
+                return 0
 
             def close(self):
                 pass
-        return S()
+
+        return type("T", (), {"open_session": lambda self: Ch()})()
 
     def close(self):
         pass
@@ -96,7 +111,8 @@ def test_lg_setup_installs_and_launches_with_host(ipk, monkeypatch):
     server = tv_lg.setup("127.0.0.1", "ABC123", 8787)
     assert fake.uploads == ["/media/developer/temp/com.gta6altyazi.tv_0.3.1_all.ipk"]
     install = next(c for c in fake.cmds if "appInstallService/dev/install" in c)
-    assert '"ipkUrl": "/media/developer/temp/com.gta6altyazi.tv_0.3.1_all.ipk"' in install
+    assert '"ipkUrl":"/media/developer/temp/com.gta6altyazi.tv_0.3.1_all.ipk"' in install
+    assert "sleep 150 </dev/null 2>/dev/null |" in install and "kill $L" in install
     launch = next(c for c in fake.cmds if "applicationManager/launch" in c)
     assert f'"server": "http://{server}"' in launch and server.endswith(":8787")
 
@@ -114,6 +130,27 @@ def test_lg_install_failure_is_reported(ipk, monkeypatch):
     monkeypatch.setattr(tv_lg.LgTv, "connect", lambda self: setattr(self, "ssh", fake))
     with pytest.raises(tv_lg.LgError, match="kurulamadı"):
         tv_lg.setup("127.0.0.1", "ABC123", 8787)
+
+
+def test_lg_install_command_returns_promptly_in_a_real_shell(tmp_path):
+    """Gerçek sh ile: kurulum bitince komut hemen döner (eski hali 'sleep' yüzünden SSH kanalını 120 sn açık tutuyordu)."""
+    import shutil
+    import subprocess
+    import time
+    if not shutil.which("sh"):
+        pytest.skip("sh yok")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    luna = fake_bin / "luna-send-pub"
+    luna.write_text('#!/bin/sh\necho \'{"returnValue":true}\'\nsleep 1\necho \'{"details":{"state":"installed"}}\'\n'
+                    'cat >/dev/null\n')
+    luna.chmod(0o755)
+    cmd = tv_lg.install_command("/tmp/x.ipk", 20).replace("/usr/bin/luna-send-pub", str(luna)) \
+        .replace(tv_lg.REMOTE_DIR, str(tmp_path))
+    t = time.time()
+    p = subprocess.run(["sh", "-c", cmd], capture_output=True, text=True, timeout=30)
+    assert time.time() - t < 8
+    assert tv_lg.install_verdict(p.stdout) == "installed"
 
 
 # ------------------------------------------------------------------ Samsung

@@ -104,6 +104,7 @@ class AppController(QObject):
         from .server import EventServer
         try:
             self.server = EventServer(self.cfg.sunucu.port, self.cfg.tv.kalibrasyon, on_command=self.command)
+            self.server.screen_ms = max(3, int(self.cfg.kisayol.tam_ekran_sure)) * 1000
             self._apply_tv_style()
             self.server.start()
         except OSError as e:
@@ -195,7 +196,9 @@ class AppController(QObject):
         winutil.keep_awake(True)
         self._set_state("calisiyor")
         self._notice("Çeviri başladı")
-        if self.cfg.tv.ip and self.cfg.tv.otomatik and self.tv_state[0] != "bagli":
+        # TV uygulaması kapatıldıysa (bağlı TV yoksa) yeniden aç; bağlantı sürüyorsa ikinciyi başlatma
+        if self.cfg.tv.ip and self.cfg.tv.otomatik and self.server and self.server.tv_count == 0 \
+                and self.tv_state[0] not in ("baglaniyor", "onay"):
             self.tv_connect()
         return True
 
@@ -476,69 +479,121 @@ class AppController(QObject):
         self.tvStatus.emit(state, msg)
 
     def tv_connect(self, host: str | None = None, force_install: bool = False) -> None:
-        host = (host or self.cfg.tv.ip).split(":")[0]
+        raw = (host or self.cfg.tv.ip or "").strip()
+        host, _, cport = raw.partition(":")
+        wport = int(cport) if cport.isdigit() else None       # Kablosuz hata ayıklama ekranındaki port (yazıldıysa)
         if not host:
             self._tv("yok", "TV adresi girilmedi")
             return
+        if self.server is None:
+            self._tv("hata", f"Programın yerel sunucusu açılamadı (port {self.cfg.sunucu.port} başka bir programda; "
+                             "CouchSubs ya da programın ikinci kopyası açık olabilir). Onu kapatıp programı yeniden aç.")
+            return
+        if not hasattr(self, "_tv_lock"):
+            self._tv_lock = threading.Lock()
+        if not self._tv_lock.acquire(blocking=False):
+            log.info("TV bağlantısı zaten sürüyor; ikinci istek yok sayıldı")
+            return
 
         def run() -> None:
-            from . import tv
-            t = self.cfg.tv
             try:
-                self._tv("baglaniyor", f"{host} adresine bağlanılıyor...")
-                if t.marka == "lg":
-                    from . import tv_lg
-                    if not t.lg_parola:
-                        raise RuntimeError("LG Developer Mode ekranındaki parolayı (passphrase) yaz.")
-                    server = tv_lg.setup(host, t.lg_parola, self.cfg.sunucu.port, force_install=force_install)
-                elif t.marka == "samsung" and t.tizen_yolu:
-                    # Gelişmiş: Tizen Studio klasörü seçildiyse onun araçları ve sertifika profiliyle kur
-                    from . import tv_samsung
-                    self._tv("baglaniyor", "Samsung TV'ye bağlanılıyor, uygulama Tizen Studio ile imzalanıp kuruluyor "
-                                           "(1-2 dk)...")
-                    server = tv_samsung.setup(host, t.samsung_profil, t.tizen_yolu)
-                elif t.marka == "samsung":
-                    # Varsayılan: Tizen Studio'suz, doğrudan (sdb + Samsung sertifikası + imza Python'da)
-                    from .samsung import setup_direct
-
-                    def login_needed(_url: str) -> None:
-                        if not force_install:    # kendiliğinden bağlanırken habersiz tarayıcı açma
-                            raise RuntimeError("Samsung hesabıyla bir kez giriş gerekiyor: Televizyon sayfasında "
-                                               "\"Bağlan, kur ve başlat\"a bas.")
-                        self._tv("onay", "Tarayıcıda açılan Samsung sayfasında hesabına gir (yalnız ilk sefer, 5 dk "
-                                         "içinde). Giriş bitince kurulum kendiliğinden sürer.")
-
-                    server = setup_direct(host, force_install=force_install,
-                                          progress=lambda msg: self._tv("baglaniyor", msg),
-                                          on_login_needed=login_needed)
-                else:
-                    server = tv.setup(host, self.cfg.sunucu.port, force_install=force_install, mode=t.mod,
-                                      on_prompt=lambda: self._tv("onay", "TV'ye bak: \"Hata ayıklamaya izin verilsin mi?\" "
-                                                                        "sorusunda Her zaman izin ver + İzin ver"))
-                self._tv("bagli", f"TV hazır ({host}). TV bu bilgisayara bağlanıyor: {server}")
-            except Exception as e:  # noqa: BLE001
-                self._tv("hata", str(e))
+                self._tv_run(host, wport, force_install)
+            finally:
+                self._tv_lock.release()
         threading.Thread(target=run, daemon=True, name="tv").start()
+
+    def _tv_wait_client(self, server: str, before: int, timeout: float = 30.0) -> None:
+        """TV uygulaması açıldıktan sonra gerçekten bu bilgisayara bağlandı mı? Bağlanmadıysa sebebini söyle."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.server and self.server.tv_count > 0:
+                return
+            time.sleep(0.5)
+        try:
+            fw = self.firewall_status()
+        except Exception:  # noqa: BLE001
+            fw = "bilinmiyor"
+        if fw == "ortak":
+            raise RuntimeError("TV uygulaması açıldı ama bu bilgisayara bağlanamadı: Windows bu ağı 'Ortak' sayıyor ve "
+                               "TV'yi engelliyor. Windows Ayarlar › Ağ ve İnternet › Wi-Fi/Ethernet › ağın özellikleri › "
+                               "Ağ profili: 'Özel' yap, sonra yeniden Bağlan'a bas.")
+        if fw == "eksik":
+            raise RuntimeError("TV uygulaması açıldı ama bu bilgisayara bağlanamadı: Windows güvenlik duvarı engelliyor. "
+                               "Televizyon sayfasındaki '3 · Bağlantı izni' kısmında İzin ver'e bas (Windows soracak, "
+                               "Evet de), sonra yeniden Bağlan'a bas.")
+        raise RuntimeError(f"TV uygulaması açıldı ama bu bilgisayara ({server}) bağlanamadı. TV ile bilgisayar aynı "
+                           "modemde mi? Modemde 'misafir ağı / AP izolasyonu' açıksa kapat. Televizyon sayfasında "
+                           "güvenlik duvarı iznini ver ve yeniden Bağlan'a bas.")
+
+    def _tv_run(self, host: str, wport: int | None, force_install: bool) -> None:
+        from . import tv
+        t = self.cfg.tv
+        before = self.server.tv_count if self.server else 0
+        try:
+            self._tv("baglaniyor", f"{host} adresine bağlanılıyor...")
+            if t.marka == "lg":
+                from . import tv_lg
+                if not t.lg_parola:
+                    raise RuntimeError("LG Developer Mode ekranındaki parolayı (passphrase) yaz.")
+                server = tv_lg.setup(host, t.lg_parola, self.cfg.sunucu.port, force_install=force_install)
+            elif t.marka == "samsung" and t.tizen_yolu:
+                # Gelişmiş: Tizen Studio klasörü seçildiyse onun araçları ve sertifika profiliyle kur
+                from . import tv_samsung
+                self._tv("baglaniyor", "Samsung TV'ye bağlanılıyor, uygulama Tizen Studio ile imzalanıp kuruluyor "
+                                       "(1-2 dk)...")
+                server = tv_samsung.setup(host, t.samsung_profil, t.tizen_yolu)
+            elif t.marka == "samsung":
+                # Varsayılan: Tizen Studio'suz, doğrudan (sdb + Samsung sertifikası + imza Python'da)
+                from .samsung import setup_direct
+
+                def login_needed(_url: str) -> None:
+                    if not force_install:    # kendiliğinden bağlanırken habersiz tarayıcı açma
+                        raise RuntimeError("Samsung hesabıyla bir kez giriş gerekiyor: Televizyon sayfasında "
+                                           "\"Bağlan, kur ve başlat\"a bas.")
+                    self._tv("onay", "Tarayıcıda açılan Samsung sayfasında hesabına gir (yalnız ilk sefer, 5 dk "
+                                     "içinde). Giriş bitince kurulum kendiliğinden sürer.")
+
+                server = setup_direct(host, force_install=force_install,
+                                      progress=lambda msg: self._tv("baglaniyor", msg),
+                                      on_login_needed=login_needed, server_port=self.cfg.sunucu.port)
+            else:
+                server = tv.setup(host, self.cfg.sunucu.port, force_install=force_install, mode=t.mod, port=wport,
+                                  progress=lambda msg: self._tv("baglaniyor", msg),
+                                  on_prompt=lambda: self._tv("onay", "TV'ye bak: \"Hata ayıklamaya izin verilsin mi?\" "
+                                                                    "sorusunda Her zaman izin ver + İzin ver"))
+            self._tv("baglaniyor", f"TV uygulaması açıldı; bu bilgisayara ({server}) bağlanması bekleniyor...")
+            self._tv_wait_client(server, before)
+            self._tv("bagli", f"TV bağlandı ({host}). Altyazılar TV'de görünecek.")
+        except Exception as e:  # noqa: BLE001
+            log.exception("TV bağlantısı başarısız")
+            self._tv("hata", str(e) or f"{type(e).__name__} (ayrıntı altyazi.log'da)")
 
     def tv_scan(self) -> None:
         def run() -> None:
-            from . import tv
-            marka = self.cfg.tv.marka
-            if marka in ("lg", "samsung"):
-                port = 9922 if marka == "lg" else 26101
-                self.tvFound.emit([(h, marka.upper() if marka == "lg" else "Samsung") for h in tv.scan(port)])
-                return
-            found = [(h, "klasik") for h in tv.scan()]
             try:
-                import re
-                out = tv.Adb().run("mdns", "services", timeout=10)
-                for h in sorted(set(re.findall(r"_adb-tls-connect\S*\s+(\d+\.\d+\.\d+\.\d+)", out))):
-                    if h not in [f[0] for f in found]:
-                        found.append((h, "kablosuz"))
+                self._tv_scan()
             except Exception:  # noqa: BLE001
-                pass
-            self.tvFound.emit(found)
+                log.exception("TV taraması başarısız")
+                self.tvFound.emit([])
         threading.Thread(target=run, daemon=True, name="tv-tara").start()
+
+    def _tv_scan(self) -> None:
+        from . import tv
+        marka = self.cfg.tv.marka
+        if marka in ("lg", "samsung"):
+            port = 9922 if marka == "lg" else 26101
+            self.tvFound.emit([(h, marka.upper() if marka == "lg" else "Samsung") for h in tv.scan(port)])
+            return
+        found = [(h, "klasik") for h in tv.scan()]
+        try:
+            import re
+            out = tv.Adb().run("mdns", "services", timeout=10)
+            for h in sorted(set(re.findall(r"_adb-tls-connect\S*\s+(\d+\.\d+\.\d+\.\d+)", out))):
+                if h not in [f[0] for f in found]:
+                    found.append((h, "kablosuz"))
+        except Exception:  # noqa: BLE001
+            pass
+        self.tvFound.emit(found)
 
     def tv_pair(self, host_port: str, code: str) -> None:
         def run() -> None:

@@ -14,8 +14,8 @@ android {
         minSdk 24
         targetSdk 35
         // Kasadaki uygulama beklenen TV sürümünü buradan alır (release/gta6-altyazi-tv.version).
-        versionCode 4
-        versionName '0.4.0'
+        versionCode 5
+        versionName '0.4.17'
     }
     buildFeatures { buildConfig true }
     signingConfigs {

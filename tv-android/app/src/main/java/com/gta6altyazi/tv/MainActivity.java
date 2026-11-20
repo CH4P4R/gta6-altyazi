@@ -4,8 +4,10 @@ package com.gta6altyazi.tv;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.media.tv.TvContract;
 import android.media.tv.TvInputManager;
@@ -34,7 +36,7 @@ import java.util.List;
  * - Uygulama içinde (varsayılan): HDMI girişini TvView ile tam ekran gösterir; üstünde şeffaf WebView'de LG ve Samsung'la
  *   ortak arayüz çalışır. Görüntü hiç gelmezse (bazı TV'lerde TvView siyah kalıyor) ve izin varsa katmana geçer.
  * - Katman: HDMI'yı TV kendi giriş ekranında gösterir, altyazıyı OverlayService üstte çizer. Bu ekran yalnız servisi
- *   başlatıp kapanır; servis çalışırken CouchSubs yeniden açılırsa katman kapanır.
+ *   başlatıp kapanır; servis çalışırken GTA6 Altyazı yeniden açılırsa katman kapanır.
  *
  * Google Play paketinde katman modu yoktur (BuildConfig.OVERLAY_MODE; bkz. docs/play-store-tv.md): orada yalnız uygulama
  * içinde çalışır, katman gerektiğinde ne yapılacağı anlatılır.
@@ -42,9 +44,24 @@ import java.util.List;
 public class MainActivity extends Activity implements TvPage.Host {
     /** Katman servisi uygulamayı kendisi açtı (izin yok ya da bilgisayarda "Uygulama içinde" seçildi). */
     static final String EXTRA_FROM_OVERLAY = "fromOverlay";
+    /** Katman açılamadı; neden DisplayMode.FAILED_* (uygulama yeniden katmana geçmez, nedeni gösterir). */
+    static final String EXTRA_OVERLAY_FAILED = "overlayFailed";
     private static final String EXTRA_DISPLAY_MODE = "displayMode";
     private static final long WATCH_EVERY_MS = 1000;
     private static final long HELP_VISIBLE_MS = 25_000;
+    /** Giriş seçicide bundan çok düğme varsa yan yana sığmaz, alt alta dizilir. */
+    private static final int CHOICES_IN_ROW = 3;
+
+    // design/tokens.json, koyu görünüm (TV her zaman koyu): seçici ve yardım kutusu sayfadaki panelle aynı dilde.
+    private static final int SURFACE = 0xFF1C1E23;
+    private static final int SURFACE2 = 0xFF25282F;
+    private static final int TEXT_PRIMARY = 0xFFF3EEE4;
+    private static final int ACCENT = 0xFFF5B83D;
+    private static final int ACCENT_HI = 0xFFFFCF6B;
+    private static final int ON_ACCENT = 0xFF17181B;
+    private static final int BORDER = 0xFF30333A;
+    /** Odaktaki düğme biraz büyür: uzaktan bakınca odak yalnız renkle değil boyutla da seçilsin. */
+    private static final float FOCUS_SCALE = 1.05f;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TvView tvView;
@@ -61,6 +78,8 @@ public class MainActivity extends Activity implements TvPage.Host {
     private int retuneAttempts;
     private final FallbackWatch watch = new FallbackWatch();
     private boolean watching;
+    /** Kullanıcı katman açıkken GTA6 Altyazı'ı kumandadan açtı: bu ekran kayıtlı tercih katman olsa da uygulama içinde kalır. */
+    private boolean leftOverlay;
     /** Ekran önde mi; arka plandayken görüntü izlenmez. */
     private boolean resumed;
     private final Runnable watchTick = this::checkFallback;
@@ -74,25 +93,28 @@ public class MainActivity extends Activity implements TvPage.Host {
         TvPage.storeDisplayMode(this, intent.getStringExtra(EXTRA_DISPLAY_MODE));
 
         if (OverlayService.running && !intent.getBooleanExtra(EXTRA_FROM_OVERLAY, false)) {
-            if (!launchParams.isEmpty()) {
+            if (DisplayMode.whileOverlay(launchParams) == DisplayMode.Relaunch.FORWARD_TO_OVERLAY) {
                 // Bilgisayar uygulamayı yeni adresle açtı: katman sürer, adres ona iletilir.
                 OverlayService.start(this, launchParams);
-            } else {
-                // Kumandadan yeniden açıldı: katman kapanır.
-                OverlayService.stop(this);
-                Toast.makeText(this, R.string.overlay_stopped, Toast.LENGTH_LONG).show();
+                finish();
+                return;
             }
-            finish();
-            return;
+            // Kumandadan yeniden açıldı: katman kapanır, GTA6 Altyazı ekranı açılır (panel görünsün; eskiden uygulama da
+            // kapanıyordu ve kullanıcı ekrana hiç ulaşamıyordu).
+            OverlayService.stop(this);
+            Toast.makeText(this, R.string.overlay_stopped, Toast.LENGTH_LONG).show();
+            leftOverlay = true;
         }
 
-        DisplayMode.Start start = DisplayMode.atLaunch(TvPage.storedDisplayMode(this), overlayAllowed());
+        DisplayMode.Start start = DisplayMode.atLaunch(TvPage.storedDisplayMode(this), overlayAllowed(),
+                intent.getStringExtra(EXTRA_OVERLAY_FAILED), leftOverlay);
         if (start == DisplayMode.Start.OVERLAY) {
-            startOverlay();
-            return;
+            if (startOverlay()) return;
+            start = DisplayMode.Start.IN_APP_OVERLAY_FAILED;
         }
         showInApp();
         if (start == DisplayMode.Start.IN_APP_NEEDS_PERMISSION) showPermissionHelp(R.string.overlay_permission_needed);
+        else if (start == DisplayMode.Start.IN_APP_OVERLAY_FAILED) showOverlayFailed();
     }
 
     /** Katman açılabilir mi: bu derlemede var (Play paketinde yok) ve "Diğer uygulamaların üzerinde göster" izni verilmiş. */
@@ -111,6 +133,8 @@ public class MainActivity extends Activity implements TvPage.Host {
                 @Override public void onVideoAvailable(String inputId) {
                     retuneAttempts = 0;
                     watch.videoAvailable();
+                    // Görüntü gelen giriş kaydedilir: sonraki açılışta konsol yeniden aranmadan bu açılır (#367).
+                    HdmiInputs.remember(MainActivity.this, inputId);
                     hideHelp();
                     keepScreenOn(true);
                     status("playing");
@@ -139,16 +163,21 @@ public class MainActivity extends Activity implements TvPage.Host {
         helpBox = new LinearLayout(this);
         helpBox.setOrientation(LinearLayout.VERTICAL);
         helpBox.setVisibility(View.GONE);
-        helpBox.setBackgroundColor(0xE6202024);
+        // surface %90 saydam, 16 köşe (tokens radius.card); odaktaki düğme büyüyünce kenarda kırpılmasın.
+        helpBox.setBackground(rounded((SURFACE & 0x00FFFFFF) | 0xE6000000, 16));
+        helpBox.setClipChildren(false);
+        helpBox.setClipToPadding(false);
         int pad = Math.round(28 * fitScale());
         helpBox.setPadding(pad, pad, pad, pad);
         help = new TextView(this);
-        help.setTextColor(Color.WHITE);
+        help.setTextColor(TEXT_PRIMARY);
         help.setTextSize(TypedValue.COMPLEX_UNIT_PX, 30 * fitScale());
         helpBox.addView(help);
         choices = new LinearLayout(this);
         choices.setOrientation(LinearLayout.HORIZONTAL);
         choices.setVisibility(View.GONE);
+        choices.setClipChildren(false);
+        choices.setClipToPadding(false);
         LinearLayout.LayoutParams choicesLayout = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         choicesLayout.topMargin = pad;
@@ -202,18 +231,43 @@ public class MainActivity extends Activity implements TvPage.Host {
 
     // --- Katmana geçiş ---
 
-    private void startOverlay() {
-        OverlayService.start(this, launchParams);
+    /** Katman servisini başlatıp bu ekranı kapatır; servis başlatılamadıysa ekran açık kalır ve false döner. */
+    private boolean startOverlay() {
+        if (!OverlayService.start(this, launchParams)) return false;
         finish();
+        return true;
     }
 
     /** Uygulama içinden katmana: TvView girişi bırakır ki TV kendi ekranında açabilsin. */
     private void switchToOverlay(int message) {
         stopWatching();
+        String previous = tunedInput;
         if (tvView != null) tvView.reset();
         tunedInput = null;
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-        startOverlay();
+        if (!startOverlay()) {
+            // Katman açılamadı: uygulama kapanmaz, nedeni söylenir, bırakılan giriş yeniden açılır.
+            if (previous != null && tvView != null) tune(previous);
+            showOverlayFailed();
+            return;
+        }
+        // GTA6 Altyazı ekranı kapanır, katman arka planda sürer. TV girişleri uygulamalara açmıyorsa (#275) TV HDMI'ya
+        // kendiliğinden geçmez: kullanıcı ana ekranda kalır ve uygulama "kapandı" sanılır. Bu yüzden ne yapılacağı söylenir.
+        boolean manualInput = HdmiInputs.list(this).isEmpty();
+        Toast.makeText(this, manualInput ? R.string.overlay_started_manual_input : message, Toast.LENGTH_LONG).show();
+    }
+
+    /** Katman açılamadı (TV pencereye ya da arka plan servisine izin vermedi): uygulama içinde kalınır, neden gösterilir. */
+    private void showOverlayFailed() {
+        if (help == null) return;
+        if (pickerShown) {
+            Toast.makeText(this, R.string.overlay_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
+        help.setText(R.string.overlay_failed);
+        choices.setVisibility(View.GONE);
+        helpBox.setVisibility(View.VISIBLE);
+        handler.removeCallbacks(hideHelpTask);
+        handler.postDelayed(hideHelpTask, HELP_VISIBLE_MS);
     }
 
     /** Görüntü gelmiyor: izleme başlar (yoksa), saat ilk sorunda başlar. */
@@ -283,6 +337,9 @@ public class MainActivity extends Activity implements TvPage.Host {
             int port = tunedPort(inputs);
             if (port > 0) {
                 text.append(getString(sourceConnected ? R.string.no_picture : R.string.no_picture_empty, port)).append(' ');
+            } else if (tunedInput == null) {
+                // Konsolun girişi bulunamadı, hiçbir giriş açılmadı (bkz. chooseInput).
+                text.append(getString(R.string.console_not_found)).append(' ');
             }
             text.append(getString(R.string.no_picture_choose));
             text.append("\n\n").append(getString(R.string.no_picture_still_black));
@@ -310,6 +367,7 @@ public class MainActivity extends Activity implements TvPage.Host {
         Button close = choiceButton(getString(R.string.picker_close));
         close.setOnClickListener(v -> closePicker());
         choices.addView(close);
+        arrangeChoices();
         help.setText(text);
         choices.setVisibility(View.VISIBLE);
         helpBox.setVisibility(View.VISIBLE);
@@ -331,24 +389,68 @@ public class MainActivity extends Activity implements TvPage.Host {
         return label;
     }
 
+    /**
+     * Seçici düğmesi (tokens.json; sayfadaki #no-picture düğmeleriyle aynı dil): durgunken surface2 zemin, 3 px border
+     * çerçeve ve ana metin rengi; odakta accent zemin, beyaz çerçeve ve onAccent yazı (basılıyken accentHi), 12 köşe
+     * (radius.control); odakta %5 büyür. Mavi ve gri sistem renkleri kullanılmaz.
+     */
     private Button choiceButton(String label) {
         Button button = new Button(this);
         button.setText(label);
         button.setAllCaps(false);
-        button.setTextColor(Color.WHITE);
+        button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        button.setTextColor(new ColorStateList(
+                new int[][] {{android.R.attr.state_focused}, {android.R.attr.state_pressed}, {}},
+                new int[] {ON_ACCENT, ON_ACCENT, TEXT_PRIMARY}));
         button.setTextSize(TypedValue.COMPLEX_UNIT_PX, 28 * fitScale());
         StateListDrawable background = new StateListDrawable();
-        background.addState(new int[] {android.R.attr.state_focused}, new ColorDrawable(0xFF3B82F6));
-        background.addState(new int[] {}, new ColorDrawable(0xFF3A3A40));
+        int stroke = Math.max(1, Math.round(3 * fitScale()));
+        background.addState(new int[] {android.R.attr.state_pressed}, outlined(rounded(ACCENT_HI, 12), stroke, Color.WHITE));
+        background.addState(new int[] {android.R.attr.state_focused}, outlined(rounded(ACCENT, 12), stroke, Color.WHITE));
+        background.addState(new int[] {}, outlined(rounded(SURFACE2, 12), stroke, BORDER));
         button.setBackground(background);
+        // Temanın gölge ve yükselme animasyonu düz yüzey kuralına aykırı.
+        button.setStateListAnimator(null);
         int pad = Math.round(16 * fitScale());
         button.setPadding(2 * pad, pad, 2 * pad, pad);
         button.setFocusable(true);
-        LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        layout.rightMargin = pad;
-        button.setLayoutParams(layout);
+        button.setOnFocusChangeListener((view, focused) -> {
+            float scale = focused ? FOCUS_SCALE : 1f;
+            view.animate().scaleX(scale).scaleY(scale).setDuration(120).start();
+        });
         return button;
+    }
+
+    /**
+     * Düğmeleri dizer: az düğme yan yana, {@link #CHOICES_IN_ROW}'dan çoksa (çok HDMI girişli TV) alt alta; yan yana
+     * dizilince 1400 piksellik kutudan taşıyordu. Kumandada yan yana sol/sağ, alt alta yukarı/aşağı ile gezilir.
+     */
+    private void arrangeChoices() {
+        int count = choices.getChildCount();
+        boolean stacked = count > CHOICES_IN_ROW;
+        choices.setOrientation(stacked ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
+        int gap = Math.round(16 * fitScale());
+        for (int i = 0; i < count; i++) {
+            LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            boolean last = i == count - 1;
+            if (stacked) layout.bottomMargin = last ? 0 : gap;
+            else layout.rightMargin = last ? 0 : gap;
+            choices.getChildAt(i).setLayoutParams(layout);
+        }
+    }
+
+    /** Düz renkli, köşesi 1920 piksellik sayfa ölçüsünde verilen yuvarlak zemin. */
+    private GradientDrawable rounded(int color, float radius) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(radius * fitScale());
+        return drawable;
+    }
+
+    private static GradientDrawable outlined(GradientDrawable drawable, int width, int color) {
+        drawable.setStroke(width, color);
+        return drawable;
     }
 
     /**
@@ -359,6 +461,8 @@ public class MainActivity extends Activity implements TvPage.Host {
         hidePicker();
         pickerClosed = false;
         watch.pause();
+        // Seçim kalıcı: 4'ten büyük numaralar sayfada kaydedilmez, uygulama da kaydeder (#367).
+        HdmiInputs.remember(this, HdmiInputs.idForPort(this, port));
         if (port >= 1 && port <= 4 && page != null) page.key(48 + port);
         else showHdmi(port);
     }
@@ -391,12 +495,24 @@ public class MainActivity extends Activity implements TvPage.Host {
         String id = HdmiInputs.idForPort(this, port);
         if (tvView == null || id == null) {
             status("sourceError");
-            // TV HDMI girişlerini uygulamalara hiç açmıyor: TvView'da gösterilecek bir şey yok, hemen söylenir.
-            if (tvView != null && !pickerShown && !pickerClosed && HdmiInputs.list(this).isEmpty()) showPicker(false);
+            // TV HDMI girişlerini uygulamalara hiç açmıyor (giriş listesi boş ya da TV giriş servisi yok): TvView'da
+            // gösterilecek bir şey yok, hemen söylenir. Eskiden TV giriş servisi olmayan TV'lerde (#275) yalnız
+            // "kaynak desteklenmiyor" yazıyordu; ne yapılacağı ve Katman söylenmiyordu.
+            boolean noInputs = tvView == null || HdmiInputs.list(this).isEmpty();
+            if (noInputs && !pickerShown && !pickerClosed) showPicker(false);
             return;
         }
         retuneAttempts = 0;
         tune(id);
+    }
+
+    /**
+     * Konsolun girişi bulunamadı (CEC kapalı, birden çok giriş bağlı görünüyor, kayıtlı seçim yok): eskiden HDMI 1
+     * açılıyordu (#367). Artık hiçbir giriş açılmaz, giriş seçici hemen gösterilir; seçilen giriş kaydedilir.
+     */
+    @Override
+    public void chooseInput() {
+        if (!pickerShown && !pickerClosed) showPicker(true);
     }
 
     @Override
@@ -416,7 +532,9 @@ public class MainActivity extends Activity implements TvPage.Host {
         super.onNewIntent(intent);
         TvPage.storeDisplayMode(this, intent.getStringExtra(EXTRA_DISPLAY_MODE));
         if (page == null) return;
-        if (DisplayMode.OVERLAY.equals(TvPage.storedDisplayMode(this)) && overlayAllowed()) {
+        // Kullanıcı katmanı kapatıp uygulamayı açtıysa kumandadan yeniden açılış (parametresiz) onu katmana geri atmaz.
+        boolean stay = leftOverlay && paramsOf(intent).isEmpty();
+        if (!stay && DisplayMode.OVERLAY.equals(TvPage.storedDisplayMode(this)) && overlayAllowed()) {
             String params = paramsOf(intent);
             if (!params.isEmpty()) launchParams = params;
             switchToOverlay(R.string.overlay_selected);
@@ -480,7 +598,8 @@ public class MainActivity extends Activity implements TvPage.Host {
         // TV kendi HDMI oynatıcısını öne çekti (bkz. FallbackWatch.TAKEOVER_MS): altyazı onun üstünde, katmanda çizilir.
         if (!isFinishing() && tvView != null && watch.takenOver(SystemClock.elapsedRealtime(), overlayAllowed())) {
             switchToOverlay(R.string.overlay_fallback);
-            return;
+            // Arka plandan ön plan servisi başlatılamadıysa (Android 12+ kısıtı) ekran açık kalır, normal yoldan devam.
+            if (isFinishing()) return;
         }
         if (page != null) page.background(true);
     }

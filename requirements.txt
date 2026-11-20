@@ -19,5 +19,5 @@ anthropic
 requests
 # İsteğe bağlı: google-genai (Gemini), deepl
 segno
-paramiko
+paramiko>=3.4,<5       # 5.x eski LG webOS'larin ssh-rsa/SHA1 algoritmalarini kaldirdi
 cryptography        # Samsung imzası ve Android TV'ye adb'siz bağlantı

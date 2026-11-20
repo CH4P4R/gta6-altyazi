@@ -325,6 +325,7 @@ class Pipeline:
         self._cond = threading.Condition()
         self._latest: tuple[np.ndarray, float] | None = None
         self._running = False
+        self._stopped = False      # stop() çağrıldı: geç gelen çeviriler yok sayılır
         self._seq = 0
         self._current: dict[str, tuple[int, str, int]] = {}   # bölge -> (seq, ingilizce, gösterilen kalite)
         self._blocks: dict[str, dict[str, tuple[int, int]]] = {}   # bölge -> {paragraf adı: (y0, y1)}
@@ -350,6 +351,10 @@ class Pipeline:
 
     def stop(self) -> None:
         self._running = False
+        self._stopped = True
+        with self._lock:          # durdurulduktan sonra gelen geç çeviriler ekrana basılmasın (TV'de takılı kalırdı)
+            self._current.clear()
+            self._seq += 1
         if self.source is not None:
             self.source.stop()
         with self._cond:
@@ -592,6 +597,8 @@ class Pipeline:
             self.sink.clear(k)
 
     def _on_translation(self, base: DisplayItem, t_frame: float, r: Result) -> None:
+        if self._stopped:
+            return
         with self._lock:
             cur = self._current.get(base.zone)
             if not cur or cur[0] != base.seq or r.quality < cur[2]:
