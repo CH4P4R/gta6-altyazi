@@ -215,9 +215,13 @@ MAC = [
     step("GTA6 Altyazı'yı kur",
          ["Releases sayfasından **GTA6Altyazi-mac.dmg**'yi indir ve aç (yalnız Apple Silicon: M1 ve sonrası).",
           "Açılan pencerede **GTA6 Altyazı**'yı **Applications** (Uygulamalar) klasörüne sürükle.",
-          "Uygulamalar'dan **GTA6 Altyazı**'yı aç."],
+          "Uygulamalar'dan **GTA6 Altyazı**'yı aç.",
+          "\"Apple doğrulayamadı\" uyarısı çıkarsa **Bitti**'ye bas; **Sistem Ayarları › Gizlilik ve Güvenlik**'in en "
+          "altında **GTA6 Altyazı engellendi** yazısının yanındaki **Yine de Aç**'a bas, Mac şifreni gir. Bunu yalnız ilk "
+          "açılışta bir kez yaparsın."],
          link=("Releases sayfası", "https://github.com/CH4P4R/gta6-altyazi/releases"),
-         note="Mac'te NVIDIA yok: çeviri ve OCR işlemcide çalışır; M serisi Mac'lerde bu yeterince hızlı."),
+         note="Mac'te NVIDIA yok: çeviri ve OCR işlemcide çalışır; M serisi Mac'lerde bu yeterince hızlı. Güncellemeyi "
+              "program kendisi kurar ve yeniden açar."),
     step("chiaki-ng'yi kur",
          ["chiaki-ng'nin indirme sayfasından **macOS** sürümünü (.dmg) indir, Uygulamalar'a sürükle.",
           "PS5 eşleme adımları Windows'takiyle aynı (Rehber › Bilgisayar monitöründe oyna)."],
@@ -228,7 +232,8 @@ MAC = [
           "**Erişilebilirlik:** Kısayol tuşları (Control+Shift+9 ekranı çevir) için **Gizlilik ve Güvenlik › "
           "Erişilebilirlik**'te **GTA6 Altyazı**'yı aç.",
           "**Yerel Ağ:** TV'ye bağlanırken macOS sorarsa **İzin Ver** de."],
-         note="İzin verdikten sonra programı kapatıp yeniden açman gerekir; macOS izni ancak yeniden açılışta tanır."),
+         note="İzin verdikten sonra programı kapatıp yeniden açman gerekir; macOS izni ancak yeniden açılışta tanır. "
+              "Güncellemeden sonra çeviri başlamazsa Ekran Kaydı listesinde GTA6 Altyazı'yı kapatıp yeniden aç."),
     step("Oyna",
          ["chiaki-ng'de PS5'e bağlan, istersen tam ekran yap.",
           "GTA6 Altyazı'da **Başlat**'a bas; Türkçe chiaki'nin üstünde, tam ekranda da görünür.",

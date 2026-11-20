@@ -24,10 +24,15 @@ def notes(version: str, sha: str = "") -> str:
 
 {body}
 
-### Kurulum
+### Kurulum (Windows)
 1. Aşağıdaki **GTA6Altyazi-Setup.exe**'yi indir ve çalıştır (yönetici izni istemez).
 2. "Windows kişisel bilgisayarınızı korudu" uyarısında **Ek bilgi › Yine de çalıştır**.
 3. İlk açılışta resimli kurulum sihirbazı adım adım yol gösterir. Takıldığın yerde uygulamadaki **Rehber** sayfasına bak.
+
+### Kurulum (Mac, M1 ve sonrası)
+1. Aşağıdaki **GTA6Altyazi-mac.dmg**'yi indir, aç, **GTA6 Altyazı**'yı **Applications** klasörüne sürükle.
+2. İlk açılışta "Apple doğrulayamadı" uyarısı çıkarsa: **Sistem Ayarları › Gizlilik ve Güvenlik › Yine de Aç**.
+3. Ekran Kaydı ve Erişilebilirlik izinleri için uygulamadaki **Rehber › Mac'te kullanım**'a bak.
 
 Eski sürümün üstüne kurabilirsin; ayarların korunur. · [Bütün sürüm notları](https://github.com/CH4P4R/gta6-altyazi/blob/HEAD/CHANGELOG.md) · [Rehber](https://github.com/CH4P4R/gta6-altyazi#-adım-adım-rehber)
 {f"<sub>derleme {sha}</sub>" if sha else ""}
