@@ -126,3 +126,20 @@ def test_older_tv_app_gets_updated(fake, adb_port):
     set_state(installed=True, version=1)
     tv.setup("127.0.0.1", 8787)
     assert any("install" in c for c in get_state()["calls"])
+
+
+def test_pair_button_skips_pairing_when_usb_debugging_is_on(monkeypatch):
+    """USB hata ayıklama açıksa (5555 açık) Eşleştir'e basınca kod istenmeden doğrudan bağlanılır."""
+    import types
+
+    from altyazi.app import AppController
+    monkeypatch.setattr(tv, "port_open", lambda *a, **k: True)
+    monkeypatch.setattr(tv.Adb, "pair", lambda *a, **k: (_ for _ in ()).throw(AssertionError("eşleştirme denenmemeli")))
+    done = threading.Event()
+    calls = []
+    fake = types.SimpleNamespace(cfg=types.SimpleNamespace(tv=types.SimpleNamespace(ip="")),
+                                 _tv=lambda *a: calls.append(a),
+                                 tv_connect=lambda host, force_install=False: (calls.append(("connect", host)), done.set()))
+    AppController.tv_pair(fake, "192.168.1.40:41234", "")
+    assert done.wait(5)
+    assert ("connect", "192.168.1.40") in calls

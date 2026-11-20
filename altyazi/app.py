@@ -543,12 +543,19 @@ class AppController(QObject):
     def tv_pair(self, host_port: str, code: str) -> None:
         def run() -> None:
             from . import tv
+            host = host_port.strip().split(":")[0] or self.cfg.tv.ip
+            # USB hata ayıklama açıksa TV 5555'te bekler: eşleştirmeye hiç gerek yok, doğrudan bağlan
+            if host and tv.port_open(host, tv.ADB_PORT, 1.5):
+                self._tv("baglaniyor", "Eşleştirme gerekmiyor (USB hata ayıklama açık), doğrudan bağlanılıyor...")
+                self.tv_connect(host, force_install=True)
+                return
             try:
                 tv.Adb().pair(host_port, code)
                 self._tv("baglaniyor", "Eşleştirildi, bağlanılıyor...")
-                self.tv_connect(host_port.split(":")[0])
+                self.tv_connect(host)
             except Exception as e:  # noqa: BLE001
-                self._tv("hata", str(e))
+                self._tv("hata", f"{e}\nEn kolayı: TV'de Geliştirici seçenekleri › USB hata ayıklama'yı aç ve "
+                                 "eşleştirmeden Bağlan'a bas.")
         threading.Thread(target=run, daemon=True, name="tv-eslestir").start()
 
     def tv_test(self) -> None:

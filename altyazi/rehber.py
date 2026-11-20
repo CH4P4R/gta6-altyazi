@@ -119,11 +119,11 @@ GOOGLE_TV = [
          note="TCL'de menü adları biraz farklı olabilir: Ayarlar › Sistem › Hakkında › Derleme / Yapı numarası."),
     step("USB hata ayıklamayı aç",
          ["**Ayarlar › Sistem › Geliştirici seçenekleri**'ne gir.",
-          "**USB hata ayıklama**'yı aç."],
+          "**USB hata ayıklama**'yı aç (düz olanı; Kablosuz hata ayıklama gerekmez).",
+          "Eşleştirme kodu da gerekmez: program TV'ye ağdan doğrudan bağlanır."],
          img="tv-hata-ayiklama",
-         note="Yoksa ya da TV bulunamazsa Kablosuz hata ayıklama'yı aç ve 'Eşleştirme koduyla cihaz eşleştir'e bas. "
-              "Açılan küçük penceredeki adres:port'u (ana ekrandaki değil, port farklıdır) ve 6 haneli kodu programdaki "
-              "Eşleştir kısmına yaz; pencere açıkken Eşleştir'e bas."),
+         note="Yalnız TV'de USB hata ayıklama hiç yoksa: Kablosuz hata ayıklama › 'Eşleştirme koduyla cihaz eşleştir'; "
+              "açılan küçük penceredeki adres:port ve kodu programdaki Gelişmiş › Eşleştir kısmına yaz."),
     step("Bağlan ve izin ver",
          ["Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de "
           "**Ayarlar › Ağ ve İnternet**'te bağlı olduğun Wi-Fi'ye gir, IP adresi orada yazar.",

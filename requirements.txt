@@ -20,3 +20,4 @@ requests
 # İsteğe bağlı: google-genai (Gemini), deepl
 segno
 paramiko
+cryptography        # Samsung imzası ve Android TV'ye adb'siz bağlantı

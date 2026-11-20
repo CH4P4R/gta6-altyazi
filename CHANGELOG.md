@@ -3,6 +3,14 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.16
+- **Google TV / Android TV'ye adb'siz, eşleştirmesiz bağlantı:** program artık TV'ye kendi ADB istemcisiyle bağlanıyor
+  (CouchSubs'ın yöntemi). TV'de yalnız **USB hata ayıklama** açık olsun; eşleştirme kodu, Kablosuz hata ayıklama ve
+  adb.exe gerekmiyor. Bilgisayardaki başka programların (emülatör, telefon aracı) adb'siyle çakışma da bitti. İlk
+  bağlantıda TV "hata ayıklamaya izin verilsin mi?" diye bir kez sorar.
+- Eşleştir'e basıldığında TV zaten doğrudan bağlantıyı kabul ediyorsa kod sorulmadan bağlanılır. Kablosuz eşleştirme
+  yalnız USB hata ayıklaması olmayan TV'ler için "Gelişmiş" seçenek olarak kaldı.
+
 ## 0.4.15
 - **Google TV kablosuz eşleştirme düzeltmesi:** "protocol fault (couldn't read status message)" hatası. Kablosuz hata
   ayıklama ana ekranındaki port yazıldığında eşleştirme olmuyordu; program artık TV'deki eşleştirme penceresinin

@@ -494,7 +494,7 @@ class TvPage(QWidget):
         self.status = label("", "muted", wrap=True)
         conn.add(self.status)
         pair = Card(inner=True, margins=14)
-        pair.add(label("Kablosuz hata ayıklama ile eşleştirme (gerekirse)", "h3"))
+        pair.add(label("Gelişmiş: yalnız TV'de USB hata ayıklama yoksa (kablosuz eşleştirme)", "h3"))
         pair.add(label("TV'de Kablosuz hata ayıklama › Eşleştirme koduyla cihaz eşleştir. Açılan küçük penceredeki "
                        "adres:port'u (ana ekrandaki değil, port farklıdır) ve 6 haneli kodu yaz; pencere açıkken "
                        "Eşleştir'e bas.", "faint", wrap=True))

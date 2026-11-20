@@ -243,8 +243,10 @@ class Wizard(QDialog):
                                      button("Eşleştir", None, lambda: self.ctl.tv_pair(self.pair_addr.text().strip(),
                                                                                        self.pair_code.text().strip())),
                                      spacing=10))
+        self.pair_toggle = QCheckBox("Gelişmiş: TV'de USB hata ayıklama yok, kablosuz eşleştirme kodu kullanacağım")
+        self.pair_toggle.toggled.connect(lambda on: self.pair_row.setVisible(on and self.tv_brand.currentData() == "android"))
         conn.setLayout(vbox(hbox(self.tv_ip, self.tv_scan_btn, self.tv_found, self.tv_conn_btn, spacing=10),
-                            self.lg_pass, self.pair_row,
+                            self.lg_pass, self.pair_toggle, self.pair_row,
                             hbox(self.tv_dot, self.tv_msg, 1, spacing=6), spacing=8))
         self.tv_conn = conn
         from ..tv import local_ip
@@ -264,7 +266,8 @@ class Wizard(QDialog):
         brand = self.tv_brand.currentData()
         self.cfg.tv.marka = brand
         self.lg_pass.setVisible(brand == "lg")
-        self.pair_row.setVisible(brand == "android")
+        self.pair_toggle.setVisible(brand == "android")
+        self.pair_row.setVisible(brand == "android" and self.pair_toggle.isChecked())
         self.tv_guide.index = 0
         self.tv_guide.set_steps(rehber.TV_STEPS[brand], {"baglan": self.tv_conn, "pcip": self.pc_ip})
 

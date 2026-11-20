@@ -208,9 +208,9 @@ class AndroidTv:
             candidates.append(mdns)
         if not candidates:
             raise TvError(
-                f"{self.host} adresindeki TV'ye ulaşılamıyor. TV açık mı? Geliştirici seçeneklerinde "
-                "'USB hata ayıklama' açık mı? Yeni Google TV'lerde 'Kablosuz hata ayıklama'yı açıp "
-                "'tv eslestir' komutunu kullan.")
+                f"{self.host} adresindeki TV'ye ulaşılamıyor. TV açık mı, bilgisayarla aynı modemde mi? TV'de "
+                "Ayarlar › Sistem › Geliştirici seçenekleri › 'USB hata ayıklama'yı aç ve yeniden Bağlan'a bas "
+                "(Kablosuz hata ayıklama ve eşleştirme gerekmez).")
         prompted = False
         for serial in candidates:
             out = self.adb.run("connect", serial, timeout=15)
@@ -282,13 +282,68 @@ class AndroidTv:
                 f"--es host {server} --es mod {old}")
 
 
+class NativeAndroidTv(AndroidTv):
+    """Aynı işler, adb.exe yerine programın kendi ADB istemcisiyle (adb_native; CouchSubs'tan). 5555 açık olmalı."""
+
+    def __init__(self, host: str):
+        self.host = host
+        self.serial = f"{host}:{ADB_PORT}"
+        self.conn = None
+
+    def connect(self, on_prompt=None, approve_timeout: float = 90.0) -> str:  # noqa: ANN001
+        from .adb_native import AdbConnection, AdbError
+        try:
+            self.conn = AdbConnection.connect(self.host, ADB_PORT, on_prompt=on_prompt, approve_timeout=approve_timeout)
+        except AdbError as e:
+            if e.kind == "not_approved":
+                raise TvError("TV'de 'Hata ayıklamaya izin verilsin mi?' sorusu onaylanmadı. Programda yeniden Bağlan'a "
+                              "bas ve TV'de 'Bu bilgisayardan her zaman izin ver'i işaretleyip İzin ver de.") from e
+            raise TvError(f"TV'ye bağlanılamadı ({self.serial}): {e.detail or e.kind}") from e
+        return self.serial
+
+    def sh(self, cmd: str, timeout: float = 30.0) -> str:
+        return self.conn.shell(cmd, timeout=timeout)
+
+    def install(self, apk: Path = APK) -> None:
+        if not apk.exists():
+            raise TvError(f"{apk} yok. Programı yeniden kur.")
+        out = self.conn.install(apk)
+        if "INSTALL_FAILED_UPDATE_INCOMPATIBLE" in out or "signatures do not match" in out \
+                or "INSTALL_FAILED_VERSION_DOWNGRADE" in out:
+            self.sh(f"pm uninstall {PACKAGE}", timeout=60)
+            out = self.conn.install(apk)
+        if "Success" not in out:
+            raise TvError(f"TV'ye kurulamadı: {out}")
+
+    def close(self) -> None:
+        if self.conn:
+            self.conn.close()
+
+
+def _use_native(host: str, adb: Adb | None) -> bool:
+    """TV 5555'te bekliyorsa programın kendi ADB istemcisi kullanılır (adb.exe yok: sunucu çakışması, eşleştirme yok)."""
+    if adb is not None or os.environ.get("ALTYAZI_ADB"):
+        return False
+    return port_open(host, ADB_PORT, 1.5)
+
+
 def setup(host: str, server_port: int, force_install: bool = False, on_prompt=None, adb: Adb | None = None,  # noqa: ANN001
           mode: str = "otomatik") -> str:
     """Bağlan, gerekirse kur/güncelle, izni ver ve başlat. TV'nin bağlanacağı adresi döndürür.
 
     mode: otomatik (uygulama içinde; görüntü gelmezse TV uygulaması kendisi katmana geçer) | katman | hdmi
     """
-    tv = AndroidTv(host, adb)
+    if _use_native(host, adb):
+        tv = NativeAndroidTv(host)
+        try:
+            return _setup_with(tv, host, server_port, force_install, on_prompt, mode)
+        finally:
+            tv.close()
+    return _setup_with(AndroidTv(host, adb), host, server_port, force_install, on_prompt, mode)
+
+
+def _setup_with(tv: AndroidTv, host: str, server_port: int, force_install: bool, on_prompt,  # noqa: ANN001
+                mode: str) -> str:
     tv.connect(on_prompt)
     log.info("TV bağlandı: %s (Android %s)", tv.serial, tv.android_version())
     have, want = tv.installed_version(), apk_version()

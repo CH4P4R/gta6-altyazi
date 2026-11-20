@@ -426,9 +426,10 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 <img src="altyazi/ui/rehber/tv-hata-ayiklama.png" alt="USB hata ayıklamayı aç" width="640">
 
 1. **Ayarlar › Sistem › Geliştirici seçenekleri**'ne gir.
-2. **USB hata ayıklama**'yı aç.
+2. **USB hata ayıklama**'yı aç (düz olanı; Kablosuz hata ayıklama gerekmez).
+3. Eşleştirme kodu da gerekmez: program TV'ye ağdan doğrudan bağlanır.
 
-> Yoksa ya da TV bulunamazsa Kablosuz hata ayıklama'yı aç ve 'Eşleştirme koduyla cihaz eşleştir'e bas. Açılan küçük penceredeki adres:port'u (ana ekrandaki değil, port farklıdır) ve 6 haneli kodu programdaki Eşleştir kısmına yaz; pencere açıkken Eşleştir'e bas.
+> Yalnız TV'de USB hata ayıklama hiç yoksa: Kablosuz hata ayıklama › 'Eşleştirme koduyla cihaz eşleştir'; açılan küçük penceredeki adres:port ve kodu programdaki Gelişmiş › Eşleştir kısmına yaz.
 
 #### Adım 3: Bağlan ve izin ver
 
