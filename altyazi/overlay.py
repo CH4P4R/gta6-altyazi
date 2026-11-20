@@ -10,6 +10,8 @@ görüntünün içine çizer. Discord'da sadece bu pencereyi paylaşmak yeterli.
 
 from __future__ import annotations
 
+import sys
+
 import os
 import threading
 
@@ -164,6 +166,12 @@ class OverlayWindow(QWidget):
         self._timer.timeout.connect(self._follow)
         self._timer.start(150)
         self._follow()
+
+    def showEvent(self, e) -> None:  # noqa: ANN001, N802
+        super().showEvent(e)
+        if sys.platform == "darwin":       # tam ekran chiaki'nin üstünde, bütün masaüstlerinde; tıklamayı geçir
+            from . import macutil
+            macutil.raise_overlay(self)
 
     def _follow(self) -> None:
         if not self.hwnd:

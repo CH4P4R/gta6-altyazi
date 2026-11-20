@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import webbrowser
 
 from PySide6.QtCore import Qt
@@ -426,7 +428,8 @@ class Wizard(QDialog):
         self.chiaki_btn_open.setEnabled(bool(path))
 
     def _browse_chiaki(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "chiaki-ng programını seç", "", "Program (*.exe);;Tümü (*)")
+        path, _ = QFileDialog.getOpenFileName(self, "chiaki-ng programını seç", "/Applications" if sys.platform == "darwin" else "",
+                                                  "Program (*.app *.exe);;Tümü (*)")
         if path:
             self.cfg.kaynak.chiaki_yolu = path
             self.ctl.apply_config(self.cfg)

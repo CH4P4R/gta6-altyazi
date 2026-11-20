@@ -26,6 +26,9 @@ from .pipeline import DisplayItem, MultiSink, Pipeline
 log = logging.getLogger(__name__)
 
 CHIAKI_CANDIDATES = [
+    "/Applications/chiaki-ng.app/Contents/MacOS/chiaki-ng",
+    "~/Applications/chiaki-ng.app/Contents/MacOS/chiaki-ng",
+    "~/Downloads/chiaki-ng.app/Contents/MacOS/chiaki-ng",
     r"%ProgramFiles%\chiaki-ng\chiaki.exe",
     r"%ProgramFiles%\chiaki-ng\chiaki-ng.exe",
     r"%LOCALAPPDATA%\Programs\chiaki-ng\chiaki.exe",
@@ -37,7 +40,9 @@ CHIAKI_DOWNLOAD = "https://github.com/streetpea/chiaki-ng/releases/latest"
 
 def find_chiaki(configured: str = "") -> str | None:
     for c in ([configured] if configured else []) + CHIAKI_CANDIDATES:
-        p = Path(os.path.expandvars(c))
+        if c.endswith(".app"):                       # macOS: .app paketi seçildiyse içindeki program
+            c = str(Path(c) / "Contents" / "MacOS" / Path(c).stem)
+        p = Path(os.path.expanduser(os.path.expandvars(c)))
         if p.is_file():
             return str(p)
     return None
@@ -391,7 +396,7 @@ class AppController(QObject):
             self.sourceStatus.emit(True, {"capture": "Capture kart", "video": "Video dosyası",
                                           "resim": "Resim"}.get(k.tur, k.tur))
             return
-        found = winutil.find_window(k.pencere_adi) if winutil.IS_WIN else None
+        found = winutil.find_window(k.pencere_adi) if winutil.CAN_FIND_WINDOWS else None
         self.sourceStatus.emit(bool(found), found[1] if found else "")
         self._auto_source(bool(found))
 
@@ -414,7 +419,7 @@ class AppController(QObject):
             return
         if time.time() - self._last_launch < 45:
             return
-        if winutil.IS_WIN and winutil.find_window(self.cfg.kaynak.pencere_adi):
+        if winutil.CAN_FIND_WINDOWS and winutil.find_window(self.cfg.kaynak.pencere_adi):
             return
 
         def run() -> None:
@@ -466,7 +471,7 @@ class AppController(QObject):
         if not path:
             self._notice("chiaki-ng bulunamadı. Ayarlardan yerini seç ya da indir.")
             return False
-        if winutil.IS_WIN and winutil.find_window(self.cfg.kaynak.pencere_adi):
+        if winutil.CAN_FIND_WINDOWS and winutil.find_window(self.cfg.kaynak.pencere_adi):
             self._notice("chiaki-ng zaten açık")
             return True
         args = self.chiaki_args(stream)
@@ -761,5 +766,7 @@ class AppController(QObject):
 def open_path(path: str) -> None:
     if sys.platform == "win32":
         os.startfile(path)  # noqa: S606
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", path])
     else:
         subprocess.Popen(["xdg-open", path])

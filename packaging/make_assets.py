@@ -97,6 +97,7 @@ def main() -> int:
     sizes = [16, 24, 32, 48, 64, 128, 256]
     badge(256).save(OUT / "icon.ico", sizes=[(s, s) for s in sizes])
     badge(256).save(OUT / "icon.png")
+    badge(1024).save(OUT / "icon.icns")          # macOS uygulama simgesi
     for scale in (1, 2):
         wizard_large(scale).save(OUT / f"wizard_large_{scale}x.bmp")
         small = Image.new("RGB", (55 * scale, 55 * scale), (13, 11, 19))

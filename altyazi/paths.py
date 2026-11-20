@@ -18,6 +18,8 @@ def data_dir() -> Path:
         d = Path(os.environ["ALTYAZI_DATA"])
     elif sys.platform == "win32":
         d = Path(os.environ.get("APPDATA", Path.home())) / "GTA6Altyazi"
+    elif sys.platform == "darwin":
+        d = Path.home() / "Library" / "Application Support" / "GTA6Altyazi"
     else:
         d = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "gta6altyazi"
     d.mkdir(parents=True, exist_ok=True)

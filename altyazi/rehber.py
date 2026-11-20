@@ -211,6 +211,31 @@ SAMSUNG_TV = [
          img="samsung-hdmi"),
 ]
 
+MAC = [
+    step("GTA6 Altyazı'yı kur",
+         ["Releases sayfasından **GTA6Altyazi-mac.dmg**'yi indir ve aç (yalnız Apple Silicon: M1 ve sonrası).",
+          "Açılan pencerede **GTA6 Altyazı**'yı **Applications** (Uygulamalar) klasörüne sürükle.",
+          "Uygulamalar'dan **GTA6 Altyazı**'yı aç."],
+         link=("Releases sayfası", "https://github.com/CH4P4R/gta6-altyazi/releases"),
+         note="Mac'te NVIDIA yok: çeviri ve OCR işlemcide çalışır; M serisi Mac'lerde bu yeterince hızlı."),
+    step("chiaki-ng'yi kur",
+         ["chiaki-ng'nin indirme sayfasından **macOS** sürümünü (.dmg) indir, Uygulamalar'a sürükle.",
+          "PS5 eşleme adımları Windows'takiyle aynı (Rehber › Bilgisayar monitöründe oyna)."],
+         link=("chiaki-ng indirme sayfası", CHIAKI_DOWNLOAD)),
+    step("İzinleri ver",
+         ["**Ekran Kaydı:** Çeviri başlayınca macOS sorar. **Sistem Ayarları › Gizlilik ve Güvenlik › Ekran ve Sistem Ses "
+          "Kaydı**'nda **GTA6 Altyazı**'yı aç, programı kapatıp yeniden aç. chiaki penceresini okumak için gerekir.",
+          "**Erişilebilirlik:** Kısayol tuşları (Control+Shift+9 ekranı çevir) için **Gizlilik ve Güvenlik › "
+          "Erişilebilirlik**'te **GTA6 Altyazı**'yı aç.",
+          "**Yerel Ağ:** TV'ye bağlanırken macOS sorarsa **İzin Ver** de."],
+         note="İzin verdikten sonra programı kapatıp yeniden açman gerekir; macOS izni ancak yeniden açılışta tanır."),
+    step("Oyna",
+         ["chiaki-ng'de PS5'e bağlan, istersen tam ekran yap.",
+          "GTA6 Altyazı'da **Başlat**'a bas; Türkçe chiaki'nin üstünde, tam ekranda da görünür.",
+          "TV kurulumları (Google TV, LG, Samsung) Mac'te de aynı adımlarla yapılır."],
+         img="baslat"),
+]
+
 TV_STEPS = {"android": GOOGLE_TV, "lg": LG_TV, "samsung": SAMSUNG_TV}
 TV_BRANDS = [("android", "Google TV / Android TV (TCL, Sony, Philips, Xiaomi, Hisense...)"),
              ("lg", "LG (webOS)"), ("samsung", "Samsung (Tizen)")]
@@ -345,6 +370,8 @@ GUIDES: list[dict] = [
     {"key": "tv-izle", "icon": "tv", "title": "TV'de oyna, bilgisayar izlesin",
      "summary": "Sen TV'den HDMI ile oyna; bilgisayar ikinci hesapla izleyip Türkçeyi TV'ye göndersin.",
      "steps": chiaki_steps("tv") + [START_STEP]},
+    {"key": "mac", "icon": "ps", "title": "Mac'te kullanım (Apple Silicon)",
+     "summary": "M1 ve sonrası Mac'lerde kurulum, chiaki-ng ve macOS izinleri.", "steps": MAC},
     {"key": "google-tv", "icon": "tv", "title": "TV uygulaması: Google TV / Android TV",
      "summary": "TCL, Sony, Philips, Xiaomi, Hisense ve diğer Android TV'ler.", "steps": GOOGLE_TV},
     {"key": "lg", "icon": "tv", "title": "TV uygulaması: LG (webOS)",

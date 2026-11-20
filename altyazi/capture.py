@@ -131,11 +131,14 @@ class _ThreadSource(Source):
 class CaptureCardSource(_ThreadSource):
     def __init__(self, index: int, width: int, height: int, fps: int):
         super().__init__()
-        backend = cv2.CAP_DSHOW if hasattr(cv2, "CAP_DSHOW") else cv2.CAP_ANY
+        import sys
+        backend = (cv2.CAP_DSHOW if sys.platform == "win32" else
+                   cv2.CAP_AVFOUNDATION if sys.platform == "darwin" else cv2.CAP_ANY)
         cap = cv2.VideoCapture(index, backend)
         if not cap.isOpened():
             raise RuntimeError(f"Capture kart açılamadı (cihaz {index}). Liste: python -m altyazi kameralar")
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"NV12"))
+        if sys.platform == "win32":
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"NV12"))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         cap.set(cv2.CAP_PROP_FPS, fps)
@@ -203,6 +206,10 @@ class ImageSource(_ThreadSource):
 def make_source(cfg) -> Source:  # noqa: ANN001
     k = cfg.kaynak
     if k.tur == "pencere":
+        import sys
+        if sys.platform == "darwin":
+            from .capture_mac import MacWindowSource
+            return MacWindowSource(k.pencere_adi)
         return WindowSource(k.pencere_adi)
     if k.tur == "capture":
         return CaptureCardSource(k.capture_cihaz, k.capture_genislik, k.capture_yukseklik, k.capture_fps)

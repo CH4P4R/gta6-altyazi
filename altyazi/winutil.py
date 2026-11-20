@@ -8,6 +8,8 @@ import sys
 from ctypes import wintypes
 
 IS_WIN = sys.platform == "win32"
+IS_MAC = sys.platform == "darwin"
+CAN_FIND_WINDOWS = IS_WIN or IS_MAC
 
 
 log = logging.getLogger(__name__)
@@ -362,3 +364,11 @@ def network_is_public() -> bool | None:
         return None
     cats = (out or "").split()
     return bool(cats) and all(c == "Public" for c in cats)
+
+
+# macOS: aynı adlı fonksiyonlar macutil'den (Quartz, caffeinate, LaunchAgent, uygulama güvenlik duvarı)
+if IS_MAC:
+    from . import macutil as _mac
+    for _name in ("add_cuda_dll_dirs", "client_bounds", "find_window", "firewall_allow", "firewall_ok", "frame_bounds",
+                  "is_minimized", "keep_awake", "list_windows", "network_is_public", "set_autostart", "set_dpi_aware"):
+        globals()[_name] = getattr(_mac, _name)

@@ -26,6 +26,11 @@ log = logging.getLogger(__name__)
 REPO = "CH4P4R/gta6-altyazi"
 RELEASES_API = f"https://api.github.com/repos/{REPO}/releases?per_page=15"
 SETUP_NAME = "GTA6Altyazi-Setup.exe"
+MAC_NAME = "GTA6Altyazi-mac.dmg"
+
+
+def asset_name(platform: str = sys.platform) -> str:
+    return MAC_NAME if platform == "darwin" else SETUP_NAME
 _TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 
 
@@ -82,7 +87,7 @@ def latest_release(fetch=None) -> dict | None:  # noqa: ANN001
         tag = str(r.get("tag_name", ""))
         if not _TAG.match(tag) or r.get("draft"):
             continue
-        asset = next((a for a in r.get("assets") or [] if a.get("name") == SETUP_NAME), None)
+        asset = next((a for a in r.get("assets") or [] if a.get("name") == asset_name()), None)
         if not asset:
             continue
         if best is None or _ver(tag) > _ver("v" + best["version"]):
@@ -96,7 +101,8 @@ def newer_than_current(rel: dict | None, current: str = __version__) -> bool:
 
 
 def download_setup(rel: dict, progress=None) -> Path:  # noqa: ANN001
-    dest = Path(tempfile.gettempdir()) / f"GTA6Altyazi-Setup-{rel['version']}.exe"
+    ext = "dmg" if sys.platform == "darwin" else "exe"
+    dest = Path(tempfile.gettempdir()) / f"GTA6Altyazi-Setup-{rel['version']}.{ext}"
     req = urllib.request.Request(rel["url"], headers={"User-Agent": "gta6-altyazi"})
     done = 0
     with urllib.request.urlopen(req, timeout=60) as r, open(dest.with_suffix(".part"), "wb") as f:
@@ -151,10 +157,50 @@ if ($code -ne 0) {{ Start-Process -FilePath {_q(exe)} }}
 """
 
 
+def mac_bundle(exe: str = sys.executable) -> Path | None:
+    """Çalışan programın .app paketi (…/GTA6 Altyazı.app/Contents/MacOS/GTA6Altyazi → …/GTA6 Altyazı.app)."""
+    p = Path(exe).resolve()
+    for parent in p.parents:
+        if parent.suffix == ".app":
+            return parent
+    return None
+
+
+def mac_update_script(dmg: Path, bundle: Path, pid: int, log_file: Path) -> str:
+    """macOS: program kapanınca .dmg'yi bağla, yeni .app'i eskisinin yerine koy, yeni sürümü aç. Başarısızsa eski
+    program açılır; nedeni günlükte (Windows'taki update_script'in karşılığı)."""
+    import shlex
+    q = shlex.quote
+    trace, result = q(str(log_file.with_suffix(".adim"))), q(str(log_file.with_suffix(".sonuc")))
+    return f"""#!/bin/bash
+adim() {{ echo "$(date +%H:%M:%S) $1" >> {trace}; }}
+bitir() {{ echo "$1" > {result}; adim "bitti, kod $1"; open {q(str(bundle))}; exit 0; }}
+adim basladi
+for i in $(seq 1 90); do kill -0 {int(pid)} 2>/dev/null || break; sleep 0.5; done
+kill -9 {int(pid)} 2>/dev/null
+adim 'program kapandi'
+MNT=$(mktemp -d /tmp/gta6altyazi.XXXXXX)
+hdiutil attach -nobrowse -quiet -noautoopen -mountpoint "$MNT" {q(str(dmg))} >> {q(str(log_file))} 2>&1 || bitir 2
+SRC=$(ls -d "$MNT"/*.app 2>/dev/null | head -1)
+[ -n "$SRC" ] || {{ hdiutil detach -quiet "$MNT"; bitir 3; }}
+NEW={q(str(bundle) + ".yeni")}
+rm -rf "$NEW"
+ditto "$SRC" "$NEW" >> {q(str(log_file))} 2>&1 || {{ hdiutil detach -quiet "$MNT"; bitir 4; }}
+hdiutil detach -quiet "$MNT"
+rm -rf {q(str(bundle))} && mv "$NEW" {q(str(bundle))} || bitir 5
+xattr -dr com.apple.quarantine {q(str(bundle))} 2>/dev/null
+bitir 0
+"""
+
+
 def run_setup(setup: Path, version: str = "") -> None:
-    """Programdan bağımsız bir PowerShell, program kapanınca sessiz kurulumu yapar; bkz. update_script."""
+    """Programdan bağımsız bir betik, program kapanınca kurulumu yapar (Windows: update_script, macOS:
+    mac_update_script)."""
+    if sys.platform == "darwin":
+        _run_mac_update(setup, version)
+        return
     if sys.platform != "win32":
-        raise RuntimeError("Güncelleme yalnız Windows'ta kurulabilir.")
+        raise RuntimeError("Güncelleme yalnız Windows'ta ve macOS'ta kurulabilir.")
     import os
 
     log_file = paths.data("guncelleme.log")
@@ -162,6 +208,23 @@ def run_setup(setup: Path, version: str = "") -> None:
         f.unlink(missing_ok=True)
     paths.data("guncelleme.json").write_text(json.dumps({"hedef": version, "eski": __version__}), encoding="utf-8")
     launch_script(update_script(setup, sys.executable, os.getpid(), log_file))
+
+
+def _run_mac_update(dmg: Path, version: str) -> None:
+    import os
+
+    bundle = mac_bundle()
+    if bundle is None:
+        raise RuntimeError("Program bir .app paketinden çalışmıyor; güncellemeyi elle kur.")
+    log_file = paths.data("guncelleme.log")
+    for f in (log_file, log_file.with_suffix(".sonuc"), log_file.with_suffix(".adim")):
+        f.unlink(missing_ok=True)
+    paths.data("guncelleme.json").write_text(json.dumps({"hedef": version, "eski": __version__}), encoding="utf-8")
+    script = paths.data("guncelle.sh")
+    script.write_text(mac_update_script(dmg, bundle, os.getpid(), log_file), encoding="utf-8")
+    script.chmod(0o755)
+    subprocess.Popen(["/bin/bash", str(script)], start_new_session=True, close_fds=True,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def launch_script(script: str) -> subprocess.Popen:

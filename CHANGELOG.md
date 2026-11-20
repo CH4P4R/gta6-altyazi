@@ -3,6 +3,13 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.5.0 · macOS
+- **Mac sürümü (Apple Silicon, M1 ve sonrası):** GTA6Altyazi-mac.dmg. chiaki-ng penceresi ScreenCaptureKit ile
+  okunur, Türkçe tam ekranda da chiaki'nin üstünde görünür; kısayol tuşları, TV kurulumları (Google TV, LG, Samsung),
+  capture kart, hazır paketler, Claude/Gemini/yerel model Windows'takiyle aynı. Uygulama içi güncelleme Mac'te de var.
+- Mac için Rehber'de yeni konu: kurulum, chiaki-ng ve macOS izinleri (Ekran Kaydı, Erişilebilirlik, Yerel Ağ).
+- Mac sürümü de yayınlanmadan önce gerçek bir Mac'te deneniyor (açılış, çeviri, TV akışı, güncelleme).
+
 ## 0.4.21
 - **Tuş simgeli yazılar artık çevriliyor:** "Press △ to enter" gibi ipuçlarında tuş bir resim olduğu için OCR okuyamıyordu
   ve bu satırlar çevrilmiyordu. Artık o satırın küçük resmi yapay zekâya (Claude ya da Gemini) gösteriliyor; simgeyi

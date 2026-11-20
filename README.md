@@ -186,6 +186,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 |---|---|
 | 🖥️ [Bilgisayar monitöründe oyna](#rehber-monitor) | chiaki-ng ile PS5'i bilgisayarda oyna; Türkçe chiaki'nin üstünde çıksın. |
 | 📺 [TV'de oyna, bilgisayar izlesin](#rehber-tv-izle) | Sen TV'den HDMI ile oyna; bilgisayar ikinci hesapla izleyip Türkçeyi TV'ye göndersin. |
+| • [Mac'te kullanım (Apple Silicon)](#rehber-mac) | M1 ve sonrası Mac'lerde kurulum, chiaki-ng ve macOS izinleri. |
 | 🤖 [TV uygulaması: Google TV / Android TV](#rehber-google-tv) | TCL, Sony, Philips, Xiaomi, Hisense ve diğer Android TV'ler. |
 | 📺 [TV uygulaması: LG (webOS)](#rehber-lg) | LG Developer Mode ile kurulum. |
 | 📺 [TV uygulaması: Samsung (Tizen)](#rehber-samsung) | Tizen Studio olmadan, Samsung hesabıyla kurulum. |
@@ -405,6 +406,45 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 3. Oyunda İngilizce altyazıyı aç; yazılar Türkçe görünür.
 
 > Kısayollar: Ctrl+Shift+9 ekranın tamamını çevirir, Ctrl+Shift+0 duraklatır.
+
+</details>
+
+<a name="rehber-mac"></a>
+<details>
+<summary><b>• Mac'te kullanım (Apple Silicon)</b> · M1 ve sonrası Mac'lerde kurulum, chiaki-ng ve macOS izinleri.</summary>
+
+#### Adım 1: GTA6 Altyazı'yı kur
+
+1. Releases sayfasından **GTA6Altyazi-mac.dmg**'yi indir ve aç (yalnız Apple Silicon: M1 ve sonrası).
+2. Açılan pencerede **GTA6 Altyazı**'yı **Applications** (Uygulamalar) klasörüne sürükle.
+3. Uygulamalar'dan **GTA6 Altyazı**'yı aç.
+
+🔗 [Releases sayfası](https://github.com/CH4P4R/gta6-altyazi/releases)
+
+> Mac'te NVIDIA yok: çeviri ve OCR işlemcide çalışır; M serisi Mac'lerde bu yeterince hızlı.
+
+#### Adım 2: chiaki-ng'yi kur
+
+1. chiaki-ng'nin indirme sayfasından **macOS** sürümünü (.dmg) indir, Uygulamalar'a sürükle.
+2. PS5 eşleme adımları Windows'takiyle aynı (Rehber › Bilgisayar monitöründe oyna).
+
+🔗 [chiaki-ng indirme sayfası](https://github.com/streetpea/chiaki-ng/releases)
+
+#### Adım 3: İzinleri ver
+
+1. **Ekran Kaydı:** Çeviri başlayınca macOS sorar. **Sistem Ayarları › Gizlilik ve Güvenlik › Ekran ve Sistem Ses Kaydı**'nda **GTA6 Altyazı**'yı aç, programı kapatıp yeniden aç. chiaki penceresini okumak için gerekir.
+2. **Erişilebilirlik:** Kısayol tuşları (Control+Shift+9 ekranı çevir) için **Gizlilik ve Güvenlik › Erişilebilirlik**'te **GTA6 Altyazı**'yı aç.
+3. **Yerel Ağ:** TV'ye bağlanırken macOS sorarsa **İzin Ver** de.
+
+> İzin verdikten sonra programı kapatıp yeniden açman gerekir; macOS izni ancak yeniden açılışta tanır.
+
+#### Adım 4: Oyna
+
+<img src="altyazi/ui/rehber/baslat.png" alt="Oyna" width="640">
+
+1. chiaki-ng'de PS5'e bağlan, istersen tam ekran yap.
+2. GTA6 Altyazı'da **Başlat**'a bas; Türkçe chiaki'nin üstünde, tam ekranda da görünür.
+3. TV kurulumları (Google TV, LG, Samsung) Mac'te de aynı adımlarla yapılır.
 
 </details>
 

@@ -1,0 +1,165 @@
+name: macOS uygulaması (.dmg)
+
+# Windows derlemesiyle aynı: commit mesajında [exe] geçince ya da elle çalışır. Yalnız Apple Silicon (M1 ve sonrası).
+# İmza ve Apple onayı (notarization) için GitHub Secrets: MAC_CERT_P12_B64, MAC_CERT_PASSWORD, APPLE_ID,
+# APPLE_TEAM_ID, APPLE_APP_PASSWORD. Yoksa imzasız (yerel imzalı) derlenir; ilk açılışta sağ tık › Aç gerekir.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dmg:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[exe]')
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Bağımlılıklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy opencv-python pyyaml rapidfuzz PySide6-Essentials ctranslate2 sentencepiece sounddevice anthropic requests segno "paramiko>=3.4,<5" cryptography pyinstaller pillow pyclipper shapely six pytest
+          pip install pyobjc-core pyobjc-framework-Cocoa pyobjc-framework-Quartz pyobjc-framework-ScreenCaptureKit pyobjc-framework-CoreMedia pyobjc-framework-ApplicationServices pyobjc-framework-libdispatch
+          pip install --no-deps rapidocr_onnxruntime
+          pip install onnxruntime
+
+      - name: Çeviri modeli önbelleği
+        id: model-cache
+        uses: actions/cache@v4
+        with:
+          path: models/opus-mt-en-tr
+          key: mac-opus-mt-tc-big-en-tr-ct2-v1
+
+      - name: Çeviri modelini indir ve dönüştür
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        run: python tools/model_indir.py
+
+      - name: İngilizce OCR modeli
+        run: python tools/ocr_model_indir.py
+
+      - name: adb (TV kurulumu için, yedek yol)
+        run: |
+          curl -sSfL -o pt.zip https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
+          unzip -qo pt.zip -d tools
+          rm pt.zip
+
+      - name: Testler
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_adb_native.py tests/test_samsung_direct.py tests/test_updater.py tests/test_harcama.py tests/test_tv_brands.py tests/test_auto.py
+
+      - name: macOS platform denemesi (pencere listesi, Quartz, kısayol ayrıştırma)
+        run: |
+          python - <<'PY'
+          from altyazi import winutil, macutil
+          from altyazi.hotkeys import Hotkeys
+          wins = winutil.list_windows()
+          print("pencereler:", wins[:5])
+          print("ekran kaydı izni:", macutil.screen_capture_allowed())
+          print("kısayol:", Hotkeys.parse_mac("ctrl+shift+9"))
+          import ScreenCaptureKit, CoreMedia, Quartz, AppKit  # paketlenecek modüller yükleniyor mu
+          print("pyobjc tamam")
+          PY
+
+      - name: Simge, TV paketleri, hazır paketler
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python packaging/make_assets.py
+          python tools/tv_web_hazirla.py
+          mkdir -p paketler
+          gh release download paketler -p "*.json.gz" -D paketler --clobber || python tools/paket_aynasi.py paketler
+          rm -f paketler/pool-*.json.gz
+
+      - name: Uygulamayı paketle (PyInstaller)
+        run: pyinstaller --noconfirm --clean packaging/gta6altyazi.spec
+
+      - name: İmza (Developer ID; yoksa yerel imza)
+        env:
+          MAC_CERT_P12_B64: ${{ secrets.MAC_CERT_P12_B64 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          APP="dist/GTA6 Altyazı.app"
+          if [ -n "$MAC_CERT_P12_B64" ] && [ -n "$MAC_CERT_PASSWORD" ]; then
+            KC="$RUNNER_TEMP/imza.keychain-db"; KCP=$(uuidgen)
+            echo "$MAC_CERT_P12_B64" | base64 --decode > "$RUNNER_TEMP/imza.p12"
+            security create-keychain -p "$KCP" "$KC"
+            security set-keychain-settings -lut 21600 "$KC"
+            security unlock-keychain -p "$KCP" "$KC"
+            security import "$RUNNER_TEMP/imza.p12" -P "$MAC_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+            security set-key-partition-list -S apple-tool:,apple: -k "$KCP" "$KC"
+            security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+            rm -f "$RUNNER_TEMP/imza.p12"
+            ID=$(security find-identity -v -p codesigning "$KC" | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)".*/\1/')
+            echo "İmza: $ID"
+            echo "MAC_SIGNED=1" >> "$GITHUB_ENV"
+          else
+            echo "::warning::MAC_CERT_P12_B64 / MAC_CERT_PASSWORD yok: uygulama yerel imzayla derleniyor (ilk açılışta sağ tık › Aç gerekir)"
+            ID="-"
+          fi
+          OPTS=(--force --timestamp --options runtime --entitlements packaging/mac.entitlements --sign "$ID")
+          [ "$ID" = "-" ] && OPTS=(--force --sign -)
+          # içten dışa: önce bütün kütüphaneler ve programlar, en son paket
+          find "$APP/Contents" -type f \( -name "*.dylib" -o -name "*.so" -o -perm -u+x \) -print0 | while IFS= read -r -d '' f; do
+            if file "$f" | grep -q "Mach-O"; then codesign "${OPTS[@]}" "$f" >/dev/null 2>&1 || echo "imzalanamadı: $f"; fi
+          done
+          codesign "${OPTS[@]}" "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Disk görüntüsü (.dmg)
+        run: |
+          mkdir -p dmg
+          cp -R "dist/GTA6 Altyazı.app" dmg/
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname "GTA6 Altyazı" -srcfolder dmg -ov -format UDZO dist/GTA6Altyazi-mac.dmg
+          ls -la dist/GTA6Altyazi-mac.dmg
+
+      - name: Apple onayı (notarization)
+        if: env.MAC_SIGNED == '1'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_TEAM_ID" ] || [ -z "$APPLE_APP_PASSWORD" ]; then
+            echo "::warning::APPLE_ID / APPLE_TEAM_ID / APPLE_APP_PASSWORD yok: imzalı ama Apple onaysız"; exit 0
+          fi
+          xcrun notarytool submit dist/GTA6Altyazi-mac.dmg --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait --timeout 60m
+          xcrun stapler staple dist/GTA6Altyazi-mac.dmg
+          spctl -a -t open --context context:primary-signature -vv dist/GTA6Altyazi-mac.dmg || true
+
+      - name: Uçtan uca deneme (gerçek Mac - açılış, çeviri, TV akışı, güncelleme)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(python -c "import altyazi; print(altyazi.__version__)")
+          prev=$(gh release list --limit 30 --json tagName,isDraft -q '.[].tagName' | grep '^v' | grep -v "^v$v$" | head -1)
+          old=""
+          if [ -n "$prev" ] && gh release download "$prev" -p GTA6Altyazi-mac.dmg -D eski --clobber 2>/dev/null; then old="eski/GTA6Altyazi-mac.dmg"; fi
+          echo "Önceki Mac sürümü: ${old:-yok}"
+          python tools/e2e_mac.py dist/GTA6Altyazi-mac.dmg "$old"
+
+      - name: Sürümler sayfasına koy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(python -c "import altyazi; print(altyazi.__version__)")
+          tag="v$v"
+          for i in 1 2 3 4 5 6; do
+            if gh release view "$tag" >/dev/null 2>&1; then break; fi
+            python tools/surum_notu.py "$v" notlar.md "${GITHUB_SHA::7}"
+            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "GTA6 Altyazı $v" --notes-file notlar.md && break
+            sleep 30
+          done
+          gh release upload "$tag" dist/GTA6Altyazi-mac.dmg --clobber
+
+      - name: Anahtar zincirini sil
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/imza.keychain-db" 2>/dev/null || true

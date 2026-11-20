@@ -69,3 +69,46 @@ def test_failed_update_is_reported_once(tmp_path, monkeypatch):
     assert updater.last_update_problem() is None                     # bir kez söylenir
     (tmp_path / "guncelleme.json").write_text(json.dumps({"hedef": "0.0.1"}))
     assert updater.last_update_problem() is None                     # güncelleme olmuş: sessiz
+
+
+def test_mac_update_script_replaces_bundle(tmp_path):
+    """macOS güncelleme betiği: sahte hdiutil/ditto ile gerçek bash'te çalıştırılır."""
+    import os
+    import shutil
+    import subprocess
+    import sys
+    if not shutil.which("bash"):
+        import pytest
+        pytest.skip("bash yok")
+    from altyazi import updater
+    app = tmp_path / "Applications" / "GTA6 Altyazı.app"
+    (app / "Contents" / "MacOS").mkdir(parents=True)
+    (app / "Contents" / "MacOS" / "GTA6Altyazi").write_text("eski")
+    assert updater.mac_bundle(str(app / "Contents" / "MacOS" / "GTA6Altyazi")) == app
+    new_app = tmp_path / "dmg" / "GTA6 Altyazı.app" / "Contents" / "MacOS"
+    new_app.mkdir(parents=True)
+    (new_app / "GTA6Altyazi").write_text("yeni")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    # hdiutil attach: dmg içeriğini bağlama noktasına kopyala; ditto: cp -R; open/xattr: hiçbir şey
+    (bin_dir / "hdiutil").write_text(f'#!/bin/bash\nif [ "$1" = attach ]; then for a; do last=$m; m=$a; done; '
+                                     f'mnt=$(echo "$@" | sed "s/.*-mountpoint \\([^ ]*\\).*/\\1/"); '
+                                     f'cp -R "{tmp_path / "dmg"}/." "$mnt/"; fi\n')
+    (bin_dir / "ditto").write_text('#!/bin/bash\ncp -R "$1" "$2"\n')
+    (bin_dir / "open").write_text(f'#!/bin/bash\necho "$1" > "{tmp_path / "acildi"}"\n')
+    (bin_dir / "xattr").write_text("#!/bin/bash\nexit 0\n")
+    for f in bin_dir.iterdir():
+        f.chmod(0o755)
+    log = tmp_path / "guncelleme.log"
+    script = updater.mac_update_script(tmp_path / "x.dmg", app, 999999, log)
+    env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}
+    subprocess.run(["bash", "-c", script], env=env, timeout=60, check=True)
+    assert (app / "Contents" / "MacOS" / "GTA6Altyazi").read_text() == "yeni"
+    assert log.with_suffix(".sonuc").read_text().strip() == "0"
+    assert (tmp_path / "acildi").read_text().strip() == str(app)
+
+
+def test_release_asset_per_platform():
+    from altyazi import updater
+    assert updater.asset_name("darwin") == "GTA6Altyazi-mac.dmg"
+    assert updater.asset_name("win32") == "GTA6Altyazi-Setup.exe"

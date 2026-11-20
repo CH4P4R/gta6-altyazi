@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import time
 import webbrowser
 
@@ -1088,7 +1090,8 @@ class SettingsPage(QWidget):
         lay.addWidget(scroll_page(content))
 
     def _browse(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "chiaki-ng programını seç", "", "Program (*.exe);;Tümü (*)")
+        path, _ = QFileDialog.getOpenFileName(self, "chiaki-ng programını seç", "/Applications" if sys.platform == "darwin" else "",
+                                                  "Program (*.app *.exe);;Tümü (*)")
         if path:
             self.chiaki.setText(path)
 

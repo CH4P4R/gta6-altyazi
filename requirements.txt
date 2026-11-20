@@ -12,6 +12,14 @@ ctranslate2
 sentencepiece
 # Ekran / pencere yakalama (Windows)
 windows-capture; sys_platform == "win32"
+# macOS: pencere yakalama (ScreenCaptureKit), katman, kısayollar
+pyobjc-core; sys_platform == "darwin"
+pyobjc-framework-Cocoa; sys_platform == "darwin"
+pyobjc-framework-Quartz; sys_platform == "darwin"
+pyobjc-framework-ScreenCaptureKit; sys_platform == "darwin"
+pyobjc-framework-CoreMedia; sys_platform == "darwin"
+pyobjc-framework-ApplicationServices; sys_platform == "darwin"
+pyobjc-framework-libdispatch; sys_platform == "darwin"
 # Capture kart sesi
 sounddevice
 # Kalite katmanı
