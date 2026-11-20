@@ -214,7 +214,7 @@ def test_server_discovery_endpoint_has_cors():
     EventServer(port).start()
     time.sleep(0.2)
     with urllib.request.urlopen(f"http://127.0.0.1:{port}/hello", timeout=3) as r:
-        assert json.loads(r.read()) == {"app": "gta6altyazi"}
+        assert json.loads(r.read())["app"] == "gta6altyazi"
         assert r.headers["Access-Control-Allow-Origin"] == "*"
 
 

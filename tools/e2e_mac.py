@@ -202,6 +202,39 @@ def step_translate(new_dmg: Path, new_version: str) -> None:
             print("  " + ln)
 
 
+def step_restart() -> None:
+    """İkinci kopya açılmıyor; TV bağlıyken program kapanıp hemen açılınca sunucu yeniden açılıyor."""
+    print("\n== 3. İkinci kopya, kapatıp hemen yeniden açma (TV bağlıyken)", flush=True)
+    events_open = []
+
+    def tv() -> None:
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{PORT}/events", timeout=60) as r:
+                events_open.append(True)
+                for _ in r:
+                    pass
+        except Exception:  # noqa: BLE001
+            pass
+
+    threading.Thread(target=tv, daemon=True).start()
+    wait(lambda: events_open, 10, 0.2)
+    before = app_pids()
+    second = subprocess.Popen([str(EXE)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        rc = second.wait(60)
+    except subprocess.TimeoutExpired:
+        rc = None
+        second.kill()
+    check("ikinci kez açınca ikinci kopya açılmıyor, kapanıyor", rc == 0, f"çıkış kodu {rc}")
+    check("ilk kopya çalışmaya devam ediyor", app_pids() == before and http("/hello").get("pid") in before,
+          f"önce {before}, sonra {app_pids()}")
+    kill_app()                                   # çökme/zorla kapatma: TV bağlantısı yarıda kalır
+    t0 = time.time()
+    launch()
+    hello = wait(lambda: http("/hello"), 60, 0.5)
+    check("hemen yeniden açınca sunucu açılıyor (port 8787 boşalmış)", bool(hello), f"{time.time() - t0:.0f} sn")
+
+
 def main() -> int:
     new_dmg = Path(sys.argv[1]).resolve()
     old_dmg = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 and sys.argv[2] else None
@@ -213,6 +246,7 @@ def main() -> int:
     try:
         step_update(new_dmg, old_dmg, new_version)
         step_translate(new_dmg, new_version)
+        step_restart()
     finally:
         kill_app()
     failed = [r for r in results if not r[1]]

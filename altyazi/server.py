@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import queue
 import socket
 import sys
@@ -324,7 +325,7 @@ class EventServer:
             def do_GET(self):  # noqa: N802
                 path = self.path.split("?")[0]
                 if path in ("/kim", "/hello"):   # TV uygulaması kasayı ağda bu adresle bulur
-                    self._json(200, {"app": "gta6altyazi"})
+                    self._json(200, {"app": "gta6altyazi", "pid": os.getpid()})
                     return
                 if path == "/events":
                     self._tv_stream()
@@ -377,8 +378,8 @@ class EventServer:
             allow_reuse_address = sys.platform != "win32"
 
             def server_bind(self):  # noqa: ANN202
-                if sys.platform == "win32" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
-                    self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                # SO_EXCLUSIVEADDRUSE kullanılmıyor: o seçenekle program kapandıktan sonra TV'nin eski bağlantısı
+                # bitene kadar (birkaç dakika) port yeniden açılamıyordu ("port 8787 başka bir programda").
                 # HTTPServer.server_bind bilgisayarın adını ters DNS ile sorar (socket.getfqdn); macOS'ta bazı ağlarda
                 # bu 70 sn'ye kadar bekletiyordu (Mac denemesinde görüldü). Ada gerek yok: doğrudan bağla.
                 import socketserver

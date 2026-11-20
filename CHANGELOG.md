@@ -3,6 +3,18 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.5.2
+- **"Port 8787 başka bir programda" hatası düzeltildi.** Sebepleri:
+  - Program zaten açıkken (ör. Windows açılışında simge durumunda açılmışken) yeniden açılınca ikinci bir kopya
+    açılıyordu. Artık ikinci kopya açılmıyor; açık olan pencere öne geliyor.
+  - Pencere kapatılınca arka planda süren bir iş (çeviri isteği, model yükleme) programı penceresiz açık tutup portu
+    bırakmayabiliyordu. Artık pencere kapanınca program tamamen kapanıyor.
+  - TV bağlıyken program kapatılıp hemen açılınca port birkaç dakika açılamayabiliyordu. Düzeltildi.
+- Port yine doluysa program onu kimin tuttuğunu buluyor: penceresiz kalmış eski bir GTA6 Altyazı kopyasıysa kendisi
+  kapatıyor; başka bir programsa (ör. CouchSubs) adını söylüyor ve o kapanınca birkaç saniye içinde kendiliğinden
+  bağlanıyor. Programı yeniden açmana gerek yok.
+- Mac rehberi ve sürüm notlarına Mac kurulumu (ilk açılışta "Yine de Aç") eklendi.
+
 ## 0.5.1
 - Program açılışta bazı ağlarda (özellikle Mac'te) bilgisayarın adını sorarken bir dakikaya kadar bekleyebiliyordu
   (Mac denemesinde 70 sn görüldü); artık hemen açılıyor. Mac denemesi açılışın 30 saniyeden kısa sürdüğünü de denetliyor.

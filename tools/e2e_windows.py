@@ -208,8 +208,53 @@ def step_translate(new_setup: Path, new_version: str) -> None:
             print("  " + ln)
 
 
+def step_restart() -> None:
+    """Kullanıcının gördüğü "port 8787 başka bir programda" hatasının senaryoları (TV bağlıyken)."""
+    print("\n== 4. İkinci kopya, kapatıp hemen yeniden açma (TV bağlıyken)", flush=True)
+    events_open = []
+
+    def tv() -> None:                                       # TV gibi /events'e bağlı kal
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{PORT}/events", timeout=60) as r:
+                events_open.append(True)
+                for _ in r:
+                    pass
+        except Exception:  # noqa: BLE001
+            pass
+
+    import threading
+    threading.Thread(target=tv, daemon=True).start()
+    wait(lambda: events_open, 10, 0.2)
+    before = app_pids()
+    t0 = time.time()
+    second = subprocess.Popen([str(EXE)], cwd=str(INSTALL))
+    try:
+        rc = second.wait(60)
+    except subprocess.TimeoutExpired:
+        rc = None
+    check("ikinci kez açınca ikinci kopya açılmıyor, kapanıyor", rc == 0, f"çıkış kodu {rc}, {time.time() - t0:.0f} sn")
+    check("ilk kopya çalışmaya devam ediyor", app_pids() == before and http("/hello").get("pid") in before,
+          f"önce {before}, sonra {app_pids()}")
+    pid = before[0] if before else None
+    if not pid:
+        return
+    subprocess.run(["taskkill", "/PID", str(pid)], capture_output=True)    # pencereyi kapat (WM_CLOSE)
+    gone = wait(lambda: pid not in app_pids(), 30, 0.5)
+    check("pencere kapanınca program tamamen kapandı", bool(gone), f"süreç {'yok' if gone else 'hâlâ açık'}")
+    if not gone:
+        kill_app()
+    t0 = time.time()
+    subprocess.Popen([str(EXE)], cwd=str(INSTALL))
+    hello = wait(lambda: http("/hello"), 60, 0.5)
+    check("hemen yeniden açınca sunucu açılıyor (port 8787 boşalmış)", bool(hello), f"{time.time() - t0:.0f} sn")
+    log = DATA / "altyazi.log"
+    if log.exists():
+        bad = [ln for ln in log.read_text(encoding="utf-8", errors="replace").splitlines()[-60:] if "Port " in ln and "dolu" in ln]
+        check("günlükte 'port dolu' yok", not bad, bad[-1] if bad else "")
+
+
 def step_firewall() -> None:
-    print("\n== 4. Güvenlik duvarı izni (gerçek kural)", flush=True)
+    print("\n== 5. Güvenlik duvarı izni (gerçek kural)", flush=True)
     from altyazi import winutil
     check("ağ profili okunabiliyor", winutil.network_is_public() in (True, False), str(winutil.network_is_public()))
     res = winutil.firewall_allow(make_private=False)
@@ -229,6 +274,7 @@ def main() -> int:
     try:
         step_update(new_setup, old_setup, new_version)
         step_translate(new_setup, new_version)
+        step_restart()
         step_firewall()
     finally:
         kill_app()

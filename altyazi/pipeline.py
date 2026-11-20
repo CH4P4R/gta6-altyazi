@@ -52,6 +52,11 @@ class MultiSink:
     def __init__(self, *sinks):
         self.sinks = [s for s in sinks if s is not None]
 
+    def add(self, sink) -> None:  # noqa: ANN001
+        """Çeviri sürerken sonradan açılan yerel sunucuyu (TV akışı) ekle."""
+        if sink is not None and sink not in self.sinks:
+            self.sinks.append(sink)
+
     def show(self, item: DisplayItem) -> None:
         for s in self.sinks:
             s.show(item)

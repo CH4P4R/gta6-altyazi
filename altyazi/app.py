@@ -104,17 +104,58 @@ class AppController(QObject):
 
     # ------------------------------------------------------------------ altyapı
     def _start_server(self) -> None:
+        """TV/OBS/telefon sunucusunu aç. Port doluysa kimin tuttuğunu bul; kendiliğinden yeniden dene."""
+        self.server_problem = ""
         if not self.cfg.sunucu.acik:
             return
+        if self._try_server():
+            return
+        from . import tekkopya
+        port = self.cfg.sunucu.port
+        kind, pid, name = tekkopya.port_holder(port)
+        log.warning("Port %s dolu: %s (pid %s, %s)", port, kind, pid, name)
+        if kind == "gta6altyazi" and pid and pid != os.getpid():
+            # Tek kopya denetimi geçildiyse bu, penceresi kapanmış ama süreci kapanmamış eski bir kopyadır
+            log.warning("Penceresiz kalmış eski GTA6 Altyazı kopyası kapatılıyor (pid %s)", pid)
+            tekkopya.kill(pid)
+            for _ in range(20):
+                time.sleep(0.25)
+                if self._try_server():
+                    return
+        self.server_problem = tekkopya.holder_message(port, kind, name)
+        self._server_tries = 0
+        self._server_timer = QTimer(self)
+        self._server_timer.timeout.connect(self._retry_server)
+        self._server_timer.start(2000)
+
+    def _try_server(self) -> bool:
         from .server import EventServer
         try:
-            self.server = EventServer(self.cfg.sunucu.port, self.cfg.tv.kalibrasyon, on_command=self.command)
-            self.server.screen_ms = max(3, int(self.cfg.kisayol.tam_ekran_sure)) * 1000
-            self._apply_tv_style()
-            self.server.start()
+            srv = EventServer(self.cfg.sunucu.port, self.cfg.tv.kalibrasyon, on_command=self.command)
+            srv.screen_ms = max(3, int(self.cfg.kisayol.tam_ekran_sure)) * 1000
+            srv.start()
         except OSError as e:
-            self.server = None
-            log.error("Yerel sunucu açılamadı (port %s): %s", self.cfg.sunucu.port, e)
+            log.info("Yerel sunucu açılamadı (port %s): %s", self.cfg.sunucu.port, e)
+            return False
+        self.server = srv
+        self._apply_tv_style()
+        return True
+
+    def _retry_server(self) -> None:
+        self._server_tries += 1
+        if self._try_server():
+            self._server_timer.stop()
+            self.server_problem = ""
+            log.info("Yerel sunucu açıldı (%d. denemede)", self._server_tries)
+            if self.tv_state[0] == "hata":
+                self._tv("yok", "")
+            if self.pipe and self.pipe.sink is not None and hasattr(self.pipe.sink, "add"):
+                self.pipe.sink.add(self.server)
+            return
+        if self._server_tries % 15 == 0:          # yarım dakikada bir: hâlâ kim tutuyor
+            from . import tekkopya
+            kind, _pid, name = tekkopya.port_holder(self.cfg.sunucu.port)
+            self.server_problem = tekkopya.holder_message(self.cfg.sunucu.port, kind, name)
 
     def _start_hotkeys(self) -> None:
         from .hotkeys import Hotkeys
@@ -495,8 +536,8 @@ class AppController(QObject):
             self._tv("yok", "TV adresi girilmedi")
             return
         if self.server is None:
-            self._tv("hata", f"Programın yerel sunucusu açılamadı (port {self.cfg.sunucu.port} başka bir programda; "
-                             "CouchSubs ya da programın ikinci kopyası açık olabilir). Onu kapatıp programı yeniden aç.")
+            self._tv("hata", getattr(self, "server_problem", "") or
+                     "TV'ye altyazı gönderen yerel sunucu kapalı (Ayarlar › Sunucu).")
             return
         if not hasattr(self, "_tv_lock"):
             self._tv_lock = threading.Lock()
@@ -756,6 +797,9 @@ class AppController(QObject):
         return packs.export_cache(self.engine.cache.rows(), Path(dest))
 
     def shutdown(self) -> None:
+        if getattr(self, "_shut", False):
+            return
+        self._shut = True
         from .harcama import tracker
         tracker.save()
         self.stop()
