@@ -8,7 +8,7 @@ from altyazi.server import EventServer
 
 def free_port():
     s = socket.socket()
-    s.bind(("127.0.0.1", 0))
+    s.bind(("0.0.0.0", 0))          # sunucu 0.0.0.0'a bağlanır; macOS'ta 127.0.0.1'de boş görünen port orada dolu olabilir
     p = s.getsockname()[1]
     s.close()
     return p
@@ -121,7 +121,7 @@ def test_tv_protocol_events():
     from altyazi.server import EventServer
 
     s = _s.socket()
-    s.bind(("127.0.0.1", 0))
+    s.bind(("0.0.0.0", 0))
     port = s.getsockname()[1]
     s.close()
     srv = EventServer(port)
