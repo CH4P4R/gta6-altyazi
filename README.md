@@ -428,7 +428,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 1. **Ayarlar › Sistem › Geliştirici seçenekleri**'ne gir.
 2. **USB hata ayıklama**'yı aç.
 
-> Yoksa ya da TV bulunamazsa Kablosuz hata ayıklama'yı aç; ekrandaki eşleştirme adresi ve kodunu programdaki Eşleştir kısmına yazarsın.
+> Yoksa ya da TV bulunamazsa Kablosuz hata ayıklama'yı aç ve 'Eşleştirme koduyla cihaz eşleştir'e bas. Açılan küçük penceredeki adres:port'u (ana ekrandaki değil, port farklıdır) ve 6 haneli kodu programdaki Eşleştir kısmına yaz; pencere açıkken Eşleştir'e bas.
 
 #### Adım 3: Bağlan ve izin ver
 

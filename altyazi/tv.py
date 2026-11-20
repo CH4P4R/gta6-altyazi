@@ -119,11 +119,67 @@ class Adb:
                     return f"{m.group(1)}:{m.group(2)}"
         return None
 
+    def mdns_pairing_address(self, host: str) -> str | None:
+        """TV'de 'Eşleştirme koduyla cihaz eşleştir' penceresi açıkken onun adres:port'unu ağdan bul."""
+        try:
+            out = self.run("mdns", "services", timeout=10)
+        except TvError:
+            return None
+        for line in out.splitlines():
+            if "_adb-tls-pairing" in line:
+                m = re.search(r"(\d+\.\d+\.\d+\.\d+):(\d+)", line)
+                if m and m.group(1) == host:
+                    return f"{m.group(1)}:{m.group(2)}"
+        return None
+
     def pair(self, host_port: str, code: str) -> str:
-        out = self.run("pair", host_port, code, timeout=30)
-        if "Successfully paired" not in out:
-            raise TvError(f"Eşleştirme başarısız: {out}")
-        return out
+        host_port = host_port.strip().replace(" ", "")
+        code = re.sub(r"\D", "", code or "")
+        host = host_port.split(":")[0]
+        if not host:
+            raise TvError("Eşleştirme: TV'nin adresini yaz (ör. 192.168.1.40:37123).")
+        if len(code) != 6:
+            raise TvError("Eşleştirme kodu 6 haneli olmalı: TV'deki eşleştirme penceresindeki rakamları yaz.")
+        # Kablosuz hata ayıklama ana ekranındaki port eşleştirme portu değildir; pencere açıksa doğrusunu bul
+        found = self.mdns_pairing_address(host)
+        targets = [found] if found else []
+        if ":" in host_port and host_port not in targets:
+            targets.append(host_port)
+        if not targets:
+            raise TvError(PAIR_HELP["port"])
+        out = ""
+        for target in targets:
+            out = self.run("pair", target, code, timeout=30)
+            if "Successfully paired" in out:
+                return out
+            log.info("adb pair %s: %s", target, out)
+        raise TvError(pair_error(out))
+
+
+PAIR_HELP = {
+    "port": "Eşleştirme olmadı: yazılan port eşleştirme portu değil ya da TV'deki eşleştirme penceresi kapandı. TV'de "
+            "Kablosuz hata ayıklama › 'Eşleştirme koduyla cihaz eşleştir'e bas; açılan küçük penceredeki adres:port'u "
+            "(ana ekrandaki değil, port farklıdır) ve 6 haneli kodu yaz. Pencere açıkken Eşleştir'e bas.",
+    "code": "Eşleştirme kodu yanlış ya da süresi doldu. TV'de pencereyi kapatıp 'Eşleştirme koduyla cihaz eşleştir'e "
+            "yeniden bas ve yeni kodu yaz.",
+    "unreachable": "TV'ye ulaşılamadı. TV ile bilgisayar aynı modemde mi? Adresi doğru yazdın mı? Eşleştirme penceresi "
+                   "açık mı?",
+}
+
+
+def pair_error(out: str) -> str:
+    """adb pair çıktısını yapılacak işi söyleyen Türkçe mesaja çevir."""
+    low = (out or "").lower()
+    if "wrong password" in low or "wrong code" in low:
+        msg = PAIR_HELP["code"]
+    elif "protocol fault" in low or "couldn't read status" in low or "connection reset" in low:
+        msg = PAIR_HELP["port"]
+    elif "unable to connect" in low or "failed to connect" in low or "cannot connect" in low or "timed out" in low \
+            or "no route" in low or "refused" in low:
+        msg = PAIR_HELP["unreachable"]
+    else:
+        msg = "Eşleştirme olmadı. " + PAIR_HELP["port"].split(": ", 1)[1]
+    return f"{msg} (adb: {out.strip()[:160]})" if out.strip() else msg
 
 
 class AndroidTv:

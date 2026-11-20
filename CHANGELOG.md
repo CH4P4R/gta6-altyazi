@@ -3,6 +3,12 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.15
+- **Google TV kablosuz eşleştirme düzeltmesi:** "protocol fault (couldn't read status message)" hatası. Kablosuz hata
+  ayıklama ana ekranındaki port yazıldığında eşleştirme olmuyordu; program artık TV'deki eşleştirme penceresinin
+  doğru portunu ağdan kendisi bulur. Olmazsa ne yapılacağını Türkçe söyler (yanlış port / pencere kapandı / kod yanlış).
+  Kodda boşluk olsa da kabul edilir.
+
 ## 0.4.14
 - **Kurulum sihirbazında TV markası seçimi:** Televizyon adımında Google TV / LG / Samsung seçilir, o markanın
   resimli adımları gelir (önceden sihirbaz yalnız Google TV'yi anlatıyordu). LG parolası ve bilgisayarın IP'si

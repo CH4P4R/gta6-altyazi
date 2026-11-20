@@ -92,6 +92,23 @@ def test_pair(fake):
     assert "Successfully paired" in tv.Adb().pair("127.0.0.1:41234", "123456")
 
 
+def test_pair_finds_pairing_port_and_explains_errors(fake):
+    """Ana ekrandaki port yazılsa da eşleştirme penceresinin portu ağdan bulunur; olmazsa ne yapılacağı söylenir."""
+    set_state, get_state = fake
+    set_state(pair_port=37123, mdns="adb-XYZ\t_adb-tls-pairing._tcp\t127.0.0.1:37123\n")
+    assert "Successfully paired" in tv.Adb().pair("127.0.0.1:41234", "123 456")
+    assert ["pair", "127.0.0.1:37123", "123456"] in get_state()["calls"]
+    # pencere kapalı (mdns'te yok) ve yanlış port: "protocol fault" Türkçe açıklamaya çevrilir
+    set_state(pair_port=37123)
+    with pytest.raises(tv.TvError, match="küçük penceredeki adres:port"):
+        tv.Adb().pair("127.0.0.1:41234", "123456")
+    set_state(pair_code="111111")
+    with pytest.raises(tv.TvError, match="kodu yanlış"):
+        tv.Adb().pair("127.0.0.1:41234", "123456")
+    with pytest.raises(tv.TvError, match="6 haneli"):
+        tv.Adb().pair("127.0.0.1:41234", "12")
+
+
 def test_no_overlay_permission_falls_back_to_hdmi_mode(fake, adb_port):
     set_state, get_state = fake
     set_state(installed=True, no_overlay=True)

@@ -231,7 +231,7 @@ class Wizard(QDialog):
         self.lg_pass = QLineEdit(self.cfg.tv.lg_parola)
         self.lg_pass.setPlaceholderText("LG Passphrase (Developer Mode ekranında, ör. A1B2C3)")
         self.pair_addr = QLineEdit()
-        self.pair_addr.setPlaceholderText("Eşleştirme adresi (ör. 192.168.1.40:37123)")
+        self.pair_addr.setPlaceholderText("Eşleştirme penceresindeki adres:port (ana ekrandaki değil)")
         self.pair_code = QLineEdit()
         self.pair_code.setPlaceholderText("Kod")
         self.pair_code.setFixedWidth(100)

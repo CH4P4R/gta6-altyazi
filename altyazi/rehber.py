@@ -121,8 +121,9 @@ GOOGLE_TV = [
          ["**Ayarlar › Sistem › Geliştirici seçenekleri**'ne gir.",
           "**USB hata ayıklama**'yı aç."],
          img="tv-hata-ayiklama",
-         note="Yoksa ya da TV bulunamazsa Kablosuz hata ayıklama'yı aç; ekrandaki eşleştirme adresi ve kodunu "
-              "programdaki Eşleştir kısmına yazarsın."),
+         note="Yoksa ya da TV bulunamazsa Kablosuz hata ayıklama'yı aç ve 'Eşleştirme koduyla cihaz eşleştir'e bas. "
+              "Açılan küçük penceredeki adres:port'u (ana ekrandaki değil, port farklıdır) ve 6 haneli kodu programdaki "
+              "Eşleştir kısmına yaz; pencere açıkken Eşleştir'e bas."),
     step("Bağlan ve izin ver",
          ["Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de "
           "**Ayarlar › Ağ ve İnternet**'te bağlı olduğun Wi-Fi'ye gir, IP adresi orada yazar.",

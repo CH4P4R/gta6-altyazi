@@ -495,8 +495,9 @@ class TvPage(QWidget):
         conn.add(self.status)
         pair = Card(inner=True, margins=14)
         pair.add(label("Kablosuz hata ayıklama ile eşleştirme (gerekirse)", "h3"))
-        pair.add(label("TV'de Kablosuz hata ayıklama › Eşleştirme koduyla cihaz eşleştir. Ekranda çıkan adres:port ve "
-                       "6 haneli kodu yaz.", "faint", wrap=True))
+        pair.add(label("TV'de Kablosuz hata ayıklama › Eşleştirme koduyla cihaz eşleştir. Açılan küçük penceredeki "
+                       "adres:port'u (ana ekrandaki değil, port farklıdır) ve 6 haneli kodu yaz; pencere açıkken "
+                       "Eşleştir'e bas.", "faint", wrap=True))
         self.pair_addr = QLineEdit()
         self.pair_addr.setPlaceholderText("192.168.1.40:37123")
         self.pair_code = QLineEdit()
