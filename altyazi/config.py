@@ -207,7 +207,37 @@ def load(path: str | Path | None = None) -> Config:
         _merge(data, yaml.safe_load(local.read_text(encoding="utf-8")) or {})
     cfg = _build(Config, data, "config")
     _migrate(cfg)
+    if path is None:
+        _restore_keys(cfg)
+    log.info("Anahtarlar: %s", ", ".join(f"{k.split('_')[0]} {'var' if getattr(cfg.ceviri, k) else 'yok'}"
+                                         for k in KEY_FIELDS))
     return cfg
+
+
+KEY_FIELDS = ("claude_anahtar", "gemini_anahtar", "deepl_anahtar", "yerelai_anahtar")
+
+
+def _vault() -> Path:
+    from . import paths
+    return paths.data("anahtarlar.yaml")
+
+
+def _read_keys(p: Path) -> dict:
+    try:
+        data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    data = data.get("ceviri", data) if isinstance(data, dict) else {}
+    return {k: str(data.get(k) or "") for k in KEY_FIELDS if isinstance(data, dict)}
+
+
+def _restore_keys(cfg: Config) -> None:
+    """Ayar dosyasında anahtar boşsa ama yedekte varsa geri koy (güncellemede anahtar kaybolmasın)."""
+    saved = _read_keys(_vault())
+    for k in KEY_FIELDS:
+        if not getattr(cfg.ceviri, k, "") and saved.get(k):
+            setattr(cfg.ceviri, k, saved[k])
+            log.warning("%s ayar dosyasında yoktu; yedekten geri yüklendi", k)
 
 
 def _migrate(cfg: Config) -> None:
@@ -229,12 +259,31 @@ def to_dict(cfg) -> dict:  # noqa: ANN001
     return asdict(cfg)
 
 
-def save(cfg: Config, path: str | Path | None = None) -> Path:
-    """Kullanıcı ayarlarını yaz (arayüzden yapılan değişiklikler)."""
+def save(cfg: Config, path: str | Path | None = None, explicit_keys: bool = False) -> Path:
+    """Kullanıcı ayarlarını yaz (arayüzden yapılan değişiklikler).
+
+    Anahtarlar korunur: boş anahtar, dosyadaki dolu anahtarın üstüne yalnız kullanıcı anahtar alanını kendisi
+    boşalttıysa (explicit_keys) yazılır. Anahtarlar ayrıca anahtarlar.yaml'a yedeklenir.
+    """
     from . import paths
 
     p = Path(path) if path else paths.user_config()
     p.parent.mkdir(parents=True, exist_ok=True)
+    if path is None:
+        old = _read_keys(p)
+        vault = _read_keys(_vault())
+        for k in KEY_FIELDS:
+            if not getattr(cfg.ceviri, k, "") and not explicit_keys and (old.get(k) or vault.get(k)):
+                setattr(cfg.ceviri, k, old.get(k) or vault.get(k))
+                log.warning("%s boş kaydedilmek üzereydi; eski anahtar korundu", k)
+        try:
+            keys = {k: getattr(cfg.ceviri, k, "") for k in KEY_FIELDS}
+            v = _vault()
+            tmpv = v.with_suffix(".tmp")
+            tmpv.write_text(yaml.safe_dump(keys, allow_unicode=True), encoding="utf-8")
+            tmpv.replace(v)
+        except OSError as e:
+            log.warning("Anahtar yedeği yazılamadı: %s", e)
     tmp = p.with_suffix(".tmp")
     tmp.write_text(yaml.safe_dump(to_dict(cfg), allow_unicode=True, sort_keys=False), encoding="utf-8")
     tmp.replace(p)

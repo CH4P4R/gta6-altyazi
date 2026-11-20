@@ -349,10 +349,10 @@ class AppController(QObject):
         self.server.set_tv_style(lineScale=float(scale), background=opacity,
                                  displayMode="overlay" if self.cfg.tv.mod == "katman" else "inApp")
 
-    def apply_config(self, cfg: config_mod.Config) -> None:
+    def apply_config(self, cfg: config_mod.Config, explicit_keys: bool = False) -> None:
         old = self.cfg
+        config_mod.save(cfg, explicit_keys=explicit_keys)    # boş anahtar dolu olanı silmez (save korur)
         self.cfg = cfg
-        config_mod.save(cfg)
         if self.server:
             x, y, w, h = cfg.tv.kalibrasyon
             self.server.tv = {"x": x, "y": y, "w": w, "h": h}

@@ -778,6 +778,18 @@ class TranslationPage(QWidget):
             self.cache_l.setText(f"{ctl.engine_info.get('onbellek', 0)} çeviri kayıtlı")
         self._vis()
 
+    def showEvent(self, e) -> None:  # noqa: ANN001, N802
+        """Sayfa her açıldığında anahtar alanlarını güncel ayardan doldur (sihirbazda girilen anahtar burada boş
+        görünüp 'Kaydet'le silinmesin)."""
+        c = self.ctl.cfg.ceviri
+        for w, val in ((self.key, c.claude_anahtar), (self.gem, c.gemini_anahtar), (self.deepl, c.deepl_anahtar)):
+            if w.text().strip() != val and not w.hasFocus():
+                w.setText(val)
+        i = self.qual.findData(c.kalite)
+        if i >= 0 and self.qual.currentIndex() != i:
+            self.qual.setCurrentIndex(i)
+        super().showEvent(e)
+
     def _vis(self) -> None:
         k = self.qual.currentData()
         for w in (self.key, self.model, self.fastmode):
@@ -886,7 +898,7 @@ class TranslationPage(QWidget):
                 if k.strip():
                     gl[k.strip()] = v.strip()
         c.sozluk = gl
-        self.ctl.apply_config(cfg)
+        self.ctl.apply_config(cfg, explicit_keys=True)     # anahtar alanlarını kullanıcı kendisi düzenledi
         self.window().toast.show_text("Çeviri ayarları kaydedildi, motorlar yeniden hazırlanıyor")
 
 

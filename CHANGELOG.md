@@ -3,6 +3,12 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.19
+- **API anahtarları artık kaybolmuyor:** boş bir kayıt dolu anahtarın üstüne yazamıyor (yalnız anahtar alanını kendin
+  boşaltırsan silinir); anahtarlar ayrıca ayrı bir yedek dosyada tutuluyor ve ayar dosyasında yoksa oradan geri
+  geliyor. Çeviri sayfası her açılışta anahtar alanlarını güncel ayardan dolduruyor (sihirbazda girilen anahtar orada
+  boş görünüp "Kaydet"le silinmiyor).
+
 ## 0.4.18
 - **Güvenlik duvarı "İzin ver" baştan yazıldı:** eskisi Windows'a komutu gönderip sonucunu hiç beklemiyordu; çalışıp
   çalışmadığı belli olmuyordu. Ağ "Ortak" ise (kablolu bağlantılarda Windows çoğu zaman böyle işaretler) verilen izin

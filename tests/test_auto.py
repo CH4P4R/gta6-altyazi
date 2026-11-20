@@ -171,3 +171,22 @@ def test_tv_that_never_connects_back_is_explained(monkeypatch):
             appmod.AppController._tv_wait_client(fake, "192.168.1.20:8787", 0, timeout=20)
     ok = types.SimpleNamespace(server=types.SimpleNamespace(tv_count=1), firewall_status=lambda: "tamam")
     appmod.AppController._tv_wait_client(ok, "x", 0, timeout=20)
+
+
+def test_api_keys_survive_accidental_empty_save(tmp_path, monkeypatch):
+    """Boş anahtarlı bir kayıt (eski kopya, sihirbaz) dolu anahtarı silmez; ayar dosyası kaybolsa da yedekten gelir."""
+    monkeypatch.setenv("ALTYAZI_DATA", str(tmp_path))
+    from altyazi import config
+    cfg = config.load()
+    cfg.ceviri.claude_anahtar = "sk-ant-ABC"
+    config.save(cfg)
+    stale = config.load()
+    stale.ceviri.claude_anahtar = ""
+    config.save(stale)                                        # arka plandaki bir kayıt
+    assert config.load().ceviri.claude_anahtar == "sk-ant-ABC"
+    (tmp_path / "config.yaml").unlink()                       # ayar dosyası tamamen gitse bile
+    assert config.load().ceviri.claude_anahtar == "sk-ant-ABC"
+    cleared = config.load()
+    cleared.ceviri.claude_anahtar = ""
+    config.save(cleared, explicit_keys=True)                  # kullanıcı alanı kendisi boşalttı
+    assert config.load().ceviri.claude_anahtar == ""
