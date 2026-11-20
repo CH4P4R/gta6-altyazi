@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import ctypes
+import logging
 import sys
 from ctypes import wintypes
 
 IS_WIN = sys.platform == "win32"
 
+
+log = logging.getLogger(__name__)
 
 def set_dpi_aware() -> None:
     """Koordinatlar fiziksel piksel olsun (ekran ölçekleme %125/%150 olsa bile)."""
@@ -212,9 +215,6 @@ def set_autostart(enabled: bool) -> bool:
 # ---------------------------------------------------------------- uyku engeli ve güvenlik duvarı
 # (fikirler CouchSubs'tan: SleepGuard ve yerel ağ güvenlik duvarı kuralı; https://github.com/yorulmazsinan/couchsubs)
 _ES_CONTINUOUS, _ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
-FIREWALL_RULE = "GTA6 Altyazı (yerel ağ)"
-
-
 def keep_awake(on: bool) -> None:
     """Çeviri sürerken bilgisayar uykuya geçmesin (oyun kumandayla oynanır, fare/klavye boşta kalır)."""
     if sys.platform != "win32":
@@ -223,52 +223,128 @@ def keep_awake(on: bool) -> None:
     ctypes.windll.kernel32.SetThreadExecutionState(flags)
 
 
+FIREWALL_RULE = "GTA6 Altyazı (yerel ağ)"          # eski sürümlerin kural adı (kaldırılır)
+FIREWALL_GROUP = "GTA6Altyazi.LocalNetwork"        # yeni kurallar bu grupta (ASCII: kod sayfası derdi yok)
+
+
 def _program() -> str:
     return sys.executable
 
 
-def firewall_ok() -> bool | None:
-    """Bu program için izin kuralı var mı? (Windows dışında None)"""
-    if sys.platform != "win32":
-        return None
+def _ps_quote(s: str) -> str:
+    return "'" + s.replace("'", "''") + "'"
+
+
+def _powershell(script: str, timeout: float = 30) -> int | None:
+    """PowerShell betiğini (çıktısını okumadan) çalıştır, çıkış kodunu döndür. Betik base64 gider: tırnak/Türkçe
+    karakter sorunu olmaz."""
+    import base64
     import subprocess
 
-    # netsh çıktısı konsol kod sayfasında (Türkçe Windows'ta cp857) gelir ve kural adındaki "ı" çözülemiyordu;
-    # PowerShell'in çıkış koduna bakılır, metin okunmaz.
-    name = FIREWALL_RULE.replace("'", "''")
-    ps = (f"if (Get-NetFirewallRule -DisplayName '{name}' -ErrorAction SilentlyContinue | "
-          "Where-Object {{ $_.Enabled -eq 'True' -and $_.Action -eq 'Allow' }}) {{ exit 0 }} else {{ exit 3 }}")
-    ps = ps.replace("{{", "{").replace("}}", "}")
+    enc = base64.b64encode(script.encode("utf-16-le")).decode()
     try:
-        r = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=20,
-                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-EncodedCommand", enc],
+                           capture_output=True, timeout=timeout, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except (OSError, subprocess.SubprocessError, ValueError):
         return None
-    if r.returncode == 0:
-        return True
-    return False if r.returncode == 3 else None
+    return r.returncode
 
 
-def firewall_allow() -> bool:
-    """Yönetici izniyle (UAC sorusu) TV ve telefonun bu programa bağlanmasına izin ver.
+def firewall_ok() -> bool | None:
+    """Bu program için Özel ağda yerel cihazlardan gelen bağlantı izni var mı? (Windows dışında None)
 
-    Kural yalnız Özel ağ profilinde ve yalnız yerel alt ağdan gelen bağlantılar içindir. Windows'un ilk açılıştaki
-    soruya "İptal" denince bu program için kendiliğinden koyduğu engelleme kuralları da kaldırılır.
+    CouchSubs'taki gibi: Özel profilde 'gelen bütün bağlantıları engelle' açıksa ya da bu programa engel kuralı varsa
+    izin yok sayılır.
     """
     if sys.platform != "win32":
-        return False
-    exe = _program().replace("'", "''")
-    ps = (f"$p='{exe}';"
-          "Get-NetFirewallApplicationFilter -Program $p -ErrorAction SilentlyContinue | Get-NetFirewallRule | "
-          "Where-Object {$_.Action -eq 'Block'} | Remove-NetFirewallRule;"
-          f"Remove-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -ErrorAction SilentlyContinue;"
-          f"New-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -Direction Inbound -Action Allow -Program $p "
-          "-Profile Private -RemoteAddress LocalSubnet -Protocol TCP | Out-Null;"
-          f"New-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -Direction Inbound -Action Allow -Program $p "
-          "-Profile Private -RemoteAddress LocalSubnet -Protocol UDP | Out-Null")
-    args = f'-NoProfile -WindowStyle Hidden -Command "{ps}"'
-    rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", "powershell.exe", args, None, 0)
-    return rc > 32
+        return None
+    exe = _ps_quote(_program())
+    script = f"""
+$ErrorActionPreference = 'SilentlyContinue'
+$p = {exe}
+$prof = Get-NetFirewallProfile -Name Private
+if ($prof.Enabled -eq 'True' -and $prof.AllowInboundRules -eq 'False') {{ exit 4 }}
+$mine = Get-NetFirewallApplicationFilter -Program $p | Get-NetFirewallRule | Where-Object {{ $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' }}
+if ($mine | Where-Object {{ $_.Action -eq 'Block' }}) {{ exit 3 }}
+$allow = $mine | Where-Object {{ $_.Action -eq 'Allow' -and ($_.Profile -match 'Private|Any') }}
+if ($allow) {{ exit 0 }} else {{ exit 3 }}
+"""
+    rc = _powershell(script)
+    if rc == 0:
+        return True
+    return False if rc in (3, 4) else None
+
+
+def _shell_execute_wait(file: str, params: str, timeout_ms: int = 120000) -> int | None:
+    """Yönetici olarak çalıştır (UAC sorusu), bitmesini bekle, çıkış kodunu döndür. İptal edilirse None."""
+    from ctypes import wintypes as wt
+
+    class SHELLEXECUTEINFOW(ctypes.Structure):
+        _fields_ = [("cbSize", wt.DWORD), ("fMask", ctypes.c_ulong), ("hwnd", wt.HWND), ("lpVerb", wt.LPCWSTR),
+                    ("lpFile", wt.LPCWSTR), ("lpParameters", wt.LPCWSTR), ("lpDirectory", wt.LPCWSTR),
+                    ("nShow", ctypes.c_int), ("hInstApp", wt.HINSTANCE), ("lpIDList", ctypes.c_void_p),
+                    ("lpClass", wt.LPCWSTR), ("hkeyClass", wt.HKEY), ("dwHotKey", wt.DWORD),
+                    ("hIconOrMonitor", wt.HANDLE), ("hProcess", wt.HANDLE)]
+
+    info = SHELLEXECUTEINFOW()
+    info.cbSize = ctypes.sizeof(info)
+    info.fMask = 0x00000040 | 0x00000400          # SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI
+    info.lpVerb = "runas"
+    info.lpFile = file
+    info.lpParameters = params
+    info.nShow = 0
+    if not ctypes.windll.shell32.ShellExecuteExW(ctypes.byref(info)) or not info.hProcess:
+        return None
+    try:
+        ctypes.windll.kernel32.WaitForSingleObject(info.hProcess, timeout_ms)
+        code = wt.DWORD()
+        ctypes.windll.kernel32.GetExitCodeProcess(info.hProcess, ctypes.byref(code))
+        return int(code.value)
+    finally:
+        ctypes.windll.kernel32.CloseHandle(info.hProcess)
+
+
+def firewall_script(exe: str, make_private: bool) -> str:
+    """Yönetici olarak çalışan betik: (istenirse Ortak ev ağını Özel yap), bu programın engel kurallarını kaldır,
+    Özel ağda yalnız yerel alt ağdan TCP/UDP izni ekle ve doğrula (CouchSubs LocalFirewallPolicy gibi)."""
+    p = _ps_quote(exe)
+    g = _ps_quote(FIREWALL_GROUP)
+    private = ("Get-NetConnectionProfile | Where-Object { $_.NetworkCategory -eq 'Public' -and "
+               "$_.IPv4Connectivity -ne 'Disconnected' } | Set-NetConnectionProfile -NetworkCategory Private\n"
+               if make_private else "")
+    return f"""
+$ErrorActionPreference = 'SilentlyContinue'
+$p = {p}
+{private}Get-NetFirewallApplicationFilter -Program $p | Get-NetFirewallRule | Where-Object {{ $_.Direction -eq 'Inbound' -and $_.Action -eq 'Block' }} | Remove-NetFirewallRule
+Get-NetFirewallRule -Group {g} | Remove-NetFirewallRule
+Get-NetFirewallRule -DisplayName 'GTA6 Altyaz* (yerel a*)' | Remove-NetFirewallRule
+$ErrorActionPreference = 'Stop'
+try {{
+  New-NetFirewallRule -DisplayName 'GTA6 Altyazi - yerel TCP' -Group {g} -Direction Inbound -Action Allow -Program $p -Profile Private -RemoteAddress LocalSubnet -Protocol TCP | Out-Null
+  New-NetFirewallRule -DisplayName 'GTA6 Altyazi - yerel UDP' -Group {g} -Direction Inbound -Action Allow -Program $p -Profile Private -RemoteAddress LocalSubnet -Protocol UDP | Out-Null
+}} catch {{ exit 5 }}
+if ((Get-NetFirewallRule -Group {g} | Measure-Object).Count -lt 2) {{ exit 6 }}
+exit 0
+"""
+
+
+def firewall_allow(make_private: bool = False) -> str:
+    """Yönetici izniyle (UAC) TV ve telefonun bu programa bağlanmasına izin ver ve sonucu doğrula.
+
+    Döner: 'tamam' | 'iptal' (UAC'ye Hayır denildi) | 'hata' (kural yazılamadı) | 'desteklenmiyor'
+    """
+    if sys.platform != "win32":
+        return "desteklenmiyor"
+    import base64
+
+    enc = base64.b64encode(firewall_script(_program(), make_private).encode("utf-16-le")).decode()
+    rc = _shell_execute_wait("powershell.exe", f"-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {enc}")
+    if rc is None:
+        return "iptal"
+    if rc != 0:
+        log.warning("Güvenlik duvarı kuralı yazılamadı (çıkış kodu %s)", rc)
+        return "hata"
+    return "tamam" if firewall_ok() is not False else "hata"
 
 
 def network_is_public() -> bool | None:

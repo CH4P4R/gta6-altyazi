@@ -3,6 +3,13 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.4.18
+- **Güvenlik duvarı "İzin ver" baştan yazıldı:** eskisi Windows'a komutu gönderip sonucunu hiç beklemiyordu; çalışıp
+  çalışmadığı belli olmuyordu. Ağ "Ortak" ise (kablolu bağlantılarda Windows çoğu zaman böyle işaretler) verilen izin
+  hiç işe yaramıyordu. Artık düğme ev ağını "Özel" yapıyor, izni ekliyor, sonucu doğruluyor ve ne olduğunu yazıyor
+  (izin verildi / Windows'un sorusuna Hayır denildi / başka bir güvenlik programı engelliyor).
+- Durum denetimi Windows'un "gelen bütün bağlantıları engelle" ayarını ve bu programa konmuş engel kurallarını da görüyor.
+
 ## 0.4.17 · Ayrıntılı TV denetimi
 Programın TV kısmı baştan sona CouchSubs'ın gerçek TV'lerde denenmiş koduyla satır satır karşılaştırıldı; bulunan
 hatalar düzeltildi.

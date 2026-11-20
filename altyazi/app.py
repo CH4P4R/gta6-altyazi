@@ -515,8 +515,8 @@ class AppController(QObject):
             fw = "bilinmiyor"
         if fw == "ortak":
             raise RuntimeError("TV uygulaması açıldı ama bu bilgisayara bağlanamadı: Windows bu ağı 'Ortak' sayıyor ve "
-                               "TV'yi engelliyor. Windows Ayarlar › Ağ ve İnternet › Wi-Fi/Ethernet › ağın özellikleri › "
-                               "Ağ profili: 'Özel' yap, sonra yeniden Bağlan'a bas.")
+                               "TV'yi engelliyor. Televizyon sayfasındaki '3 · Bağlantı izni' kısmında İzin ver'e bas "
+                               "(ev ağını 'Özel' yapar; Windows soracak, Evet de), sonra yeniden Bağlan'a bas.")
         if fw == "eksik":
             raise RuntimeError("TV uygulaması açıldı ama bu bilgisayara bağlanamadı: Windows güvenlik duvarı engelliyor. "
                                "Televizyon sayfasındaki '3 · Bağlantı izni' kısmında İzin ver'e bas (Windows soracak, "
@@ -683,11 +683,23 @@ class AppController(QObject):
         ok = winutil.firewall_ok()
         return "bilinmiyor" if ok is None else ("tamam" if ok else "eksik")
 
-    def firewall_allow(self) -> None:
-        if winutil.firewall_allow():
-            self._notice("Windows izin isteyecek: Evet de. Sonra TV bu bilgisayara bağlanabilir.")
-        else:
-            self._notice("Güvenlik duvarı izni verilemedi.")
+    def firewall_allow(self, done=None) -> None:  # noqa: ANN001
+        """Yönetici izniyle güvenlik duvarı izni (ağ Ortak ise Özel de yapılır); sonuç done(metin) ile bildirilir."""
+        def run() -> None:
+            public = bool(winutil.network_is_public())
+            self._notice("Windows yönetici izni soracak: Evet de.")
+            res = winutil.firewall_allow(make_private=public)
+            msg = {"tamam": "✓ İzin verildi" + (" ve ev ağı 'Özel' yapıldı." if public else ".") +
+                            " TV artık bu bilgisayara bağlanabilir.",
+                   "iptal": "İzin verilmedi: Windows'un sorusuna 'Evet' demen gerekiyor. Yeniden 'İzin ver'e bas.",
+                   "hata": "Windows kuralı yazmadı. Bilgisayarda başka bir güvenlik programı (antivirüs güvenlik "
+                           "duvarı) varsa GTA6 Altyazı'ya oradan izin ver.",
+                   "desteklenmiyor": "Bu yalnız Windows'ta gerekir."}[res]
+            log.info("Güvenlik duvarı izni: %s", res)
+            self._notice(msg)
+            if done:
+                done(msg)
+        threading.Thread(target=run, daemon=True, name="guvenlik-duvari").start()
 
     def load_pack_catalog(self) -> None:
         """CouchSubs paket sunucusunun listesini arka planda al (GTA 6 paketi burada)."""
