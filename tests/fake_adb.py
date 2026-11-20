@@ -25,12 +25,16 @@ elif cmd == "mdns":
     out = "List of discovered mdns services\n" + st.get("mdns", "")
 elif cmd == "pair":
     want = st.get("pair_port")                     # gerçek TV: yalnız eşleştirme penceresinin portu kabul eder
-    if want and not args[1].endswith(f":{want}"):
+    if st.get("stale_server") and not st.get("restarted"):   # eski adb sunucusu araya giriyor
+        out = "error: protocol fault (couldn't read status message): No error"
+    elif want and not args[1].endswith(f":{want}"):
         out = "error: protocol fault (couldn't read status message): No error"
     elif st.get("pair_code") and args[2] != st["pair_code"]:
         out = "Failed: Wrong password or connection was dropped."
     else:
         out = f"Successfully paired to {args[1]} [guid=adb-XYZ]"
+elif cmd == "kill-server":
+    st["restarted"] = True
 elif cmd == "install":
     if st.get("incompatible") and not st.get("uninstalled"):
         out = "Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE: signatures do not match]"

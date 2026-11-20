@@ -148,11 +148,21 @@ class Adb:
         if not targets:
             raise TvError(PAIR_HELP["port"])
         out = ""
+        restarted = False
         for target in targets:
-            out = self.run("pair", target, code, timeout=30)
-            if "Successfully paired" in out:
-                return out
-            log.info("adb pair %s: %s", target, out)
+            for _attempt in range(2):
+                out = self.run("pair", target, code, timeout=30)
+                if "Successfully paired" in out:
+                    return out
+                log.info("adb pair %s: %s", target, out)
+                # Başka bir programın (emülatör, telefon aracı) eski adb sunucusu araya girince de "protocol fault"
+                # çıkar: adb sunucusunu bir kez baştan başlatıp aynı adresi yeniden dene
+                if "protocol fault" in out.lower() and not restarted:
+                    restarted = True
+                    self.run("kill-server", timeout=10)
+                    self.run("start-server", timeout=20)
+                    continue
+                break
         raise TvError(pair_error(out))
 
 

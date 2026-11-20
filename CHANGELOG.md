@@ -7,7 +7,8 @@ sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 - **Google TV kablosuz eşleştirme düzeltmesi:** "protocol fault (couldn't read status message)" hatası. Kablosuz hata
   ayıklama ana ekranındaki port yazıldığında eşleştirme olmuyordu; program artık TV'deki eşleştirme penceresinin
   doğru portunu ağdan kendisi bulur. Olmazsa ne yapılacağını Türkçe söyler (yanlış port / pencere kapandı / kod yanlış).
-  Kodda boşluk olsa da kabul edilir.
+  Kodda boşluk olsa da kabul edilir. Başka bir programın (emülatör, telefon aracı) eski adb'si araya girdiğinde de
+  aynı hata çıkıyordu: program adb'yi baştan başlatıp yeniden dener.
 
 ## 0.4.14
 - **Kurulum sihirbazında TV markası seçimi:** Televizyon adımında Google TV / LG / Samsung seçilir, o markanın

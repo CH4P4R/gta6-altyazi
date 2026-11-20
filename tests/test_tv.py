@@ -107,6 +107,10 @@ def test_pair_finds_pairing_port_and_explains_errors(fake):
         tv.Adb().pair("127.0.0.1:41234", "123456")
     with pytest.raises(tv.TvError, match="6 haneli"):
         tv.Adb().pair("127.0.0.1:41234", "12")
+    # doğru port ama araya eski bir adb sunucusu girmiş: sunucu baştan başlatılıp yeniden denenir
+    set_state(stale_server=True)
+    assert "Successfully paired" in tv.Adb().pair("127.0.0.1:37123", "123456")
+    assert ["kill-server"] in get_state()["calls"]
 
 
 def test_no_overlay_permission_falls_back_to_hdmi_mode(fake, adb_port):
