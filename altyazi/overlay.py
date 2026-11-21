@@ -202,6 +202,15 @@ class OverlayWindow(QWidget):
         p.end()
 
 
+    def closeEvent(self, e) -> None:  # noqa: ANN001, N802
+        # Kullanıcı bu pencereyi kapatamaz (çerçevesiz, tıklamayı geçirir); kapatma isteği yalnız sistemden gelir
+        # (Windows kapanırken, taskkill). Eskiden yalnız katman kapanıyor, program penceresiz açık kalıp port 8787'yi
+        # tutuyordu. Sistem kapatmak istiyorsa programın tamamı kapansın.
+        super().closeEvent(e)
+        if e.spontaneous():
+            QApplication.quit()
+
+
 class VideoWindow(QWidget):
     def __init__(self, painter: Painter, bridge: Bridge, fullscreen: bool = False):
         super().__init__()

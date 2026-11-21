@@ -180,12 +180,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $v = python -c "import altyazi; print(altyazi.__version__)"
-          $prev = (gh release list --limit 30 --json tagName | ConvertFrom-Json | Where-Object { $_.tagName -like 'v*' -and $_.tagName -ne "v$v" } | Select-Object -First 1).tagName
+          # Kurulum dosyası olan en son önceki sürüm (bir sürümün Windows derlemesi yayınlanmamış olabilir)
           $old = ""
-          if ($prev) {
-            gh release download $prev -p GTA6Altyazi-Setup.exe -D eski --clobber
-            if ($LASTEXITCODE -eq 0) { $old = "eski\GTA6Altyazi-Setup.exe" }
+          $prev = ""
+          foreach ($tag in (gh release list --limit 30 --json tagName | ConvertFrom-Json | Where-Object { $_.tagName -like 'v*' -and $_.tagName -ne "v$v" }).tagName) {
+            gh release download $tag -p GTA6Altyazi-Setup.exe -D eski --clobber 2>$null
+            if ($LASTEXITCODE -eq 0) { $old = "eski\GTA6Altyazi-Setup.exe"; $prev = $tag; break }
           }
+          $global:LASTEXITCODE = 0
           Write-Host "Önceki sürüm: $prev"
           python tools/e2e_windows.py dist\GTA6Altyazi-Setup.exe $old
           if ($LASTEXITCODE -ne 0) { throw "Uçtan uca deneme başarısız: kurulum dosyası yayınlanmadı" }

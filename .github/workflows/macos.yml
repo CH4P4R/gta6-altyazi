@@ -166,9 +166,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           v=$(python -c "import altyazi; print(altyazi.__version__)")
-          prev=$(gh release list --limit 30 --json tagName,isDraft -q '.[].tagName' | grep '^v' | grep -v "^v$v$" | head -1)
           old=""
-          if [ -n "$prev" ] && gh release download "$prev" -p GTA6Altyazi-mac.dmg -D eski --clobber 2>/dev/null; then old="eski/GTA6Altyazi-mac.dmg"; fi
+          # .dmg'si olan en son önceki sürüm
+          for prev in $(gh release list --limit 30 --json tagName -q '.[].tagName' | grep '^v' | grep -v "^v$v$"); do
+            if gh release download "$prev" -p GTA6Altyazi-mac.dmg -D eski --clobber 2>/dev/null; then old="eski/GTA6Altyazi-mac.dmg"; break; fi
+          done
           echo "Önceki Mac sürümü: ${old:-yok}"
           python tools/e2e_mac.py dist/GTA6Altyazi-mac.dmg "$old"
 
