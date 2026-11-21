@@ -84,12 +84,16 @@ if [[ ! -f "$PREFIX/lib/libavcodec.a" ]]; then
   cd "$NATIVE"
 fi
 
+# protoc yalnız derleme aracı (bağlanmaz); Homebrew'dakini kullan. CMAKE_IGNORE_PREFIX_PATH onu gizlediği için yolu verilir.
+PROTOC_BIN="$(command -v protoc || true)"
+[[ -n "$PROTOC_BIN" ]] || { echo "HATA: protoc yok (brew install protobuf)" >&2; exit 1; }
+
 echo "=== couchsubs_native"
 export PKG_CONFIG_LIBDIR="$PREFIX/lib/pkgconfig"
 export PKG_CONFIG_PATH=""
 cmake -S "$NATIVE" -B "$WORK/native" "${common[@]}" -DFFMPEG_PREFIX="$PREFIX" \
   -DOPENSSL_ROOT_DIR="$PREFIX" -DOPENSSL_USE_STATIC_LIBS=ON -DCURL_USE_OPENSSL=ON \
-  -DPython3_EXECUTABLE="$VENV/bin/python3" -DPYTHON_EXECUTABLE="$VENV/bin/python3" >/dev/null
+  -DPython3_EXECUTABLE="$VENV/bin/python3" -DPYTHON_EXECUTABLE="$VENV/bin/python3" -DPROTOC="$PROTOC_BIN" >/dev/null
 cmake --build "$WORK/native" --parallel "$JOBS"
 "$WORK/native/couchsubs_native_test" "$NATIVE/fixtures/sample-1080p.h264"
 cp "$WORK/native/couchsubs_native.dylib" "$NATIVE/bin/"

@@ -1,0 +1,4 @@
+# chiaki-ng yamaları satır sonları değişmeden uygulanmalı (Windows checkout CRLF yapıyordu)
+native/patches/* -text
+*.h264 binary
+*.sh text eol=lf

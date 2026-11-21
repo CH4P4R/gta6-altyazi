@@ -58,11 +58,21 @@ jobs:
           path: native/bin/couchsubs_native.dylib
           key: native-mac-${{ hashFiles('native/*.c', 'native/*.h', 'native/CMakeLists.txt', 'native/CHIAKI_COMMIT', 'native/patches/*', 'native/build-mac.sh') }}
 
+      - name: Remote Play bağımlılıkları önbelleği (OpenSSL, FFmpeg... kaynaktan)
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            native/build/mac-work/prefix
+            native/build/mac-work/.done-*
+          key: native-mac-deps-${{ hashFiles('native/build-mac.sh') }}
+
       - name: Remote Play kütüphanesi (libchiaki + FFmpeg)
         if: steps.native-cache.outputs.cache-hit != 'true'
         run: |
           brew list cmake >/dev/null 2>&1 || brew install cmake
           brew list ninja >/dev/null 2>&1 || brew install ninja
+          brew list protobuf >/dev/null 2>&1 || brew install protobuf
           bash native/fetch-chiaki.sh
           bash native/build-mac.sh
 
