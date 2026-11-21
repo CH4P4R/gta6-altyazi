@@ -743,7 +743,7 @@ class TranslationEngine:
         if len(body) > 12 and is_similar(normalize(body), normalize(tr), 0.90):
             log.info("Yapay zekâ çevirmeden geri verdi, yok sayıldı: %s", body[:60])
             return None
-        return konusan.present(tr, text, True) if sp else tr
+        return konusan.present(tr, text, bool(getattr(getattr(self, "cfg", None), "konusan_goster", True))) if sp else tr
 
     def lookup(self, text: str) -> str | None:
         """Hazır paket ya da önbellekteki kaliteli çeviri (beklemeden); yoksa None."""

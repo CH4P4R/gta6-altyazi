@@ -203,6 +203,66 @@ class ImageSource(_ThreadSource):
             time.sleep(self.period)
 
 
+DEMO_LINES = [
+    "Lucia: We need to get out of Vice City. Now!",
+    "Jason: Stay close to me and keep your voice down.",
+    "The bridge is gone. We need another way across.",
+    "Lucia: You said this would be easy.",
+    "Jason: I never said that. Get in the car!",
+    "We should reach the lighthouse before dark.",
+]
+
+
+class DemoSource(_ThreadSource):
+    """Deneme modu (CouchSubs): konsol olmadan, gün batımı sahnesi üstünde sırayla İngilizce altyazılar. Program bunları
+    gerçek oyundaki gibi okur, çevirir, bilgisayar ekranında ve TV bağlıysa TV'de gösterir."""
+
+    title = "Deneme modu"
+
+    def __init__(self, lines: list[str] | None = None, fps: int = 15, hold: float = 4.0, gap: float = 1.0,
+                 size: tuple[int, int] = (1280, 720)):
+        super().__init__()
+        self.lines = lines or DEMO_LINES
+        self.period, self.hold, self.gap = 1.0 / fps, hold, gap
+        self.w, self.h = size
+        self.background = self._scene()
+
+    def _scene(self) -> np.ndarray:
+        w, h = self.w, self.h
+        y = np.linspace(0, 1, h)[:, None]
+        top, mid, low = np.array([56, 19, 29.]), np.array([94, 42, 107.]), np.array([63, 96, 200.])   # BGR
+        rows = np.where(y < 0.55, top + (mid - top) * (y / 0.55), mid + (low - mid) * ((y - 0.55) / 0.45))
+        img = np.ascontiguousarray(np.broadcast_to(rows[:, None, :], (h, w, 3)), dtype=np.uint8)
+        cv2.circle(img, (int(w * 0.68), int(h * 0.6)), int(h * 0.16), (120, 190, 255), -1)
+        cv2.rectangle(img, (0, int(h * 0.74)), (w, h), (26, 12, 20), -1)
+        for i in range(6):                               # palmiyeler
+            x = int(w * (0.07 + i * 0.17))
+            cv2.line(img, (x, int(h * 0.75)), (x + 8, int(h * 0.42)), (22, 10, 16), 6)
+            for dx, dy in ((-60, 20), (-35, -10), (35, -10), (60, 20), (0, -25)):
+                cv2.line(img, (x + 8, int(h * 0.42)), (x + 8 + dx, int(h * 0.42) + dy + 12), (22, 10, 16), 4)
+        return img
+
+    def frame_at(self, t: float) -> np.ndarray:
+        img = self.background.copy()
+        cycle = self.hold + self.gap
+        i = int(t // cycle) % len(self.lines)
+        if (t % cycle) < self.hold:
+            text = self.lines[i]
+            font, scale, th = cv2.FONT_HERSHEY_DUPLEX, 1.05 * self.w / 1280, max(2, int(2 * self.w / 1280))
+            (tw, tht), _ = cv2.getTextSize(text, font, scale, th)
+            x, y = (self.w - tw) // 2, int(self.h * 0.9)
+            cv2.putText(img, text, (x, y), font, scale, (0, 0, 0), th + 5, cv2.LINE_AA)       # oyun yazısı gibi kontur
+            cv2.putText(img, text, (x, y), font, scale, (255, 255, 255), th, cv2.LINE_AA)
+        return img
+
+    def _run(self, on_frame: FrameCallback) -> None:
+        t0 = time.perf_counter()
+        while not self._stop.is_set():
+            now = time.perf_counter()
+            on_frame(self.frame_at(now - t0), now)
+            time.sleep(self.period)
+
+
 class RemotePlaySource(Source):
     """PS5 görüntüsü yerleşik Remote Play ile (ikinci PSN hesabı, chiaki penceresi gerekmez)."""
 

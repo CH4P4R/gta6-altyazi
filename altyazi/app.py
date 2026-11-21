@@ -69,6 +69,7 @@ class AppController(QObject):
     updateAvailable = Signal(dict)        # uygulamanın yeni sürümü: {version, url, size, notes}
     updateProgress = Signal(float)        # güncelleme indirme ilerlemesi (0..1; -1 hata)
     spendChanged = Signal()               # Claude harcama sayacı değişti (harcama.tracker)
+    gameAsk = Signal(list)                # "Hangi oyunu oynuyorsun?" sorusu (oyun paketi başlıkları)
     _uiCommand = Signal(str)              # başka iş parçacıklarından gelen ve ana iş parçacığında yapılması gereken işler
 
     def __init__(self, cfg: config_mod.Config):
@@ -100,12 +101,18 @@ class AppController(QObject):
         from .oyun.oyun_algi import GameChoice
         self.game_choice = GameChoice(paths.data("oyun.json"))
         self.game_choice.on_change = self._game_changed
+        self.game_choice.on_ask = lambda: self.gameAsk.emit(self.game_choice.suggestions(""))
+        self.game_choice.pack_titles = lambda: [p.title for p in (self.engine.packs.packs if self.engine else [])]
+        self.demo = False
         self.layout = SubtitleLayoutStore(paths.data("altyazi-yeri.json"))
         self._game_lock = threading.Lock()
         self._game_poll = 0.0
         harcama.tracker.listener = self.spendChanged.emit
         self._start_server()
         self._start_hotkeys()
+        self._game_timer = QTimer(self)               # "Hangi oyunu oynuyorsun?" (GameChoice.tick, 15 sn'de bir)
+        self._game_timer.timeout.connect(lambda: self.game_choice.tick() if self.state == "calisiyor" else None)
+        self._game_timer.start(15000)
         self._src_timer = QTimer(self)
         self._src_timer.timeout.connect(self._check_source)
         self._src_timer.start(2000)
@@ -172,8 +179,16 @@ class AppController(QObject):
     def _start_hotkeys(self) -> None:
         from .hotkeys import Hotkeys
         k = self.cfg.kisayol
-        self.hotkeys = Hotkeys({k.tam_ekran: lambda: self.command("tam_ekran"),
-                                k.duraklat: lambda: self.command("duraklat")})
+        acts = {"tam_ekran": (k.tam_ekran, k.tam_ekran2), "duraklat": (k.duraklat, k.duraklat2),
+                "baslat_durdur": (k.baslat, k.baslat2), "seslendir": (k.seslendir, k.seslendir2),
+                "tv_deneme": (k.tv_deneme, k.tv_deneme2)}
+        bindings = {}
+        for name, combos in acts.items():
+            for combo in combos:
+                combo = (combo or "").strip().lower()
+                if combo and combo not in bindings:
+                    bindings[combo] = (lambda n=name: self.command(n))
+        self.hotkeys = Hotkeys(bindings)
         self.hotkeys.start()
 
     def _set_state(self, s: str) -> None:
@@ -229,21 +244,33 @@ class AppController(QObject):
             self._set_state("hata")
 
     # ------------------------------------------------------------------ çalıştırma
-    def start(self) -> bool:
+    def start_demo(self) -> bool:
+        """Deneme modu (CouchSubs): konsol, hesap ya da TV olmadan örnek görüntüyle her şey denenir. Görüntü ve
+        Türkçesi bilgisayarda kendi penceresinde görünür; TV bağlıysa TV'ye de gider."""
+        from .capture import DemoSource
+        return self.start(source=DemoSource())
+
+    def start(self, source=None) -> bool:  # noqa: ANN001
         if self.state != "hazir":
             self._notice("Henüz hazır değil, motorlar yükleniyor...")
             return False
         from .capture import make_source
-        try:
-            source = make_source(self.cfg, on_state=self._rp_state, on_moved=self._rp_moved)
-        except Exception as e:  # noqa: BLE001
-            self._notice(str(e))
-            if self.cfg.kaynak.tur == "remoteplay":
-                self.ps5Status.emit("kopuk", str(e))
-            return False
+        demo = source is not None
+        self.demo = demo
+        if source is None:
+            try:
+                source = make_source(self.cfg, on_state=self._rp_state, on_moved=self._rp_moved)
+            except Exception as e:  # noqa: BLE001
+                self._notice(str(e))
+                if self.cfg.kaynak.tur == "remoteplay":
+                    self.ps5Status.emit("kopuk", str(e))
+                return False
         painter = Painter(self.cfg.gosterim.yazi_tipi, self.cfg.gosterim.gecikme_goster)
         frame_sink = None
-        if self.tv_only():
+        if demo:
+            self.window = VideoWindow(painter, self.bridge, False)
+            frame_sink = self.window.push_frame
+        elif self.tv_only():
             self.window = None            # oyun TV'de: Türkçe yalnız TV'de (bilgisayar ekranına katman açılmaz)
         elif self.cfg.gosterim.mod == "pencere":
             self.window = VideoWindow(painter, self.bridge, self.cfg.gosterim.tam_ekran)
@@ -256,7 +283,7 @@ class AppController(QObject):
                              frame_sink=frame_sink)
         self.pipe.notice = self._notice
         self.pipe.layout_top = lambda: self.layout.current.read_top(self.layout_key())
-        self.game_choice.start(self.cfg.ps5.ad or None, lambda: False)
+        self.game_choice.start(self.cfg.ps5.ad or None, lambda: bool(self.cfg.ceviri.oyun_sor) and not demo)
         self.pipe.start()
         winutil.keep_awake(True)
         self._set_state("calisiyor")
@@ -348,6 +375,7 @@ class AppController(QObject):
 
     def stop(self) -> None:
         winutil.keep_awake(False)
+        self.demo = False
         if getattr(self, "_speaker", None) is not None:
             self._speaker.interrupt()
         if self.pipe:
@@ -424,6 +452,10 @@ class AppController(QObject):
             QApplication.quit()
         elif name == "toggle":
             self.toggle()
+        elif name.startswith("seslendir:"):
+            cfg = self.edit_config()
+            cfg.gosterim.seslendir = name.endswith("1")
+            self.apply_config(cfg)
         elif name == "baglan":
             self.launch_chiaki(stream=True)
         elif name == "ps5_kaydet" and getattr(self, "_found_ps5", None):
@@ -475,6 +507,14 @@ class AppController(QObject):
                 return {"mesaj": "Uygulama hazırlanıyor, birkaç saniye sonra tekrar dene", "durum": self.state}
             self._uiCommand.emit("toggle")
             return {"mesaj": "Durduruluyor..." if running else "Başlatılıyor...", "durum": self.state}
+        if name == "seslendir":
+            cfg = self.edit_config()
+            cfg.gosterim.seslendir = not cfg.gosterim.seslendir
+            self._uiCommand.emit("seslendir:" + ("1" if cfg.gosterim.seslendir else "0"))
+            return {"mesaj": "Türkçe seslendirme " + ("açık" if cfg.gosterim.seslendir else "kapalı")}
+        if name == "tv_deneme":
+            self.tv_test()
+            return {"mesaj": "TV'ye deneme altyazısı gönderildi"}
         if name == "baglan":
             self._uiCommand.emit("baglan")
             return {"mesaj": "chiaki-ng açılıyor..."}
@@ -575,7 +615,8 @@ class AppController(QObject):
                                  displayMode="overlay" if t.mod == "katman" else "inApp",
                                  placement=t.yerlesim, fontSize=int(t.yazi_boyutu), textColor=t.yazi_rengi,
                                  bold=bool(t.kalin), stackPrevious=bool(t.onceki_satirlar), bottomPercent=int(t.alttan),
-                                 backgroundShape=t.zemin_sekli)
+                                 backgroundShape=t.zemin_sekli, font=t.yazi_tipi,
+                                 speakerColors=bool(t.konusan_renk))
 
     def apply_config(self, cfg: config_mod.Config, explicit_keys: bool = False) -> None:
         old = self.cfg
@@ -601,8 +642,12 @@ class AppController(QObject):
             self.warmup()
             return
         if running and (old.bolgeler != cfg.bolgeler or old.kaynak != cfg.kaynak or old.gosterim != cfg.gosterim):
+            demo = self.demo
             self.stop()
-            self.start()
+            if demo:
+                self.start_demo()
+            else:
+                self.start()
 
     def edit_config(self) -> config_mod.Config:
         """Düzenlemek için ayarların kopyası (apply_config ile geri verilir)."""
@@ -634,7 +679,7 @@ class AppController(QObject):
         """chiaki penceresi açılınca başlat, kapanınca durdur (TV günleri: kasada kimse yok)."""
         if not found:
             self._user_stopped = False
-            if self.state == "calisiyor":
+            if self.state == "calisiyor" and not self.demo:     # deneme modu chiaki penceresi beklemez
                 self._notice("chiaki penceresi kapandı, çeviri durduruldu")
                 self.stop()
             return

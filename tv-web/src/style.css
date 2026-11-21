@@ -305,3 +305,11 @@ body.glass.covering #subtitle-text { background: transparent !important; }
 body.glass.band #subtitle-cover, body.glass.band #subtitle-text, body.glass.band #subtitle-prev-text, body.glass.band #subtitle-prev2-text {
   border-radius: 0;
 }
+
+/* Yazı tipi "Aksiyon (GTA tarzı)": dar, kalın Barlow (Ayarlar › Altyazı görünümü › Yazı tipi) */
+body.font-action #subtitle, body.font-action #subtitle-text, body.font-action #subtitle-prev-text,
+body.font-action #subtitle-prev2-text {
+  font-family: "Altyazi Modern", Roboto, Arial, sans-serif !important; letter-spacing: 0.005em;
+}
+/* Konuşana göre renk: ad biraz daha kalın */
+#subtitle-text .speaker, #subtitle-prev-text .speaker, #subtitle-prev2-text .speaker { font-weight: 800; }

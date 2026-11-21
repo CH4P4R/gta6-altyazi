@@ -43,6 +43,7 @@ class BolgeCfg:
     min_satir_yuksekligi: int = 10
     kutu_opaklik: int = 255       # İngilizceyi kapatan kutunun opaklığı (0-255)
     yazi_olcek: float = 1.3       # Türkçe yazı İngilizceden ne kadar büyük olsun (alttakini bastırsın)
+    aktif: bool = True            # kapalı bölge okunmaz (Okuma alanı › Ek alanlar)
 
 
 @dataclass
@@ -99,6 +100,8 @@ class CeviriCfg:
     # Telefondaki mesajların Türkçesi: ust (her balonun tam üstünde, balonun renginde; telefon Türkçe görünür) | yan
     # (telefonun yanında ayrı panelde)
     telefon_yeri: str = "yan"
+    konusan_goster: bool = True     # konuşanın adı çevirinin başında kalsın ("LUCIA: Gitmeliyiz."); ad çevrilmez
+    oyun_sor: bool = True           # oyun paketle tanınmazsa iki dakika sonra "Hangi oyunu oynuyorsun?" diye sor
 
 
 @dataclass
@@ -125,6 +128,15 @@ class KisayolCfg:
     duraklat: str = "ctrl+shift+0"    # çeviriyi duraklat / devam ettir
     tam_ekran_sure: int = 20          # tam ekran çeviri kaç saniye ekranda kalsın
     tam_ekran_gorsel: bool = True     # Claude anahtarı varsa ekran görüntüsünü Claude okusun (daha doğru, 2-4 sn)
+    # Her işin ikinci kısayolu (CouchSubs: sayı tuş takımı olmayan klavyeler için ikisi birden)
+    tam_ekran2: str = "num9"
+    duraklat2: str = "num0"
+    baslat: str = "ctrl+shift+8"      # çeviriyi başlat / durdur
+    baslat2: str = "num8"
+    seslendir: str = "ctrl+shift+7"   # Türkçe seslendirmeyi aç / kapat
+    seslendir2: str = "num7"
+    tv_deneme: str = "ctrl+shift+6"   # TV'ye deneme altyazısı gönder
+    tv_deneme2: str = "num6"
 
 
 @dataclass
@@ -172,6 +184,8 @@ class TvCfg:
     onceki_satirlar: bool = True  # hızlı konuşmada önceki satırlar üstte kalsın
     alttan: int = 7               # sabit yerleşimde alttan uzaklık (yüzde)
     zemin_sekli: str = "fit"      # fit (yazı kadar) | band (tam genişlik bant)
+    yazi_tipi: str = "yuvarlak"   # yuvarlak (Nunito, okunaklı) | aksiyon (Barlow, GTA tarzı)
+    konusan_renk: bool = False    # her konuşanın adı ve satırı kendi renginde
 
 
 @dataclass

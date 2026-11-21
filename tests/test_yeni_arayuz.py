@@ -112,3 +112,55 @@ def test_pages(tmp_path, monkeypatch):
     assert "Uygulama sürümü" in saglik.info_text(ctl)
     assert saglik.issue_url(ctl).startswith(saglik.ISSUES_URL)
     ctl.shutdown()
+
+
+def test_demo_source_and_new_settings(tmp_path, monkeypatch):
+    from altyazi.capture import DEMO_LINES, DemoSource
+    d = DemoSource(hold=4, gap=1)
+    a, blank, b = d.frame_at(1.0), d.frame_at(4.5), d.frame_at(6.0)
+    assert a.shape == (720, 1280, 3) and (a != blank).any() and (a != b).any()
+    assert len(DEMO_LINES) >= 5
+    app, ctl = _app(tmp_path, monkeypatch)
+    from altyazi.ui.main_window import MainWindow
+    win = MainWindow(ctl)
+    if ctl.start_demo():                              # motorlar hazırsa başlar; deneme penceresi açılır
+        assert ctl.demo and ctl.pipe is not None and ctl.window is not None
+        ctl.stop()
+        assert not ctl.demo
+    home = win.pages["home"]
+    home.show_where.buttons["monitor"].click()
+    assert ctl.cfg.kaynak.oyun_yeri == "monitor"
+    reg = win.pages["regions"]
+    tg, sz = reg.extra_rows["yardim"]
+    tg.setChecked(False)
+    assert not next(z for z in ctl.cfg.bolgeler if z.ad == "yardim").aktif
+    reg._gta6()
+    assert all(z.aktif for z in ctl.cfg.bolgeler)
+    keys = win.pages["settings"].keys
+    keys["baslat"][1].setText("num5")
+    win.pages["settings"].save()
+    assert ctl.cfg.kisayol.baslat2 == "num5"
+    tr = win.pages["translate"]
+    tr.spk_show.setChecked(False)
+    tr.save()
+    assert ctl.cfg.ceviri.konusan_goster is False
+    look = win.pages["look"]
+    look.tv_font.setCurrentIndex(look.tv_font.findData("aksiyon"))
+    look.spk_color.setChecked(True)
+    look.save()
+    assert ctl.cfg.tv.yazi_tipi == "aksiyon" and ctl.cfg.tv.konusan_renk
+    if ctl.server is not None:
+        assert ctl.server.tv_style["font"] == "aksiyon" and ctl.server.tv_style["speakerColors"] is True
+    ctl.shutdown()
+
+
+def test_pipeline_skips_inactive_zones_and_speaker_option():
+    from altyazi import config as config_mod
+    from altyazi.kalite import konusan
+    from altyazi.pipeline import Pipeline
+    cfg = config_mod.Config()
+    cfg.bolgeler[0].aktif = False
+    p = Pipeline.__new__(Pipeline)
+    zones = [z for z in cfg.bolgeler if getattr(z, "aktif", True)]
+    assert len(zones) == len(cfg.bolgeler) - 1 and p is not None
+    assert konusan.present("LUCIA: Gitmeliyiz.", "LUCIA: We have to go.", False) == "Gitmeliyiz."

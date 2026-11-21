@@ -367,7 +367,8 @@ class Pipeline:
         self.engine = engine
         self.source = source
         self.frame_sink = frame_sink          # "pencere" gösterim modunda her kareyi alır
-        self.zones: list[tuple[BolgeCfg, ZoneDetector]] = [(z, ZoneDetector(z)) for z in cfg.bolgeler]
+        self.zones: list[tuple[BolgeCfg, ZoneDetector]] = [(z, ZoneDetector(z)) for z in cfg.bolgeler
+                                                           if getattr(z, "aktif", True)]
         self._cond = threading.Condition()
         self._latest: tuple[np.ndarray, float] | None = None
         self._running = False
@@ -702,7 +703,11 @@ class Pipeline:
             if not cur or cur[0] != base.seq or r.quality < cur[2]:
                 return                            # bu arada yeni metin geldi ya da daha iyisi zaten ekranda
             self._current[base.zone] = (cur[0], cur[1], r.quality)
-        item = replace(base, text=r.text, source=r.source, quality=r.quality, mt_ms=r.ms,
+        text = r.text
+        if not getattr(self.cfg.ceviri, "konusan_goster", True):
+            from .kalite import konusan
+            text = konusan.present(text, base.english, False)     # "LUCIA: Gitmeliyiz." → "Gitmeliyiz."
+        item = replace(base, text=text, source=r.source, quality=r.quality, mt_ms=r.ms,
                        latency_ms=(time.perf_counter() - t_frame) * 1000)
         log.info("[%s] %4.0f ms (OCR %.0f, %s %.0f) %s → %s", item.zone, item.latency_ms, item.ocr_ms,
                  item.source, item.mt_ms, item.english, item.text)

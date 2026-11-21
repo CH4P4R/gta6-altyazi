@@ -233,3 +233,27 @@ test('yeni altyazı stili: zemin %90 ve üstünde, glass alanı ezer, diğer bod
     assert.deepEqual(tv.errors, []);
   } finally { await tv.close(); }
 });
+
+test('yazı tipi Aksiyon ve konuşana göre renk', { skip: skip() }, async () => {
+  const tv = await openTv(browser, { width: W, height: H });
+  try {
+    await tv.send('style', { placement: 'fixed', background: 60, font: 'aksiyon', speakerColors: true, textColor: 'cyan' });
+    await tv.send('subtitle', { text: 'LUCIA: Arabaya bin, gitmemiz gerek.', duration: 60000, box: { left: 0.3, top: 0.85, right: 0.7, bottom: 0.92 }, line: 0.03 });
+    const look = await tv.page.evaluate(() => {
+      const el = document.getElementById('subtitle-text');
+      const sp = el.querySelector('.speaker');
+      return { family: getComputedStyle(el).fontFamily, speaker: sp ? sp.textContent : null, color: el.style.color,
+               body: document.body.className, text: el.textContent };
+    });
+    assert.match(look.family, /Altyazi Modern/);
+    assert.equal(look.speaker, 'LUCIA: ');
+    assert.ok(look.color && look.color !== '', look.color);
+    assert.ok(look.text.startsWith('LUCIA: Arabaya'), look.text);
+    await tv.send('style', { font: 'yuvarlak', speakerColors: false });
+    await tv.send('subtitle', { text: 'JASON: Tamam.', duration: 60000, box: { left: 0.3, top: 0.85, right: 0.7, bottom: 0.92 }, line: 0.03 });
+    const plain = await tv.page.evaluate(() => ({ sp: !!document.querySelector('#subtitle-text .speaker'),
+                                                  body: document.body.className }));
+    assert.ok(!plain.sp && !plain.body.includes('font-action'));
+    assert.deepEqual(tv.errors, []);
+  } finally { await tv.close(); }
+});

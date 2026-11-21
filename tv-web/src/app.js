@@ -237,11 +237,38 @@
   }
 
   // Satırı yazar. Sayfadaki metin bölünmüş hâlidir; karşılaştırmalar için özgün metin elementte kalır.
+  // Konuşana göre renk (CouchSubs): "LUCIA: ..." satırında ad ve satır o konuşanın renginde; her ad hep aynı renk.
+  var speakerColors = false;
+  var SPEAKER_PALETTE = ['#FFD166', '#7BDFF2', '#B8F2A0', '#F7A1C4', '#C3B1FF', '#FFB38A'];
+  var SPEAKER_RE = /^([A-ZÇĞİÖŞÜ][A-Za-zÇĞİÖŞÜçğıöşü0-9 .'\-]{0,24}):\s+/;
+
+  function speakerColor(name) {
+    var h = 0;
+    for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 9973;
+    return SPEAKER_PALETTE[h % SPEAKER_PALETTE.length];
+  }
+
+  function fillSpeakerText(el, text) {
+    var m = speakerColors ? SPEAKER_RE.exec(text) : null;
+    if (!m) {
+      el.textContent = text;
+      el.style.color = '';
+      return;
+    }
+    while (el.firstChild) el.removeChild(el.firstChild);
+    var name = document.createElement('span');
+    name.className = 'speaker';
+    name.textContent = m[0];
+    el.appendChild(name);
+    el.appendChild(document.createTextNode(text.slice(m[0].length)));
+    el.style.color = speakerColor(m[1].toUpperCase());
+  }
+
   function setLineText(textId, text, paragraphs, baseSize) {
     var el = $(textId);
     var wrapped = paragraphs ? { text: text, scale: 1 } : wrapSubtitle(text);
     el.rawText = text;
-    el.textContent = wrapped.text;
+    fillSpeakerText(el, wrapped.text);
     el.style.whiteSpace = 'pre-line';
     el.style.fontSize = Math.round(baseSize * wrapped.scale) + 'px';
   }
@@ -774,6 +801,8 @@
       $('subtitle-prev-text').style.fontWeight = style.bold ? '700' : '600';
       $('subtitle-prev2-text').style.fontWeight = style.bold ? '700' : '600';
     }
+    if (typeof style.speakerColors === 'boolean') speakerColors = style.speakerColors;
+    if (style.font === 'aksiyon' || style.font === 'yuvarlak') setBodyClass('font-action', style.font === 'aksiyon');
     if (TEXT_COLORS[style.textColor]) {
       $('subtitle-text').style.color = TEXT_COLORS[style.textColor];
       $('subtitle-prev-text').style.color = TEXT_COLORS[style.textColor];

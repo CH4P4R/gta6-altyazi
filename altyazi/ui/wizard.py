@@ -6,8 +6,8 @@ import sys
 
 import webbrowser
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter
+from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
+from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPen
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout,
                                QLineEdit, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
 
@@ -15,8 +15,8 @@ from .. import rehber
 from ..app import CHIAKI_DOWNLOAD, AppController
 from . import theme as T
 from .guide import REHBER, Guide
-from .parcalar import Backdrop, HelpFab, IconTile, PagerDots, SubtitlePreview
-from .widgets import (Card, Dot, IconBadge, Logo, PreviewArt, QrCode, Stepper, button, hbox, label,
+from .parcalar import Backdrop, HelpFab, IconTile, PagerDots, RadioCard, RadioGroup, Segmented, SubtitlePreview
+from .widgets import (Card, Dot, Icon, IconBadge, Logo, PreviewArt, QrCode, Stepper, button, draw_icon, hbox, label,
                       scroll_page, vbox)
 
 STEPS = ["Hoş geldin", "Nerede oynuyorsun?", "PS5 bağlantısı", "Televizyon", "Çeviri", "Hazır"]
@@ -82,18 +82,6 @@ def feature(icon: str, title: str, text: str) -> QHBoxLayout:
                 spacing=16)
 
 
-def tile(icon: str, title: str, text: str) -> Card:
-    """Hoş geldin sayfasındaki büyük özellik kartı."""
-    c = Card(margins=20, spacing=10)
-    c.setMinimumHeight(190)
-    c.add(IconBadge(icon, 52))
-    c.add(label(title, "h2"))
-    t = label(text, "muted", wrap=True)
-    c.add(t)
-    c.layout().addStretch(1)
-    return c
-
-
 class ChoiceCard(QPushButton):
     """'Nerede oynuyorsun?' seçeneği: büyük ikon, başlık, açıklama, önerilen etiketi, seçilince onay işareti."""
 
@@ -145,6 +133,91 @@ CHOICES = [("tv", "ps", "TV'de oynuyorum",
             "chiaki-ng ile PS5'i bilgisayarda oynarsın. Türkçe, chiaki penceresinin üstünde çıkar.", ""),
            ("ikisi", "swap", "Bazen TV'de, bazen monitörde",
             "İkisini de kurarız; o gün hangisinde oynuyorsan o çalışır.", "")]
+
+# Hoş geldin: kuruluma başlamadan önce elde olması gerekenler (Nino'daki "İhtiyacınız olanlar")
+NEEDS = [("ps", "PS5", "Bu bilgisayarla aynı Wi-Fi ağında"),
+         ("tv", "Akıllı TV", "Android TV, Google TV, LG ya da Samsung"),
+         ("user", "İkinci PSN hesabı", "Ücretsiz, 2 dakikada açılır")]
+
+# Televizyon: önce TV türü seçilir, sonra o markanın resimli adımları gelir
+TV_KINDS = [("android", "tv", "Android TV / Google TV",
+             "TCL, iFFALCON, Sony, Philips, Vestel, Arçelik, Beko, Grundig ve diğer Android TV'ler."),
+            ("lgsam", "tv", "LG ya da Samsung", "LG webOS ve Samsung Tizen TV'ler."),
+            ("yok", "monitor", "TV'm yok, bu bilgisayarın ekranında göster",
+             "Oyunu bilgisayarda Remote Play ile oynarsın; altyazı oyun penceresinin üstünde görünür. TV'yi sonra da "
+             "bağlayabilirsin.")]
+TV_NAMES = {"android": "Android TV / Google TV", "lg": "LG (webOS)", "samsung": "Samsung (Tizen)"}
+
+ENGINE_NAMES = {"gemini": "Gemini", "claude": "Claude", "deepl": "DeepL", "yerelai": "Yerel yapay zekâ"}
+TEST_LINE = "Get in the car, we're leaving right now!"
+
+
+def draw_glyph(p: QPainter, name: str, r: QRectF, color: QColor, width: float) -> None:
+    """draw_icon'da olmayan iki ikon (kişi, kilit); gerisi draw_icon'a gider."""
+    if name not in ("user", "lock"):
+        draw_icon(p, name, r, color, width)
+        return
+    p.save()
+    pen = QPen(color, width)
+    pen.setCapStyle(Qt.RoundCap)
+    p.setPen(pen)
+    p.setBrush(Qt.NoBrush)
+    x, y, w, h = r.x(), r.y(), r.width(), r.height()
+    if name == "user":                                   # baş ve omuzlar
+        p.drawEllipse(QRectF(x + w * .32, y + h * .08, w * .36, h * .36))
+        p.drawArc(QRectF(x + w * .12, y + h * .54, w * .76, h * .76), 0, 180 * 16)
+    else:                                                # asma kilit
+        p.drawRoundedRect(QRectF(x + w * .2, y + h * .44, w * .6, h * .46), 2, 2)
+        p.drawArc(QRectF(x + w * .32, y + h * .1, w * .36, h * .6), 0, 180 * 16)
+        for sx in (x + w * .32, x + w * .68):
+            p.drawLine(QPointF(sx, y + h * .4), QPointF(sx, y + h * .44))
+    p.restore()
+
+
+class GlyphTile(IconTile):
+    """IconTile; draw_icon'da olmayan 'user' ve 'lock' ikonlarını da çizer."""
+
+    def paintEvent(self, e) -> None:  # noqa: ANN001, N802
+        super().paintEvent(e)
+        if self.icon in ("user", "lock"):
+            p = QPainter(self)
+            p.setRenderHint(QPainter.Antialiasing)
+            r = QRectF(1, 1, self.width() - 2, self.height() - 2)
+            m = r.width() * 0.25
+            draw_glyph(p, self.icon, r.adjusted(m, m, -m, -m), QColor("white"), max(2.0, r.width() / 20))
+
+
+class Glyph(Icon):
+    """Küçük çizgi ikon (Icon gibi), kilit ve kişi dahil."""
+
+    def paintEvent(self, _e) -> None:  # noqa: ANN001, N802
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        draw_glyph(p, self.name, QRectF(self.rect()).adjusted(1, 1, -1, -1), self.color, 1.6)
+
+
+def need_card(icon: str, title: str, text: str) -> Card:
+    """Hoş geldin sayfasındaki 'İhtiyacınız olanlar' kartı: ikon kutusu, kalın başlık, soluk açıklama."""
+    c = Card(margins=16, spacing=0)
+    row = QHBoxLayout()
+    row.setSpacing(14)
+    row.addWidget(GlyphTile(icon, 42, glow=False), 0, Qt.AlignTop)
+    c.title = label(title, "h3")
+    c.sub = label(text, "muted", wrap=True)
+    c.sub.setStyleSheet("font-size: 11pt;")
+    row.addLayout(vbox(c.title, c.sub, None, spacing=3), 1)
+    c.add(row)
+    return c
+
+
+def step_num(n: int) -> QWidget:
+    """Numaralı adımın degrade yuvarlağı (Nino'daki 1-2-3)."""
+    b = label(str(n))
+    b.setFixedSize(28, 28)
+    b.setAlignment(Qt.AlignCenter)
+    b.setStyleSheet(f"color: white; font-size: 11pt; font-weight: 800; border-radius: 14px; background: "
+                    f"qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {T.A1}, stop:1 {T.A2});")
+    return b
 
 
 class Wizard(QDialog):
@@ -240,21 +313,32 @@ class Wizard(QDialog):
         head = label(f"Oyun İngilizce,<br><span style='color:{T.A1}'>sen Türkçe oyna.</span>", "hero")
         head.setTextFormat(Qt.RichText)
         lay.addWidget(head)
-        lay.addWidget(label("Ekrandaki İngilizce yazıları anında okur, Türkçesini oyunun üstüne yazar. Kurulum 5 dakika.",
-                            "lead", wrap=True))
-        lay.addSpacing(4)
-        tiles = QHBoxLayout()
-        tiles.setSpacing(16)
-        for icon, title, text in (("translate", "Her yazı Türkçe", "Diyaloglar, yardım kutuları, bildirimler, "
-                                   "telefon ve menüler."),
-                                  ("tv", "TV'de oyunun üstünde", "Sen TV'de oynarsın; Türkçe, İngilizcenin tam "
-                                   "yerinde çıkar."),
-                                  ("bolt", "Bekletmez", "İlk çeviri anında gelir, yapay zekâ hemen ardından "
-                                   "cilalar.")):
-            tiles.addWidget(tile(icon, title, text), 1)
-        lay.addLayout(tiles)
-        lay.addWidget(PreviewArt(), 1)
-        return w
+        lay.addWidget(label("Ekrandaki İngilizce yazıları anında okur, Türkçesini oyunun üstüne yazar: diyaloglar, "
+                            "yardım kutuları, telefon mesajları ve menüler.", "lead", wrap=True))
+        perks = QHBoxLayout()                     # eski büyük özellik kartlarının kısa hali
+        perks.setSpacing(22)
+        for icon, text in (("translate", "Her yazı Türkçe"), ("tv", "TV'de oyunun üstünde"),
+                           ("bolt", "Bekletmez, anında gelir")):
+            perks.addLayout(hbox(IconBadge(icon, 30), label(text, "muted"), spacing=9))
+        perks.addStretch(1)
+        lay.addLayout(perks)
+        lay.addSpacing(6)
+        clock = Icon("history", 18, T.MUTED)
+        self.welcome_time = label("Kurulum yaklaşık 5 dakika sürer.", "muted")
+        lay.addLayout(hbox(label("İHTİYACINIZ OLANLAR", "tag"), None, clock, self.welcome_time, spacing=8))
+        needs = QHBoxLayout()
+        needs.setSpacing(14)
+        self.need_cards = []
+        for icon, title, text in NEEDS:
+            c = need_card(icon, title, text)
+            self.need_cards.append(c)
+            needs.addWidget(c, 1)
+        lay.addLayout(needs)
+        lay.addSpacing(2)
+        art = PreviewArt()
+        art.setMinimumHeight(150)
+        lay.addWidget(art, 1)
+        return scroll_page(w)                     # küçük pencerede kırpılmasın, kaydırılsın
 
     def _where(self) -> QWidget:
         w, lay = self._page("Nerede oynuyorsun?", "Kurulumu buna göre anlatacağım; sonra Ayarlar'dan değiştirebilirsin.")
@@ -278,10 +362,14 @@ class Wizard(QDialog):
         self.cfg.kaynak.oyun_yeri = key
         if key == "monitor" and self.cfg.kaynak.tur == "remoteplay":
             self.cfg.kaynak.tur = "pencere"
+        if key in getattr(self, "choice_cards", {}):          # Televizyon sayfasından değiştiyse ilk seçim de güncellensin
+            self.choice_cards[key].setChecked(True)
         self.ps5_guide.set_steps(self._ps5_steps(), self._ps5_extras())
         self.ps5_guide.show_step(0)
         if hasattr(self, "ps5_stack"):
             self._ps5_mode("chiaki" if key == "monitor" else "rp")
+        if hasattr(self, "tv_kinds"):
+            self._tv_sync_kind()
 
     def _ps5(self) -> QWidget:
         w, lay = self._page("PS5 bağlantısı", "")
@@ -360,16 +448,55 @@ class Wizard(QDialog):
     def _ps5_extras(self) -> dict:
         return {"psn": self.act_psn, "indir": self.act_chiaki, "baglan": self.act_conn}
 
+    TV_SUB_CHOOSE = ("Türkçe altyazıyı TV'de oyunun üstünde göstermek için TV'ye küçük bir uygulama kurulur; bunu "
+                     "bilgisayar ağ üzerinden kendisi yapar. Önce hangi televizyonun olduğunu seç.")
+    TV_SUB_GUIDE = ("TV'ye küçük bir uygulama kurulur; bunu bilgisayar ağ üzerinden kendisi yapar. Resimli adımları "
+                    "sırayla izle.")
+
     def _tv(self) -> QWidget:
-        w, lay = self._page("Televizyon",
-                            "Türkçe altyazıyı TV'de oyunun üstünde göstermek için TV'ye küçük bir uygulama kurulur. "
-                            "Bunu bilgisayar ağ üzerinden kendisi yapar. Önce TV'nin markasını seç, sonra resimli "
-                            "adımları sırayla izle.")
+        w, lay = self._page("Televizyon", self.TV_SUB_CHOOSE)
+        self.tv_page = w
+        # Marka listesi asıl kaynak olarak kalır (gizli); kartlar yalnız bunun seçimini değiştirir
         self.tv_brand = QComboBox()
         for key, text in rehber.TV_BRANDS:
             self.tv_brand.addItem(text, key)
         self.tv_brand.setCurrentIndex(max(0, self.tv_brand.findData(self.cfg.tv.marka)))
-        lay.addLayout(hbox(label("TV markası", "h3"), self.tv_brand, None, spacing=12))
+        self.tv_brand.hide()
+        self.tv_stack = QStackedWidget()
+        # 1) TV türü seçimi (Nino gibi üç büyük kart)
+        choose = QWidget()
+        cl = QVBoxLayout(choose)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(14)
+        self.tv_kinds = RadioGroup(self._tv_kind)
+        self.tv_kind_cards: dict[str, RadioCard] = {}
+        for kind, icon, title, text in TV_KINDS:
+            card = RadioCard(title, text)
+            card.title_l.setObjectName("h2")
+            card.lay.setContentsMargins(22, 20, 22, 20)
+            card.lay.itemAt(0).layout().insertWidget(1, GlyphTile(icon, 46, glow=False), 0, Qt.AlignTop)
+            card.body_l.setContentsMargins(98, 2, 0, 0)
+            self.tv_kinds.add(kind, card)
+            self.tv_kind_cards[kind] = card
+            cl.addWidget(card)
+        self.tv_lgsam = Segmented([("lg", "LG"), ("samsung", "Samsung")],
+                                  self.cfg.tv.marka if self.cfg.tv.marka in ("lg", "samsung") else "lg")
+        self.tv_lgsam.setFixedWidth(260)
+        self.tv_lgsam.changed.connect(lambda _v: self.tv_kinds.set("lgsam", user=True))
+        self.tv_kind_cards["lgsam"].add(hbox(label("Markası:", "muted"), self.tv_lgsam, None, spacing=12))
+        self.tv_none_msg = label("Tamam, TV adımını atlıyoruz. Devam'a bas; PS5 bağlantısı sayfasında bilgisayarda "
+                                 "oynamak için gereken adımlar da var.", "faint", wrap=True)
+        self.tv_kind_cards["yok"].add(self.tv_none_msg)
+        cl.addStretch(1)
+        self.tv_stack.addWidget(choose)
+        # 2) seçilen markanın resimli adımları
+        guide_page = QWidget()
+        gl = QVBoxLayout(guide_page)
+        gl.setContentsMargins(0, 0, 0, 0)
+        gl.setSpacing(10)
+        self.tv_brand_lbl = label("", "h3")
+        gl.addLayout(hbox(label("Televizyon:", "muted"), self.tv_brand_lbl, self.tv_brand, None,
+                          button("TV'yi değiştir", "ghost", lambda: self._tv_phase("choose")), spacing=8))
         self.tv_ip = QLineEdit(self.cfg.tv.ip)
         self.tv_ip.setPlaceholderText("TV'nin IP adresi")
         self.tv_scan_btn = button("Ağda ara", None, self._scan)
@@ -423,9 +550,13 @@ class Wizard(QDialog):
         self.pc_ip = label(f"Bu bilgisayarın IP'si: <b>{pc_ip}</b> (Host PC IP'ye bunu yaz)", "h3")
         self.pc_ip.setTextFormat(Qt.RichText)
         self.tv_guide = Guide()
-        lay.addWidget(self.tv_guide, 1)
+        gl.addWidget(self.tv_guide, 1)
+        self.tv_stack.addWidget(guide_page)
+        lay.addWidget(self.tv_stack, 1)
         self.tv_brand.currentIndexChanged.connect(self._tv_brand_changed)
+        self.tv_brand.currentIndexChanged.connect(self._tv_brand_external)
         self._tv_brand_changed()
+        self._tv_phase("guide" if self.cfg.tv.ip else "choose")     # daha önce kurulduysa doğrudan adımlar
         return w
 
     def _tv_brand_changed(self, *_a) -> None:  # noqa: ANN002
@@ -436,6 +567,49 @@ class Wizard(QDialog):
         self.pair_row.setVisible(brand == "android" and self.pair_toggle.isChecked())
         self.tv_guide.index = 0
         self.tv_guide.set_steps(rehber.TV_STEPS[brand], {"baglan": self.tv_conn, "pcip": self.pc_ip})
+        self.tv_brand_lbl.setText(TV_NAMES.get(brand, brand))
+        if brand in ("lg", "samsung"):
+            self.tv_lgsam.setValue(brand)
+        self._tv_sync_kind()
+
+    def _tv_brand_external(self, *_a) -> None:  # noqa: ANN002
+        """Marka kartlar dışından değiştirildiyse (ör. kod ya da eski arayüz) doğrudan o markanın adımları."""
+        if not getattr(self, "_tv_from_card", False):
+            self._tv_phase("guide")
+
+    def _tv_sync_kind(self) -> None:
+        brand = self.tv_brand.currentData()
+        self.tv_kinds.set("yok" if self.where == "monitor" else ("android" if brand == "android" else "lgsam"))
+
+    def _tv_kind(self, kind: str) -> None:
+        """TV türü kartına basıldı: marka listesini ayarla; 'TV'm yok' seçilirse bilgisayar ekranına geç."""
+        if kind == "yok":
+            if self.where != "monitor":
+                self._where_before_tv = self.where
+            self._set_where("monitor")
+        else:
+            if self.where == "monitor":
+                self._set_where(getattr(self, "_where_before_tv", "tv"))
+            brand = "android" if kind == "android" else (self.tv_lgsam.value() or "lg")
+            self._tv_from_card = True
+            try:
+                self.tv_brand.setCurrentIndex(self.tv_brand.findData(brand))
+            finally:
+                self._tv_from_card = False
+            self.tv_kinds.set(kind)
+        if hasattr(self, "stack"):
+            self._update_next()
+
+    def _tv_choosing(self) -> bool:
+        return self.tv_stack.currentIndex() == 0
+
+    def _tv_phase(self, phase: str) -> None:
+        self.tv_stack.setCurrentIndex(0 if phase == "choose" else 1)
+        self.tv_page.subtitle.setText(self.TV_SUB_CHOOSE if phase == "choose" else self.TV_SUB_GUIDE)
+        if phase == "choose":
+            self._tv_sync_kind()
+        if hasattr(self, "stack"):
+            self._update_next()
 
     def _translation(self) -> QWidget:
         w, lay = self._page("Çeviri",
@@ -455,6 +629,13 @@ class Wizard(QDialog):
                                                                 else "gemini")))
         card.add(label("Kalite katmanı", "h3"))
         card.add(self.engine)
+        # Gemini seçiliyken Nino gibi numaralı üç adım
+        self.gemini_steps = QWidget()
+        self.gemini_steps.setLayout(vbox(*(hbox(step_num(n), self._rich(text), spacing=12) for n, text in (
+            (1, "<b>Ücretsiz anahtar al</b>'a bas ve Google hesabınla giriş yap."),
+            (2, "<b>Create API key</b>'e bas ve anahtarı kopyala."),
+            (3, "Anahtarı buraya yapıştır ve <b>Kaydet ve dene</b>'ye bas."))), spacing=6, margins=(0, 4, 0, 4)))
+        card.add(self.gemini_steps)
         self.key = QLineEdit()
         self.key.setEchoMode(QLineEdit.Password)
         self.key_btn = button("Anahtar al", None, self._open_key_page)
@@ -477,20 +658,57 @@ class Wizard(QDialog):
         self.engine_hint = label("", "faint", wrap=True)
         self.engine_hint.setTextFormat(Qt.RichText)
         card.add(self.engine_hint)
-        self.engine.currentIndexChanged.connect(self._engine_changed)
-        self._engine_changed()
         lay.addWidget(card)
         self.eng_dot = Dot("warn")
         self.eng_msg = label("Motorlar hazırlanıyor...", "muted", wrap=True)
-        lay.addLayout(hbox(self.eng_dot, self.eng_msg, 1, spacing=6))
         self.test_btn = button("Kaydet ve dene", None, self._test)
         self.test_out = label("", "muted", wrap=True)
-        lay.addLayout(hbox(self.test_btn, None))
+        test_row = hbox(self.test_btn, 14, self.eng_dot, spacing=6)
+        test_row.addWidget(self.eng_msg, 1)
+        lay.addLayout(test_row)
         lay.addWidget(self.test_out)
+        # Anahtar çalışınca (Nino): ✓ Gemini hazır + deneme çevirisinin önizlemesi + kısa bilgiler
+        self.ok_box = QFrame()
+        self.ok_box.setObjectName("cardAccent")
+        okl = QHBoxLayout(self.ok_box)
+        okl.setContentsMargins(18, 14, 14, 14)
+        okl.setSpacing(16)
+        self.ok_title = label("", "h2")
+        self.ok_sub = label("", "muted", wrap=True)
+        left = vbox(hbox(GlyphTile("check", 46), vbox(self.ok_title, self.ok_sub, spacing=2), spacing=14), 4,
+                    spacing=6)
+        self.ok_info: list = []
+        for icon in ("lock", "bolt", "settings"):
+            t = label("", "faint", wrap=True)
+            self.ok_info.append(t)
+            g = Glyph(icon, 16, T.FAINT)
+            row = QHBoxLayout()
+            row.setSpacing(9)
+            row.addWidget(g, 0, Qt.AlignTop)
+            row.addWidget(t, 1)
+            left.addLayout(row)
+        left.addStretch(1)
+        okl.addLayout(left, 1)
+        self.ok_preview = SubtitlePreview("Arabaya bin, hemen gidiyoruz!", TEST_LINE)
+        self.ok_preview.setMinimumHeight(0)
+        self.ok_preview.setFixedSize(288, 162)
+        self.ok_preview.set_style(lineScale=1.6)
+        okl.addWidget(self.ok_preview, 0, Qt.AlignTop)
+        self.ok_box.hide()
+        lay.addWidget(self.ok_box)
         lay.addStretch(1)
+        self.engine.currentIndexChanged.connect(self._engine_changed)
+        self._engine_changed()
         if self.ctl.engine_info:
             self._on_engines(self.ctl.engine_info)
-        return w
+        self.tr_scroll = scroll_page(w)
+        return self.tr_scroll
+
+    @staticmethod
+    def _rich(text: str):  # noqa: ANN205
+        lb = label(text, "muted", wrap=True)
+        lb.setTextFormat(Qt.RichText)
+        return lb
 
     def _done(self) -> QWidget:
         w, lay = self._page("Her şey hazır! 🎉", "")
@@ -546,7 +764,9 @@ class Wizard(QDialog):
     def _guide(self, i: int) -> Guide | None:
         if i == P_PS5:
             return self.ps5_guide if getattr(self, "_ps5_view", "") == "chiaki" else None
-        return {P_TV: getattr(self, "tv_guide", None)}.get(i)
+        if i == P_TV:
+            return None if not hasattr(self, "tv_stack") or self._tv_choosing() else self.tv_guide
+        return None
 
     def _skipped(self, i: int) -> bool:
         return i == P_TV and self.where == "monitor"
@@ -579,6 +799,9 @@ class Wizard(QDialog):
             g.back()
             self._update_next()
             return
+        if i == P_TV and not self._tv_choosing():        # rehberin başındayken Geri: TV türü seçimine dön
+            self._tv_phase("choose")
+            return
         j = i - 1
         while j > 0 and self._skipped(j):
             j -= 1
@@ -590,6 +813,9 @@ class Wizard(QDialog):
         if g is not None and g.can_next() and self.sender() is not self.skip:
             g.next()
             self._update_next()
+            return
+        if i == P_TV and self._tv_choosing() and self.where != "monitor" and self.sender() is not self.skip:
+            self._tv_phase("guide")                       # TV türü seçildi: o markanın resimli adımları
             return
         if i == P_TV:
             self.cfg.tv.ip = self.tv_ip.text().strip()
@@ -698,8 +924,7 @@ class Wizard(QDialog):
 
     # ------------------------------------------------------------------ çeviri
     ENGINE_HINTS = {
-        "gemini": "Google hesabınla aistudio.google.com'a gir, <b>Create API key</b>'e bas, anahtarı buraya yapıştır. "
-                  "Ücretsiz kotası oyun için genelde yeter.",
+        "gemini": "Anahtar sayfası aistudio.google.com'da açılır. Ücretsiz kotası oyun için genelde yeter.",
         "claude": "console.anthropic.com'da <b>Create Key</b>'e bas. Kullandıkça Anthropic hesabından ücretlenir; "
                   "önbellekteki ve paketteki satırlar ücretsizdir.",
         "deepl": "deepl.com'da <b>DeepL API Free</b> planına üye ol (kart ister, ücret almaz); anahtarın sonu <b>:fx</b> "
@@ -727,6 +952,11 @@ class Wizard(QDialog):
         self.model.setVisible(eng == "claude")
         self.lai_box.setVisible(eng == "yerelai")
         self.engine_hint.setText(self.ENGINE_HINTS[eng])
+        self.key_btn.setText("Ücretsiz anahtar al" if eng == "gemini" else "Anahtar al")
+        self.gemini_steps.setVisible(eng == "gemini")
+        if hasattr(self, "ok_box"):                       # motor değişti: önceki "hazır" geçerli değil
+            self.ok_box.hide()
+            self.test_out.show()
 
     def _open_key_page(self) -> None:
         webbrowser.open({"claude": rehber.CLAUDE_KEYS, "gemini": rehber.GEMINI_KEYS,
@@ -748,6 +978,8 @@ class Wizard(QDialog):
         self.ctl.apply_config(self.cfg)
         self.cfg = self.ctl.edit_config()
         self.test_out.setText("Motorlar yeniden hazırlanıyor, sonra denenecek...")
+        self.test_out.show()
+        self.ok_box.hide()
         self._pending_test = True
 
     def _on_engines(self, info: dict) -> None:
@@ -760,10 +992,45 @@ class Wizard(QDialog):
         if getattr(self, "_pending_test", False):
             self._pending_test = False
             self._results = []
-            self.ctl.test_translation("You think you can just walk in here and take what's mine, man?")
+            eng = self.engine.currentData()
+            if eng in ENGINE_NAMES and info.get("kalite") != eng:
+                self.test_out.setText(f"{ENGINE_NAMES[eng]} açılamadı: anahtarı kontrol edip yeniden <b>Kaydet ve "
+                                      "dene</b>'ye bas. O zamana kadar bu bilgisayardaki ücretsiz çeviri çalışır.")
+            elif eng in ENGINE_NAMES:
+                self.test_out.setText(f"{ENGINE_NAMES[eng]} deneniyor...")
+            self.ctl.test_translation(TEST_LINE)
 
     def _on_test(self, r) -> None:  # noqa: ANN001
         if not hasattr(self, "_results"):
             self._results = []
         self._results.append(f"<b>{r.text}</b> <span style='color:{T.FAINT}'>· {r.source} · {r.ms:.0f} ms</span>")
         self.test_out.setText("<br>".join(self._results))
+        eng = self.engine.currentData()
+        if eng in ENGINE_NAMES and r.source.split("/")[-1] == eng:    # çeviri o motordan geldi: anahtar çalışıyor
+            self._show_ready(eng, r.text)
+
+    def _show_ready(self, eng: str, text: str = "") -> None:
+        """Nino'daki başarı ekranı: ✓ <motor> hazır, deneme çevirisi önizlemede, altta kısa bilgiler."""
+        name = ENGINE_NAMES.get(eng, eng)
+        self.ok_title.setText(f"{name} hazır")
+        self.ok_sub.setText(f"Altyazılar artık {name} ile çevrilecek.")
+        if text:
+            text = text if len(text) <= 52 else text[:50].rstrip() + "…"
+            # önizleme tek satır: uzun çeviride yazı küçülsün ki kutudan taşmasın
+            self.ok_preview.text = text
+            self.ok_preview.set_style(lineScale=max(1.1, min(1.6, 58 / max(len(text), 1))))
+        others = [{"yerelai": "yerel bir modeli", "gemini": "Gemini"}.get(k, ENGINE_NAMES[k])
+                  for k in ("deepl", "claude", "gemini", "yerelai") if k != eng]
+        if eng == "yerelai":
+            others[-1] = "Gemini'yi"
+        free = eng in ("gemini", "deepl")
+        self.ok_info[0].setText("Yalnızca oyunun altyazıları gönderilir." if eng != "yerelai" else
+                                "Çeviri bu bilgisayarda yapılır; hiçbir şey dışarı gönderilmez.")
+        self.ok_info[1].setText("Ücretsiz sınır dolarsa bu bilgisayardaki ücretsiz çeviri devreye girer." if free else
+                                f"{name} yanıt vermezse bu bilgisayardaki ücretsiz çeviri devreye girer.")
+        self.ok_info[2].setText(f"{', '.join(others[:-1])} ya da {others[-1]} daha sonra Ayarlar › Çeviri ve "
+                                "paketler'den seçebilirsin.")
+        self.gemini_steps.hide()
+        self.test_out.hide()
+        self.ok_box.show()
+        QTimer.singleShot(0, lambda: self.tr_scroll.ensureWidgetVisible(self.ok_box, 0, 0))   # küçük pencerede de görünsün

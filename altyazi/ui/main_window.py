@@ -204,6 +204,13 @@ class HomePage(QWidget):
         root.addWidget(self.state_hint)
         root.addSpacing(6)
         root.addLayout(hbox(None, self.start, 6, how, None, spacing=8))
+        self.show_where = Segmented([("tv", "TV"), ("monitor", "Bilgisayar ekranı"), ("ikisi", "İkisi de")],
+                                    ctl.cfg.kaynak.oyun_yeri)
+        self.show_where.setFixedWidth(420)
+        self.show_where.changed.connect(self._set_where)
+        demo = button("▷  Deneme modu (konsol olmadan dene)", "link", self._demo,
+                      "Örnek görüntüyle her şeyi dene: konsol, hesap ya da TV gerekmez")
+        root.addLayout(hbox(None, label("Altyazıyı göster", "faint"), self.show_where, 14, demo, None, spacing=10))
         root.addWidget(self.stats)
         # gecikme ve Claude harcaması (kalite katmanı Claude ise)
         self.lat = label("—", "h3")
@@ -293,6 +300,7 @@ class HomePage(QWidget):
         ctl.tvStatus.connect(self.on_tv)
         ctl.enginesReady.connect(self.on_engines)
         ctl.spendChanged.connect(self.on_spend)
+        ctl.gameAsk.connect(self._ask_game)
         self._spend_timer = QTimer(self)               # saatlik ortalama zamanla değişir
         self._spend_timer.timeout.connect(self.on_spend)
         self._spend_timer.start(30000)
@@ -311,6 +319,38 @@ class HomePage(QWidget):
     def _pause(self) -> None:
         r = self.ctl.command("duraklat")
         self.pause_btn.setText("Devam et" if r.get("duraklatildi") and self.ctl.pipe else "Duraklat")
+
+    def _set_where(self, v: str) -> None:
+        cfg = self.ctl.edit_config()
+        cfg.kaynak.oyun_yeri = v
+        if v == "monitor" and cfg.kaynak.tur == "remoteplay":
+            cfg.kaynak.tur = "pencere"
+        elif v in ("tv", "ikisi") and cfg.kaynak.tur == "pencere" and cfg.ps5.anahtar:
+            cfg.kaynak.tur = "remoteplay"
+        self.ctl.apply_config(cfg)
+        self.window().toast.show_text({"tv": "Türkçe yalnız TV'de görünecek", "monitor": "Türkçe bilgisayar ekranında "
+                                       "görünecek", "ikisi": "Türkçe hem TV'de hem bilgisayarda görünecek"}[v])
+        self._ps_initial()
+
+    def _demo(self) -> None:
+        if self.ctl.state == "calisiyor":
+            self.window().toast.show_text("Önce çeviriyi durdur, sonra deneme modunu aç")
+            return
+        if self.ctl.start_demo():
+            self.window().toast.show_text("Deneme modu: örnek altyazılar okunup çevriliyor. Durdurmak için Çeviriyi "
+                                          "Durdur'a bas.")
+
+    def _ask_game(self, titles: list) -> None:
+        """'Hangi oyunu oynuyorsun?' (Nino / CouchSubs): oyun paketle tanınmadıysa çeviri başladıktan iki dk sonra."""
+        from PySide6.QtWidgets import QInputDialog
+        items = list(titles) + ["Listede yok"]
+        name, ok = QInputDialog.getItem(self, "Hangi oyunu oynuyorsun?", "Oyunu seçersen çeviri ilk cümleden itibaren "
+                                        "oyunun hazır paketinden gelir:", items, 0, False)
+        if ok and name and name != "Listede yok":
+            self.ctl.game_choice.choose(name)
+            self._refresh_links()
+        else:
+            self.ctl.game_choice.dismiss()
 
     def _rp(self) -> bool:
         k = self.ctl.cfg.kaynak
@@ -609,6 +649,8 @@ class AppearancePage(QWidget):
         self.place = combo(self.PLACES, t.yerlesim)
         self.shape = combo([("fit", "Yazı kadar"), ("band", "Tam genişlik bant")], t.zemin_sekli)
         self.bold = QCheckBox("Kalın yazı", t.kalin)
+        self.tv_font = combo([("yuvarlak", "Yuvarlak (okunaklı)"), ("aksiyon", "Aksiyon (GTA tarzı)")], t.yazi_tipi)
+        self.spk_color = QCheckBox("Konuşana göre renk (her karakterin adı ve satırı kendi renginde)", t.konusan_renk)
         self.stack = QCheckBox("Hızlı konuşmada önceki satırları üstte göster", t.onceki_satirlar)
         self.tv_box.add(field("Yazı rengi", self.colors))
         self.size_row = slider_row("Yazı boyutu (sabit yerde)", self.size, lambda v: f"{v} px")
@@ -619,8 +661,10 @@ class AppearancePage(QWidget):
                               "tam genişlik bant yanları da örter."))
         self.tv_box.add(self.size_row)
         self.tv_box.add(slider_row("Ekran konumu (alttan yükseklik)", self.bottom, lambda v: f"%{v}"))
+        self.tv_box.add(field("Yazı tipi", self.tv_font))
         self.tv_box.add(self.bold)
         self.tv_box.add(self.stack)
+        self.tv_box.add(self.spk_color)
         self.mode = Segmented([("otomatik", "Otomatik"), ("hdmi", "Uygulama içinde"), ("katman", "Katman")],
                               ctl.cfg.tv.mod)
         self.mode.setMaximumWidth(460)
@@ -658,9 +702,9 @@ class AppearancePage(QWidget):
         self._save_timer = QTimer(self, singleShot=True, interval=350, timeout=self.save)
         for w in (self.size, self.scale, self.bg, self.bottom):
             w.valueChanged.connect(self._changed)
-        for w in (self.place, self.shape, self.pc_mode):
+        for w in (self.place, self.shape, self.pc_mode, self.tv_font):
             w.currentIndexChanged.connect(self._changed)
-        for w in (self.bold, self.stack, self.latency):
+        for w in (self.bold, self.stack, self.latency, self.spk_color):
             w.toggled.connect(self._changed)
         self.colors.changed.connect(self._changed)
         self.mode.changed.connect(self._changed)
@@ -718,6 +762,8 @@ class AppearancePage(QWidget):
         t.zemin_sekli = self.shape.currentData()
         t.kalin = self.bold.isChecked()
         t.onceki_satirlar = self.stack.isChecked()
+        t.yazi_tipi = self.tv_font.currentData()
+        t.konusan_renk = self.spk_color.isChecked()
         t.mod = self.mode.value() or t.mod
         main = next((b for b in cfg.bolgeler if b.ad == "altyazi"), None)
         if main is not None:
@@ -738,7 +784,35 @@ class RegionsPage(QWidget):
         _transparent(self)
         root = page_shell(self, "Okuma alanı", "Çoğu oyunda Otomatik yeterli: program altyazının yerini kendisi bulur "
                           "ve öğrenir. Bulamazsa hazır bir yer seç ya da kutuyu fareyle köşelerinden boyutlandır, "
-                          "ortasından tutup taşı.", "regions", scroll=False)
+                          "ortasından tutup taşı.", "regions")
+        gta = SectionCard(accent=True, margins=16, spacing=6)
+        gta.add(hbox(vbox(hbox(label("Tek tıkla GTA 6 için en iyi okuma", "h3"), Pill("ÖNERİLEN", "ok"), None),
+                          label("Altyazının yeri kendiliğinden bulunur; alttaki görev yazısı, sol üstteki ipucu kutusu, "
+                                "sağ üstteki bildirimler ve telefon mesajları da çevrilir.", "faint", wrap=True),
+                          spacing=4), 16, button("GTA 6 için ayarla", "primary", self._gta6), spacing=0))
+        root.addWidget(gta)
+        self.extra = SectionCard("Ekrandaki başka yazıları da çevir", "Açık olan alanlar okunur. Boyut: Türkçenin o "
+                                 "alanda İngilizceye göre büyüklüğü.", margins=16, spacing=8)
+        self.extra_rows: dict[str, tuple] = {}
+        names = {"altyazi": "Altyazı ve alttaki görev yazısı", "yardim": "İpucu kutusu (sol üst)",
+                 "bildirim": "Bildirim ve görev (sağ üst)", "telefon": "Telefon mesajları (sağ)"}
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(24)
+        grid.setVerticalSpacing(8)
+        for i, z in enumerate(ctl.cfg.bolgeler):
+            tg = QCheckBox(names.get(z.ad, z.ad), getattr(z, "aktif", True))
+            sz = slider(80, 200, int(z.yazi_olcek * 100))
+            sz.setFixedWidth(160)
+            val = label(f"{z.yazi_olcek:.2f}×", "faint")
+            sz.valueChanged.connect(lambda v, lb=val: lb.setText(f"{v / 100:.2f}×"))
+            tg.toggled.connect(lambda _on: self._extra_changed())
+            sz.sliderReleased.connect(self._extra_changed)
+            self.extra_rows[z.ad] = (tg, sz)
+            grid.addWidget(tg, i // 2, (i % 2) * 3)
+            grid.addWidget(sz, i // 2, (i % 2) * 3 + 1)
+            grid.addWidget(val, i // 2, (i % 2) * 3 + 2)
+        self.extra.add(grid)
+        root.addWidget(self.extra)
         self.chips = Chips([(k, k.split(" (")[0]) for k in PRESETS])
         self.chips.picked.connect(self._apply_preset_name)
         root.addWidget(self.chips)
@@ -746,6 +820,7 @@ class RegionsPage(QWidget):
         body.setSpacing(16)
         left = Card(margins=14)
         self.canvas = RegionCanvas()
+        self.canvas.setMinimumHeight(430)
         self.canvas.selected.connect(self.select)
         self.canvas.changed.connect(self._dirty)
         self.mask_cb = QCheckBox("Algılanan yazıyı kırmızı göster", True)
@@ -798,6 +873,34 @@ class RegionsPage(QWidget):
         body.addWidget(right)
         root.addLayout(body, 1)
         ctl.frameGrabbed.connect(self.on_frame)
+        self.load()
+
+    def _gta6(self) -> None:
+        """GTA 6'nın bilinen alanları (programla gelen varsayılanlar); altyazının yeri yine kendiliğinden öğrenilir."""
+        from .. import config as config_mod, paths
+        cfg = self.ctl.edit_config()
+        cfg.bolgeler = config_mod.load(paths.default_config()).bolgeler
+        self.ctl.apply_config(cfg)
+        self.load()
+        for z in cfg.bolgeler:
+            if z.ad in self.extra_rows:
+                tg, sz = self.extra_rows[z.ad]
+                for w in (tg, sz):
+                    w.blockSignals(True)
+                tg.setChecked(True)
+                sz.setValue(int(z.yazi_olcek * 100))
+                for w in (tg, sz):
+                    w.blockSignals(False)
+        self.window().toast.show_text("GTA 6 için en iyi okuma ayarlandı")
+
+    def _extra_changed(self) -> None:
+        cfg = self.ctl.edit_config()
+        for z in cfg.bolgeler:
+            if z.ad in self.extra_rows:
+                tg, sz = self.extra_rows[z.ad]
+                z.aktif = tg.isChecked()
+                z.yazi_olcek = sz.value() / 100
+        self.ctl.apply_config(cfg)
         self.load()
 
     def load(self) -> None:
@@ -1008,6 +1111,12 @@ class TvPage(QWidget):
         src.add(self.cap_box)
         src.add(hbox(None, button("Kaydet", "primary", self._save_source)))
         root.addWidget(src)
+
+        demo = SectionCard("Deneme modu", "Programın tamamını örnek görüntüyle dene: konsol, hesap ya da TV gerekmez. "
+                           "Örnek altyazılar okunur, çevrilir; bilgisayarda kendi penceresinde, TV bağlıysa TV'de de "
+                           "görünür.", "play")
+        demo.add(hbox(button("▷  Deneme modunu başlat", "primary", lambda: self.window().pages["home"]._demo()), None))
+        root.addWidget(demo)
 
         # --- TV kurulumu
         steps = SectionCard("TV", "Türkçe altyazı TV'de oyunun üstünde görünür. Önce TV'de bir kerelik hazırlık, sonra "
@@ -1419,6 +1528,18 @@ class TranslationPage(QWidget):
         self.key_btn = button("Anahtar al", None, lambda: _wb.open(self._key_url()))   # eski ad (kullanılmıyor)
         self.key_btn.hide()
 
+        # --- altyazı seçenekleri (CouchSubs Oyun paketleri sayfasındaki anahtarlar)
+        opts = SectionCard("Altyazı", "", "translate")
+        self.spk_show = QCheckBox("Konuşan adını göster: karakterin adı çevirinin başında kalır (LUCIA: …); adın "
+                                  "kendisi hiç çevrilmez", getattr(c, "konusan_goster", True))
+        self.ask_game = QCheckBox("Oynanan oyunu sor: oyun paketle tanınmazsa çeviri başladıktan iki dakika sonra bir "
+                                  "kez sorulur", getattr(c, "oyun_sor", True))
+        self.scene_cb = QCheckBox("Ekran yazılarını kendiliğinden çevir: telefon, harita görev kartı ve gelen mesajlar",
+                                  c.ekran_yazilari)
+        for w in (self.spk_show, self.ask_game, self.scene_cb):
+            opts.add(w)
+        root.addWidget(opts)
+
         # --- dene
         test = SectionCard("Dene", "Bir cümle yaz, seçili motorla nasıl çevrildiğini gör.", "play")
         self.test_in = QLineEdit("You think you can just walk in here and take what's mine, man?")
@@ -1443,13 +1564,10 @@ class TranslationPage(QWidget):
                      spacing=20))
         self.slang = QCheckBox("Argo düzeltme: \"gonna, ain't, homie\" gibi ifadeleri yerel modele düzgün İngilizce ver",
                                c.argo_duzelt)
-        self.scene_cb = QCheckBox("Oyundaki telefonu, harita görev kartını ve gelen mesajları kendiliğinden çevir",
-                                  c.ekran_yazilari)
         self.phone_where = Segmented([("yan", "Telefonun yanında, mesaj panelinde (önerilen)"),
                                       ("ust", "Balonların üstünde")], getattr(c, "telefon_yeri", "yan"))
         self.phone_where.setMaximumWidth(620)
         adv.add(self.slang)
-        adv.add(self.scene_cb)
         adv.add(field("Telefon mesajlarının Türkçesi", self.phone_where,
                       "Yanında: telefonun yanında, oyundaki sırayla, her mesaj kendi balonunda (Nino'daki gibi). "
                       "Üstünde: her mesajın Türkçesi kendi balonunun tam üstünde."))
@@ -1628,6 +1746,8 @@ class TranslationPage(QWidget):
         c.hizli = self.fast.currentData()
         c.argo_duzelt = self.slang.isChecked()
         c.ekran_yazilari = self.scene_cb.isChecked()
+        c.konusan_goster = self.spk_show.isChecked()
+        c.oyun_sor = self.ask_game.isChecked()
         c.telefon_yeri = self.phone_where.value() or "yan"
         c.kalite_bekleme_ms = self.wait.value()
         c.kalite = self.qual_group.value() or "yok"
@@ -1758,25 +1878,34 @@ class SettingsPage(QWidget):
         voice.add(slider_row("Konuşma hızı", self.speak_rate, lambda v: f"{v:+d} %"))
         root.addWidget(voice)
 
-        keys = SectionCard("Kısayollar", "Örnek: ctrl+shift+9, alt+f10, num9. TV'den oynarken aynı düğmeler telefon "
-                           "kumandasında da var.", "bolt")
-        self.k_fs = QLineEdit(cfg.kisayol.tam_ekran)
-        self.k_pause = QLineEdit(cfg.kisayol.duraklat)
-        for w in (self.k_fs, self.k_pause):
-            w.setObjectName("kbd")
-            w.setAlignment(Qt.AlignCenter)
-            w.setFixedWidth(200)
+        keys = SectionCard("Kısayollar", "Her işin iki kısayolu var; böylece sayı tuş takımı olmayan klavyelerde de "
+                           "çalışır. Örnek: ctrl+shift+9, alt+f10, num9. Boş bırakılan kısayol kapalıdır. Telefon "
+                           "kumandasında da aynı düğmeler var.", "bolt")
+        k = cfg.kisayol
+        self.keys: dict[str, tuple[QLineEdit, QLineEdit]] = {}
+        for attr, title in (("tam_ekran", "Ekranı çevir"), ("duraklat", "Altyazıyı duraklat / sürdür"),
+                            ("baslat", "Çeviriyi başlat / durdur"), ("seslendir", "Türkçe seslendirmeyi aç / kapat"),
+                            ("tv_deneme", "TV'ye deneme altyazısı gönder")):
+            pair = []
+            for a in (attr, attr + "2"):
+                e = QLineEdit(getattr(k, a, ""))
+                e.setObjectName("kbd")
+                e.setAlignment(Qt.AlignCenter)
+                e.setFixedWidth(170)
+                pair.append(e)
+            self.keys[attr] = (pair[0], pair[1])
+            keys.add(hbox(label(title, "h3"), None, pair[0], pair[1], spacing=10))
+        self.k_fs, self.k_pause = self.keys["tam_ekran"][0], self.keys["duraklat"][0]   # eski adlar
         self.fs_time = QSpinBox()
         self.fs_time.setRange(5, 120)
-        self.fs_time.setValue(cfg.kisayol.tam_ekran_sure)
+        self.fs_time.setValue(k.tam_ekran_sure)
         self.fs_time.setSuffix(" sn")
-        self.fs_time.setFixedWidth(200)
-        for title, w in (("Ekranı çevir", self.k_fs), ("Altyazıyı duraklat / sürdür", self.k_pause),
-                         ("Ekran çevirisi ekranda kalma süresi", self.fs_time)):
-            keys.add(hbox(label(title, "h3"), None, w))
+        self.fs_time.setFixedWidth(170)
+        keys.add(hbox(label("Ekran çevirisi ekranda kalma süresi", "h3"), None, self.fs_time))
         self.fs_vision = QCheckBox("Ekranı çevirirken Claude görsel okuma kullan (menü, telefon ve süslü yazılarda daha "
-                                   "doğru; 2-4 sn sürer, Claude anahtarı gerekir)", cfg.kisayol.tam_ekran_gorsel)
+                                   "doğru; 2-4 sn sürer, Claude anahtarı gerekir)", k.tam_ekran_gorsel)
         keys.add(self.fs_vision)
+        keys.add(hbox(button("Varsayılanlara dön", None, self._keys_default), None))
         root.addWidget(keys)
 
         auto = SectionCard("TV günleri: kendiliğinden çalışma", "Kasa başka odadayken her şey kendiliğinden olsun: sen "
@@ -1821,6 +1950,13 @@ class SettingsPage(QWidget):
         self.ps5_find.setVisible(not rp)
         super().showEvent(e)
 
+    def _keys_default(self) -> None:
+        from ..config import KisayolCfg
+        d = KisayolCfg()
+        for attr, (a, b) in self.keys.items():
+            a.setText(getattr(d, attr))
+            b.setText(getattr(d, attr + "2"))
+
     def _find_ps5(self) -> None:
         self.ps5_btn.setEnabled(False)
         self.ps5_btn.setText("Aranıyor...")
@@ -1841,8 +1977,9 @@ class SettingsPage(QWidget):
         cfg = self.ctl.edit_config()
         cfg.gosterim.seslendir = self.speak.isChecked()
         cfg.gosterim.ses_hizi = self.speak_rate.value()
-        cfg.kisayol.tam_ekran = self.k_fs.text().strip()
-        cfg.kisayol.duraklat = self.k_pause.text().strip()
+        for attr, (a, b) in self.keys.items():
+            setattr(cfg.kisayol, attr, a.text().strip().lower())
+            setattr(cfg.kisayol, attr + "2", b.text().strip().lower())
         cfg.kisayol.tam_ekran_sure = self.fs_time.value()
         cfg.kisayol.tam_ekran_gorsel = self.fs_vision.isChecked()
         o = cfg.otomatik

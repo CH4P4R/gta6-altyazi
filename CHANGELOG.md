@@ -3,6 +3,21 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.9.0 · Deneme modu, GTA 6 tek tık, iki kısayol, Nino kurulum ekranları
+- **Deneme modu (konsol olmadan dene):** ana ekranda ve Bağlantı'da. Örnek görüntüde İngilizce altyazılar sırayla çıkar;
+  program gerçek oyundaki gibi okur, çevirir, kendi penceresinde ve TV bağlıysa TV'de gösterir.
+- **Altyazıyı göster: TV / Bilgisayar ekranı / İkisi de** ana ekranda tek tıkla.
+- **Okuma alanı:** "Tek tıkla GTA 6 için en iyi okuma" düğmesi; ek alanlar (altyazı ve görev yazısı, ipucu kutusu, bildirim,
+  telefon) tek tek açılıp kapanır, her birinin yazı boyutu ayarlanır.
+- **Altyazı seçenekleri:** konuşan adını göster / gizle, konuşana göre renk (TV'de her karakter kendi renginde), oynanan
+  oyunu sor (paketle tanınmazsa "Hangi oyunu oynuyorsun?"), telefon mesajları yanında ya da balonların üstünde.
+- **TV yazı tipi:** Yuvarlak (okunaklı) ya da Aksiyon (GTA tarzı).
+- **Kısayollar:** her işin iki kısayolu (ör. Ctrl+Shift+9 ve Num 9); yeni: çeviriyi başlat / durdur, seslendirmeyi aç /
+  kapat, TV'ye deneme gönder. Mac'te sayı tuş takımı da çalışır.
+- **Kurulum (Nino):** "İhtiyacınız olanlar" kartları, TV seçimi büyük kartlarla (Android TV / LG-Samsung / TV'm yok),
+  Gemini için 1-2-3 adımlar ve "Gemini hazır" ekranı. **Yardım sohbetinde** hazır soru düğmeleri.
+- Düzeltme: pencere kaynağında chiaki penceresi yokken açılan çeviri hemen kapanıyordu (deneme modunda da).
+
 ## 0.8.0 · Yeni arayüz
 GameTranslator, CouchSubs ve Nino'dan esinlenen düzen; renkler ve kimlik bizim.
 - **Ana ekran:** ortada büyük durum ("Çeviri kapalı.") ve tek Başlat düğmesi; PS5 / Bilgisayar / TV kartları renkli
