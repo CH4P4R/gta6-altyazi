@@ -26,7 +26,8 @@ PSN_SIGNUP = rehber.PSN_SIGNUP
 
 
 # Sihirbaz uygulamanın geri kalanından daha büyük ve iddialı yazılarla: ilk izlenim burada.
-WIZ_QSS = f"""
+def wiz_qss() -> str:
+    return f"""
 QWidget {{ font-size: 12pt; }}
 #display {{ font-size: 30pt; font-weight: 800; }}
 #hero {{ font-size: 34pt; font-weight: 800; }}
@@ -227,7 +228,7 @@ class Wizard(QDialog):
         self.cfg = ctl.edit_config()
         self.setWindowTitle("GTA6 Altyazı · Kurulum")
         self.setModal(True)
-        self.setStyleSheet(WIZ_QSS)
+        self.setStyleSheet(wiz_qss())
         self.setMinimumSize(1040, 700)
         screen = self.screen().availableGeometry() if self.screen() else None
         w, h = 1260, 860
@@ -259,7 +260,10 @@ class Wizard(QDialog):
         self.next = button("Başlayalım", "primary", self._next)
         self.next.setMinimumWidth(210)
         self.dots = PagerDots(len(STEPS))
-        rl.addLayout(hbox(self.back, None, self.dots, None, self.skip, self.next, spacing=10))
+        self.demo_btn = button("▷  Deneme modu (konsol olmadan dene)", "ghost", self._demo,
+                               "Kurulumu bitirmeden örnek görüntüyle her şeyi dene")
+        self.demo_btn.setStyleSheet(f"color: {T.A2};")
+        rl.addLayout(hbox(self.back, self.demo_btn, None, self.dots, None, self.skip, self.next, spacing=10))
         root.addWidget(right, 1)
         self.fab = HelpFab(right)
         self.fab.clicked.connect(self._ask)
@@ -334,11 +338,33 @@ class Wizard(QDialog):
             self.need_cards.append(c)
             needs.addWidget(c, 1)
         lay.addLayout(needs)
+        mon = button("▭  Monitörde Remote Play ile oynuyorum", "link", lambda: self._quick_where("monitor"))
+        cap = button("⏚  Capture Card'ım var", "link", lambda: self._quick_where("capture"))
+        lay.addLayout(hbox(mon, None, cap, spacing=10))
         lay.addSpacing(2)
         art = PreviewArt()
         art.setMinimumHeight(150)
         lay.addWidget(art, 1)
         return scroll_page(w)                     # küçük pencerede kırpılmasın, kaydırılsın
+
+    def _quick_where(self, kind: str) -> None:
+        """Hoş geldin sayfasındaki kısayollar (Nino): monitörde oynayan ya da capture kartı olan."""
+        if kind == "capture":
+            self.cfg.kaynak.tur = "capture"
+            self._set_where("monitor")
+            self.cfg.kaynak.tur = "capture"
+        else:
+            self._set_where("monitor")
+        self._go(P_WHERE)
+
+    def _demo(self) -> None:
+        """Deneme modu: ayarları kaydedip sihirbazı kapatır, örnek görüntüyle çeviriyi başlatır."""
+        self.ctl.apply_config(self.cfg)
+        self.accept()
+        if self.ctl.state == "hazir":
+            self.ctl.start_demo()
+        else:
+            self.ctl._notice("Motorlar hazırlanıyor; birkaç saniye sonra ana ekrandaki Deneme modu'na bas")
 
     def _where(self) -> QWidget:
         w, lay = self._page("Nerede oynuyorsun?", "Kurulumu buna göre anlatacağım; sonra Ayarlar'dan değiştirebilirsin.")

@@ -21,6 +21,14 @@ OK = "#3ddc97"
 WARN = "#ffb547"
 BAD = "#ff5c7a"
 INFO = "#5cc8ff"
+# yarı saydam (cam) yüzeyler: koyu temada arkadaki ışıltı hafifçe görünür
+CARD_BG = "rgba(23, 19, 31, 0.82)"
+CARD_LINE = "rgba(255, 255, 255, 0.07)"
+RADIO_BG = "rgba(30, 25, 40, 0.75)"
+SEG_BG = "rgba(13, 11, 19, 0.7)"
+PILL_BG = "rgba(255, 255, 255, 0.06)"
+PILL_LINE = "rgba(255, 255, 255, 0.08)"
+THEME = "koyu"
 
 FAMILIES = ["Segoe UI Variable Text", "Segoe UI", "Inter", "Roboto", "DejaVu Sans"]
 DISPLAY = ["Segoe UI Variable Display", "Segoe UI", "Inter", "DejaVu Sans"]
@@ -41,7 +49,8 @@ def accent_gradient(x0: float, y0: float, x1: float, y1: float) -> QLinearGradie
     return g
 
 
-QSS = f"""
+def build_qss() -> str:
+    return f"""
 * {{ outline: 0; }}
 QWidget {{ color: {TEXT}; font-size: 10pt; }}
 QMainWindow, QDialog, #page {{ background: {BG}; }}
@@ -53,12 +62,12 @@ QToolTip {{ background: {SURFACE3}; color: {TEXT}; border: 1px solid {BORDER_HI}
 #navButton:hover {{ background: {SURFACE}; color: {TEXT}; }}
 #navButton:checked {{ background: {SURFACE2}; color: {TEXT}; }}
 
-#card {{ background: rgba(23, 19, 31, 0.82); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 18px; }}
-#cardAccent {{ background: rgba(23, 19, 31, 0.86); border: 1.5px solid rgba(255, 79, 163, 0.55); border-radius: 18px; }}
-#radioCard {{ background: rgba(30, 25, 40, 0.75); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 16px; }}
+#card {{ background: {CARD_BG}; border: 1px solid {CARD_LINE}; border-radius: 18px; }}
+#cardAccent {{ background: {CARD_BG}; border: 1.5px solid rgba(255, 79, 163, 0.55); border-radius: 18px; }}
+#radioCard {{ background: {RADIO_BG}; border: 1px solid {CARD_LINE}; border-radius: 16px; }}
 #radioCard:hover {{ border-color: {BORDER_HI}; }}
 #radioCard[checked="true"] {{ border: 1.5px solid {A1}; background: rgba(255, 79, 163, 0.06); }}
-#segmented {{ background: rgba(13, 11, 19, 0.7); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 13px; }}
+#segmented {{ background: {SEG_BG}; border: 1px solid {CARD_LINE}; border-radius: 13px; }}
 QPushButton#seg, QPushButton#segBig {{ background: transparent; border: 0; border-radius: 10px; color: {MUTED};
     padding: 8px 14px; font-weight: 600; }}
 QPushButton#segBig {{ padding: 11px 18px; font-size: 11pt; }}
@@ -69,7 +78,7 @@ QPushButton#chip {{ background: {SURFACE2}; border: 1px solid {BORDER_HI}; borde
     color: {TEXT}; font-weight: 600; }}
 QPushButton#chip:hover {{ border-color: #4a3f5c; }}
 QPushButton#chip:checked {{ border: 1px solid {A1}; background: rgba(255, 79, 163, 0.14); }}
-#pill {{ background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px;
+#pill {{ background: {PILL_BG}; border: 1px solid {PILL_LINE}; border-radius: 12px;
     padding: 4px 10px; color: {TEXT}; font-size: 9pt; font-weight: 600; }}
 #pinBox {{ font-size: 22pt; font-weight: 700; border-radius: 12px; background: {SURFACE2}; border: 1.5px solid {BORDER_HI}; }}
 #pinBox:focus {{ border-color: {A1}; }}
@@ -153,3 +162,22 @@ QListWidget::item {{ padding: 7px 8px; border-radius: 7px; color: {MUTED}; }}
 QListWidget::item:hover {{ background: {SURFACE3}; color: {TEXT}; }}
 QListWidget::item:selected {{ background: {SURFACE3}; color: {TEXT}; border-left: 3px solid {A1}; }}
 """
+
+
+QSS = build_qss()
+
+LIGHT = {"BG": "#f6f2f8", "SIDEBAR": "#efe8f3", "SURFACE": "#ffffff", "SURFACE2": "#f3edf6", "SURFACE3": "#e6ddee",
+         "BORDER": "#e3d9ea", "BORDER_HI": "#cdbfdb", "TEXT": "#1c1525", "MUTED": "#5d536e", "FAINT": "#8a809b",
+         "CARD_BG": "rgba(255, 255, 255, 0.90)", "CARD_LINE": "rgba(40, 20, 60, 0.09)",
+         "RADIO_BG": "rgba(255, 255, 255, 0.85)", "SEG_BG": "rgba(240, 233, 245, 0.9)",
+         "PILL_BG": "rgba(40, 20, 60, 0.05)", "PILL_LINE": "rgba(40, 20, 60, 0.10)", "OK": "#16a36b",
+         "WARN": "#d98a00", "BAD": "#e23d5c", "INFO": "#1c8fd6"}
+
+
+def apply(name: str) -> None:
+    """Görünümü seç ('koyu' | 'acik'); pencereler oluşturulmadan önce çağrılır (renkler sayfalar kurulurken okunur)."""
+    global QSS, THEME
+    if name == "acik":
+        globals().update(LIGHT)
+    THEME = name if name in ("koyu", "acik") else "koyu"
+    QSS = build_qss()

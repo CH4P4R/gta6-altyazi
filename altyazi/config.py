@@ -66,6 +66,7 @@ class OcrCfg:
     gpu: bool = True
     # otomatik: Mac'te Apple Vision (Neural Engine; kendini sınar, okuyamazsa PP-OCR), diğerlerinde PP-OCR
     motor: str = "otomatik"       # otomatik | vision | ppocr
+    sik_oku: bool = False         # değişmeyen altyazı alanını da saniyede bir yeniden oku (ilk okuma bozuksa düzelir)
     model: str = ""               # boşsa paketteki PP-OCR tanıma modeli
     anahtar_dosyasi: str = ""
 
@@ -102,6 +103,8 @@ class CeviriCfg:
     telefon_yeri: str = "yan"
     konusan_goster: bool = True     # konuşanın adı çevirinin başında kalsın ("LUCIA: Gitmeliyiz."); ad çevrilmez
     oyun_sor: bool = True           # oyun paketle tanınmazsa iki dakika sonra "Hangi oyunu oynuyorsun?" diye sor
+    paket_kullan: bool = True       # hazır oyun paketlerinde olan satır çevirmene gitmeden gelsin
+    yerel_is_parcacigi: int = 0     # yerel modelin işlemcide kullanacağı çekirdek sayısı (0 = kendiliğinden)
 
 
 @dataclass
@@ -114,6 +117,7 @@ class GosterimCfg:
     tam_ekran: bool = False
     seslendir: bool = False       # altyazının Türkçesini sesli oku (dublaj; oyunun konuşma sesini kısmak gerekir)
     ses_hizi: int = 10            # konuşma hızı (yüzde, -50 … +50)
+    tema: str = "koyu"            # koyu | acik (programın görünümü; yeniden açınca geçer)
 
 
 @dataclass
@@ -185,6 +189,7 @@ class TvCfg:
     alttan: int = 7               # sabit yerleşimde alttan uzaklık (yüzde)
     zemin_sekli: str = "fit"      # fit (yazı kadar) | band (tam genişlik bant)
     yazi_tipi: str = "yuvarlak"   # yuvarlak (Nunito, okunaklı) | aksiyon (Barlow, GTA tarzı)
+    uydur: bool = True            # boyut oyunun altyazısına uysun (kapalıysa sabit yazı boyutu)
     konusan_renk: bool = False    # her konuşanın adı ve satırı kendi renginde
 
 

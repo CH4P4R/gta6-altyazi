@@ -445,6 +445,13 @@ class GameChoice:
         self.asking = False
         self._publish()
 
+    def automatic(self) -> None:
+        """Kullanıcının seçimini bırak: oyun yine paketten / PS5'ten kendiliğinden anlaşılsın."""
+        with self.sense._lock:
+            self.sense._chosen = None
+        self.asking = False
+        self._publish()
+
     def ask(self) -> None:
         """"Değiştir": kart elle açılır."""
         self.sense.mark_asked()

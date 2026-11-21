@@ -167,7 +167,7 @@ class RegionCanvas(QWidget):
             f = T.font(11, QFont.DemiBold)
             p.setFont(f)
             p.drawText(A.adjusted(0, -30, 0, -30), Qt.AlignCenter,
-                       "Oyun görüntüsü yok\n\"Görüntü al\" ile chiaki penceresinden bir kare al")
+                       "Oyun görüntüsü yok\n\"Görüntü al\" ile oyundan bir kare al (PS5, pencere ya da capture kart)")
         for i, z in enumerate(self.zones):
             c = QColor(ZONE_COLORS[i % len(ZONE_COLORS)])
             r = self.zrect(z)

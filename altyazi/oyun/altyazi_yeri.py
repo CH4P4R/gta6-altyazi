@@ -143,10 +143,23 @@ class SubtitleLayoutStore:
         with self._lock:
             return SubtitleLayout(copy.deepcopy(self._layout.samples))
 
+    def forget(self, game: str | None = None) -> None:
+        """Öğrenileni unut (Okuma alanı › Otomatik): yer baştan, kendiliğinden öğrenilir. game yoksa hepsi."""
+        with self._lock:
+            if game is None:
+                self._layout.samples.clear()
+            else:
+                self._layout.samples.pop(game, None)
+            data = json.dumps(self._layout.to_json())
+        self._write(data)
+
     def record(self, box, game: str) -> None:  # noqa: ANN001
         with self._lock:
             self._layout.record(box, game)
             data = json.dumps(self._layout.to_json())
+        self._write(data)
+
+    def _write(self, data: str) -> None:
         if not self.path:
             return
         try:

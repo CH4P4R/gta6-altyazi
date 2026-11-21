@@ -170,7 +170,7 @@ class LocalMT:
 
     name = "yerel"
 
-    def __init__(self, path: str, device: str = "auto", beam: int = 2):
+    def __init__(self, path: str, device: str = "auto", beam: int = 2, threads: int = 0):
         import ctranslate2
         import sentencepiece as spm
 
@@ -181,7 +181,8 @@ class LocalMT:
         if device == "auto":
             device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
         compute = "int8_float16" if device == "cuda" else "int8"
-        threads = 0 if device == "cuda" else max(2, min(8, (os.cpu_count() or 4) - 2))
+        threads = 0 if device == "cuda" else (int(threads) if threads and threads > 0
+                                              else max(2, min(8, (os.cpu_count() or 4) - 2)))
         self._make = lambda ct: ctranslate2.Translator(str(p), device=device, compute_type=ct, inter_threads=2,
                                                        intra_threads=threads)
         self.tr = self._make(compute)
@@ -603,7 +604,7 @@ class TranslationEngine:
     def _make_fast(cfg: CeviriCfg):
         try:
             if cfg.hizli == "yerel":
-                m = LocalMT(cfg.yerel_model, cfg.yerel_cihaz, cfg.yerel_beam)
+                m = LocalMT(cfg.yerel_model, cfg.yerel_cihaz, cfg.yerel_beam, getattr(cfg, "yerel_is_parcacigi", 0))
                 m.translate("Warm up the engine.")
                 return m
             if cfg.hizli == "google":
@@ -707,6 +708,8 @@ class TranslationEngine:
 
     def pack_lookup(self, text: str) -> tuple[str, str] | None:
         """Hazır paket: önce tam anahtar, sonra oyunun paketinde bulanık arama (OCR'ın bir iki harf hatası)."""
+        if not getattr(getattr(self, "cfg", None), "paket_kullan", True):
+            return None
         hit = self.packs.lookup(text)
         if hit:
             return hit

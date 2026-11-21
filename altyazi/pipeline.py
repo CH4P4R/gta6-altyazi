@@ -369,6 +369,7 @@ class Pipeline:
         self.frame_sink = frame_sink          # "pencere" gösterim modunda her kareyi alır
         self.zones: list[tuple[BolgeCfg, ZoneDetector]] = [(z, ZoneDetector(z)) for z in cfg.bolgeler
                                                            if getattr(z, "aktif", True)]
+        self._last_read: dict[str, float] = {}
         self._cond = threading.Condition()
         self._latest: tuple[np.ndarray, float] | None = None
         self._running = False
@@ -627,9 +628,14 @@ class Pipeline:
             x0, y0, x1, y1 = zone_rect(zcfg, w, h)
             if learned and zcfg.tur == "altyazi" and y0 / h < learned < y1 / h - 0.06:
                 y0 = int(learned * h)             # altyazının yeri öğrenildi: yalnız o şerit okunur (hızlı, HUD karışmaz)
+            if getattr(self.cfg.ocr, "sik_oku", False) and det.shown_sig is not None \
+                    and t - self._last_read.get(zcfg.ad, 0.0) > 1.0:
+                det.reject()                      # değişmeyen alanı da saniyede bir yeniden oku (CouchSubs)
+                self._last_read[zcfg.ad] = t
             ev = det.process(frame[y0:y1, x0:x1], t)
             if ev is None:
                 continue
+            self._last_read[zcfg.ad] = t
             if ev.kind == "clear":
                 self._sticky.pop(zcfg.ad, None)
                 self._drop_keys(list(self._blocks.pop(zcfg.ad, {}) or [zcfg.ad]))

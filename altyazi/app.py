@@ -611,7 +611,8 @@ class AppController(QObject):
         scale = main.yazi_olcek if main else 1.3
         opacity = round((main.kutu_opaklik if main else 255) / 255 * 100)
         t = self.cfg.tv
-        self.server.set_tv_style(lineScale=float(scale), background=opacity,
+        self.server.set_tv_style(lineScale=float(scale) if getattr(self.cfg.tv, "uydur", True) else 0.0,
+                                 background=opacity,
                                  displayMode="overlay" if t.mod == "katman" else "inApp",
                                  placement=t.yerlesim, fontSize=int(t.yazi_boyutu), textColor=t.yazi_rengi,
                                  bold=bool(t.kalin), stackPrevious=bool(t.onceki_satirlar), bottomPercent=int(t.alttan),

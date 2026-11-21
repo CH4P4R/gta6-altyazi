@@ -164,3 +164,60 @@ def test_pipeline_skips_inactive_zones_and_speaker_option():
     zones = [z for z in cfg.bolgeler if getattr(z, "aktif", True)]
     assert len(zones) == len(cfg.bolgeler) - 1 and p is not None
     assert konusan.present("LUCIA: Gitmeliyiz.", "LUCIA: We have to go.", False) == "Gitmeliyiz."
+
+
+def test_round2_settings(tmp_path, monkeypatch):
+    app, ctl = _app(tmp_path, monkeypatch)
+    from altyazi.ui.main_window import MainWindow
+    win = MainWindow(ctl)
+    reg = win.pages["regions"]
+    reg.select(0)
+    z = reg.current()
+    reg.center.setChecked(True)
+    reg.edges["sol"].setValue(20)
+    assert abs(z.alan[0] - 0.20) < 0.01 and abs(z.alan[2] - 0.80) < 0.01      # ortada tut
+    reg.edges["ust"].setValue(70)
+    assert abs(z.alan[1] - 0.70) < 0.01
+    from altyazi.pipeline import DisplayItem
+    it = DisplayItem("altyazi", (0.3, 0.85, 0.7, 0.93), (0.1, 0.76, 0.9, 0.97), 0.03, "Hi.", "Selam.", "orta", "alt",
+                     255, 1.3, seq=5)
+    ctl.show(it)
+    app.processEvents()
+    assert reg.last_tr.text() == "Selam." and reg.last_en.text() == "Hi."
+    tr = win.pages["translate"]
+    tr.packs_on.setChecked(False)
+    assert ctl.cfg.ceviri.paket_kullan is False
+    tr.ocr_engine.setCurrentIndex(tr.ocr_engine.findData("ppocr"))
+    tr.sik.setChecked(True)
+    tr.mt_threads.setValue(4)
+    tr.save()
+    assert ctl.cfg.ocr.motor == "ppocr" and ctl.cfg.ocr.sik_oku and ctl.cfg.ceviri.yerel_is_parcacigi == 4
+    look = win.pages["look"]
+    look.fit.setChecked(False)
+    look.save()
+    assert ctl.cfg.tv.uydur is False
+    if ctl.server is not None:
+        assert ctl.server.tv_style["lineScale"] == 0
+    about = win.pages["about"]
+    about.theme.buttons["acik"].click()
+    assert ctl.cfg.gosterim.tema == "acik"
+    ctl.shutdown()
+
+
+def test_light_theme_and_layout_forget(tmp_path):
+    from altyazi.oyun.altyazi_yeri import SubtitleLayoutStore
+    from altyazi.ui import theme as T
+    old = (T.BG, T.QSS)
+    try:
+        T.apply("acik")
+        assert T.BG == T.LIGHT["BG"] and T.LIGHT["CARD_BG"] in T.QSS
+    finally:
+        T.apply("koyu")
+        import importlib
+        importlib.reload(T)
+    assert T.BG == old[0]
+    st = SubtitleLayoutStore(tmp_path / "y.json")
+    st.record((0.3, 0.88, 0.7, 0.93), "gta6")
+    assert st.current.samples.get("gta6")
+    st.forget("gta6")
+    assert not st.current.samples.get("gta6")

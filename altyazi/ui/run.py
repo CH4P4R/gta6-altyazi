@@ -47,6 +47,10 @@ def run_gui(argv: list[str] | None = None, background: bool = False) -> int:
         return 0
     app.setApplicationName("GTA6 Altyazı")
     app.setStyle("Fusion")
+    try:                                         # açık / koyu görünüm (Hakkında › Görünüm)
+        T.apply(config_mod.load().gosterim.tema)
+    except Exception:  # noqa: BLE001
+        T.apply("koyu")
     pal = QPalette()
     for role, color in ((QPalette.Window, T.BG), (QPalette.Base, T.SURFACE2), (QPalette.Text, T.TEXT),
                         (QPalette.WindowText, T.TEXT), (QPalette.Button, T.SURFACE2), (QPalette.ButtonText, T.TEXT),

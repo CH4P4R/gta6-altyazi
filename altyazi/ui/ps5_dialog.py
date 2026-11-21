@@ -71,6 +71,16 @@ class Ps5Panel(QWidget):
                      "kimliğini (base64, 12 karakter, ör. AbCdEfGhIjk=) aynı kutuya yazıp Kaydet'e bas.", "faint",
                      wrap=True))
         c1.add(self.acc_state)
+        # Nino: giriş yapıldıysa hesap kimliğinin bir kısmı ve Çıkış yap
+        from .parcalar import IconTile
+        self.acc_box = Card(inner=True, margins=14, spacing=4)
+        self.acc_id = label("", "faint")
+        self.acc_id.setObjectName("mono")
+        self.logout_btn = button("Çıkış yap", "danger", self._logout)
+        self.acc_box.add(hbox(IconTile("check", 40, glow=False), vbox(label("Giriş yapıldı", "h3"), self.acc_id,
+                                                                          spacing=2), None, self.logout_btn, spacing=12))
+        self.acc_box.hide()
+        c1.add(self.acc_box)
         lay.addWidget(c1)
 
         # 2. eşleme
@@ -122,9 +132,23 @@ class Ps5Panel(QWidget):
         if p.hesap:
             self.acc_state.setText("✓ İkinci hesapla giriş yapıldı.")
             self.acc_state.setStyleSheet(f"color: {T.OK};")
+            masked = p.hesap[:4] + "••••" + p.hesap[-4:] if len(p.hesap) > 8 else "••••"
+            self.acc_id.setText(f"PSN hesap kimliği: {masked}")
+            self.acc_box.show()
+        else:
+            self.acc_box.hide()
         if self.ctl.ps5_paired():
             self.pair_state.setText(f"✓ Eşli: {p.ad or 'PS5'} ({p.ip}). Başka bir PS5 için yeniden eşleyebilirsin.")
             self.pair_state.setStyleSheet(f"color: {T.OK};")
+
+    def _logout(self) -> None:
+        """İkinci hesaptan çık: hesap kimliği silinir (PS5 eşlemesi kalır; yeniden giriş yapınca kullanılır)."""
+        cfg = self.ctl.edit_config()
+        cfg.ps5.hesap = ""
+        self.ctl.apply_config(cfg)
+        self.acc_state.setText("Çıkış yapıldı. Yeniden giriş için Sony giriş sayfasını aç.")
+        self.acc_state.setStyleSheet("")
+        self.refresh()
 
     def _open_login(self) -> None:
         self._seen_clip = QApplication.clipboard().text() or ""
@@ -164,6 +188,9 @@ class Ps5Panel(QWidget):
         self.consoles.clear()
         for c in found:
             self.consoles.addItem(f"{c.name} · {c.host} · {'açık' if c.awake else 'dinlenmede'}", c.host)
+        if found:
+            self.pair_state.setText(f"<span style='color:{T.OK}'>✓</span> <b>{found[0].name}</b> bulundu"
+                                    + (f" (+{len(found) - 1} PS5 daha)" if len(found) > 1 else ""))
         if not found:
             self.consoles.setEditText(current or self.ctl.cfg.ps5.ip)
             self.pair_state.setText("PS5 bulunamadı. PS5 açık ve bilgisayarla aynı ağda mı? IP adresini de yazabilirsin "
