@@ -67,6 +67,10 @@ class OcrCfg:
     # otomatik: Mac'te Apple Vision (Neural Engine; kendini sınar, okuyamazsa PP-OCR), diğerlerinde PP-OCR
     motor: str = "otomatik"       # otomatik | vision | ppocr
     sik_oku: bool = False         # değişmeyen altyazı alanını da saniyede bir yeniden oku (ilk okuma bozuksa düzelir)
+    # CouchSubs: bozuk / yarım okunan satır çevrilmeden önce daha iyi okuma için en çok bu kadar beklenir (0 = beklemez;
+    # bizde varsayılan beklemeden göstermek, daha iyi okuma gelince yerinde düzeltmektir)
+    bozuk_bekleme_ms: int = 0
+    yarim_bekleme_ms: int = 0
     model: str = ""               # boşsa paketteki PP-OCR tanıma modeli
     anahtar_dosyasi: str = ""
 

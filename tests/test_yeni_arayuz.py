@@ -221,3 +221,19 @@ def test_light_theme_and_layout_forget(tmp_path):
     assert st.current.samples.get("gta6")
     st.forget("gta6")
     assert not st.current.samples.get("gta6")
+
+
+def test_hold_waits_for_better_reading():
+    from altyazi.pipeline import Pipeline
+    p = Pipeline.__new__(Pipeline)
+    p._pending = {}
+    assert p._hold("k", "anything", 0.0, 0, 0) == "anything"           # kapalı: beklemez
+    bad = "Ge7 in th3 c@r"
+    first = p._hold("k", bad, 10.0, 800, 0)
+    assert first is None                                               # bozuk: beklet
+    good = "Get in the car, we gotta leave."
+    assert p._hold("k", good, 10.2, 800, 0) == good                    # iyi okuma gelince hemen
+    assert p._hold("j", bad, 20.0, 800, 0) is None
+    assert p._hold("j", bad, 20.9, 800, 0) == bad                      # süre doldu: eldeki en iyi okuma
+    assert p._hold("m", "and then we went to the", 0.0, 0, 300) is None  # yarım satır
+    assert p._hold("m", "and then we went to the", 0.4, 0, 300) is not None

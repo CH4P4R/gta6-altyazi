@@ -370,6 +370,7 @@ class Pipeline:
         self.zones: list[tuple[BolgeCfg, ZoneDetector]] = [(z, ZoneDetector(z)) for z in cfg.bolgeler
                                                            if getattr(z, "aktif", True)]
         self._last_read: dict[str, float] = {}
+        self._pending: dict[str, tuple[float, str]] = {}
         self._cond = threading.Condition()
         self._latest: tuple[np.ndarray, float] | None = None
         self._running = False
@@ -663,7 +664,13 @@ class Pipeline:
             self._blocks[zcfg.ad] = {k: (b[1], b[3]) for k, (_, b) in zip(keys, blocks)}
             self._drop_keys([k for k in prev if k not in keys])
             phone = self.scene.phone_box() if self.scene is not None else None
+            o = self.cfg.ocr
             for key, (text, (bx0, by0, bx1, by1)) in zip(keys, blocks):
+                held = self._hold(key, text, t, getattr(o, "bozuk_bekleme_ms", 0), getattr(o, "yarim_bekleme_ms", 0))
+                if held is None:
+                    det.reject()                  # bekletilen satır: sonraki karede yeniden okunsun
+                    continue
+                text = held
                 if phone is not None and (self.scene.is_phone_text(text) or (
                         phone.left < (x0 + bx1) / w and (x0 + bx0) / w < phone.right
                         and phone.top < (y0 + by1) / h and (y0 + by0) / h < phone.bottom)):
@@ -690,6 +697,25 @@ class Pipeline:
                         self.engine.submit_image(text, jpeg, zcfg.tur, cb)
                         continue
                 self.engine.submit(text, zcfg.tur, cb)
+
+    def _hold(self, key: str, text: str, t: float, broken_ms: int, partial_ms: int) -> str | None:
+        """Bozuk ya da yarım okunan satırı kısa süre bekletir (CouchSubs). None: beklet; metin: şimdi çevrilecek en iyi
+        okuma (beklerken görülen okumaların en yüksek puanlısı)."""
+        if not broken_ms and not partial_ms:
+            return text
+        from .oyun.yeniden_okuma import looks_complete, looks_misread, score
+        wait = broken_ms if (broken_ms and looks_misread(text)) else (
+            partial_ms if (partial_ms and not looks_complete(text)) else 0)
+        pend = self._pending.get(key)
+        if pend is not None and score(text) < score(pend[1]):
+            best = pend[1]
+        else:
+            best = text
+        if wait and (pend is None or (t - pend[0]) * 1000 < wait):
+            self._pending[key] = (pend[0] if pend else t, best)
+            return None
+        self._pending.pop(key, None)
+        return best
 
     def _drop_keys(self, keys: list[str]) -> None:
         if not keys:

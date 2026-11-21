@@ -1700,6 +1700,14 @@ class TranslationPage(QWidget):
                      field("İşlemci çekirdekleri", self.mt_threads), spacing=16))
         adv.add(self.ocr_gpu)
         adv.add(self.sik)
+        self.wait_broken = slider(0, 15, round(getattr(o, "bozuk_bekleme_ms", 0) / 100))
+        self.wait_partial = slider(0, 15, round(getattr(o, "yarim_bekleme_ms", 0) / 100))
+        adv.add(label("Bu beklemeler yalnız kötü okunan satırları geciktirir. 0'da beklemeden gösterilir, daha iyi okuma "
+                      "gelince yerinde düzeltilir (önerilen).", "faint", wrap=True))
+        adv.add(hbox(slider_row("Bozuk okunan satır için bekleme", self.wait_broken,
+                                lambda v: f"{v / 10:.1f} sn".replace(".", ",")),
+                     slider_row("Yarım okunan satır için bekleme", self.wait_partial,
+                                lambda v: f"{v / 10:.1f} sn".replace(".", ",")), spacing=24))
         adv.add(field("Telefon mesajlarının Türkçesi", self.phone_where,
                       "Yanında: telefonun yanında, oyundaki sırayla, her mesaj kendi balonunda (Nino'daki gibi). "
                       "Üstünde: her mesajın Türkçesi kendi balonunun tam üstünde."))
@@ -1904,6 +1912,8 @@ class TranslationPage(QWidget):
         cfg.ocr.motor = self.ocr_engine.currentData()
         cfg.ocr.gpu = self.ocr_gpu.isChecked()
         cfg.ocr.sik_oku = self.sik.isChecked()
+        cfg.ocr.bozuk_bekleme_ms = self.wait_broken.value() * 100
+        cfg.ocr.yarim_bekleme_ms = self.wait_partial.value() * 100
         c.oyun_sor = self.ask_game.isChecked()
         c.telefon_yeri = self.phone_where.value() or "yan"
         c.kalite_bekleme_ms = self.wait.value()
