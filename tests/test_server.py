@@ -226,3 +226,29 @@ def test_local_ai_openai_compatible():
     assert seen["body"]["model"] == "qwen2.5:7b" and seen["body"]["messages"][0]["role"] == "system"
     # anahtarsız da kalite katmanı olarak açılır
     assert isinstance(TranslationEngine._make_refine(CeviriCfg(kalite="yerelai")), LocalAIMT)
+
+
+def test_overlay_goes_to_tv_with_overlay_flag_and_merges_with_screen_shots():
+    import json as _json
+    import queue as _q
+
+    from altyazi.pipeline import DisplayItem
+    from altyazi.server import EventServer
+    srv = EventServer(0)
+    q = _q.Queue()
+    srv.tv_clients.append(q)
+    bubble = {"box": {"left": 0.6, "top": 0.3, "right": 0.8, "bottom": 0.35}, "line": 0.03, "text": "KARAVANIMA!",
+              "fill": "#e9e9ec", "ink": "#111111", "side": True}
+    srv.set_overlay([bubble])
+    f = q.get_nowait()
+    assert f.startswith("event: screen") and '"overlay": true' in f and "KARAVANIMA" in f
+    # Ekranı çevir sonucu gelince ikisi birlikte (overlay işareti olmadan) gider
+    srv.show(DisplayItem("tam0", (0.1, 0.1, 0.3, 0.2), (0.1, 0.1, 0.3, 0.2), 0.03, "Map", "Harita", "sol", "ust",
+                         255, 1.0, seq=1))
+    data = _json.loads(q.get_nowait().split("data: ", 1)[1])
+    assert [i["text"] for i in data["items"]] == ["Harita", "KARAVANIMA!"] and "overlay" not in data
+    srv.clear("tam0")
+    data = _json.loads(q.get_nowait().split("data: ", 1)[1])
+    assert data["overlay"] is True and len(data["items"]) == 1
+    srv.set_overlay([])
+    assert q.get_nowait().startswith("event: screen-clear")

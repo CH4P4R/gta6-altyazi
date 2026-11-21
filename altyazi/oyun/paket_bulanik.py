@@ -23,7 +23,7 @@ from typing import Callable
 
 import numpy as np
 
-from ..packs import _SPEAKER, canon, key as pack_key
+from ..packs import canon, key as pack_key
 
 MIN_LENGTH = 16                     # bundan kısa satırda bulanık arama yok
 MAX_BITS = 256                      # Bloom kümesinin en büyük boyu (32 bayt)
@@ -541,39 +541,180 @@ class FuzzyPack:
         return found
 
     def match(self, text: str) -> str | None:
-        """Satırın Türkçesi: önce tam, sonra bulanık. Konuşan etiketi ("GAETANO: ") korunur; çok satırlı okumada her
-        satır ayrı aranır (köşe yazısı satırları atlanır)."""
+        """Satırın Türkçesi (Nino: PackLookup.match). Önce yalnız tam anahtarla (tüm satır, satır satır, cümle cümle),
+        bulunamazsa her parça tam ya da bulanık aranır. Konuşan etiketi ve diyalog tiresi olduğu gibi kalır."""
         text = text.strip()
         if not text:
             return None
+        found = _phase(text, self.exact)
+        if found is not None:
+            return found
         cache: dict[str, str | None] = {}
 
         def find(line: str) -> str | None:
-            if line not in cache:
+            if line not in cache:            # aynı parça birkaç yoldan sorulabilir; bulanık sonuç bir kez hesaplanır
                 cache[line] = self.exact(line) or self.nearest(line)
             return cache[line]
 
-        def single(line: str) -> str | None:
-            m = _SPEAKER.match(line)
-            if m:
-                hit = find(line[m.end():])
-                if hit:
-                    return (f"{m.group(1)}: " if m.group(1) else "- ") + hit
-            return find(line)
+        return _phase(text, find)
 
-        hit = single(text)
-        if hit:
-            return hit
-        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-        if len(lines) > 1:
-            out = []
-            for ln in lines:
-                h = single(ln)
-                if h is None:
-                    if overlay_like(ln):
-                        continue
-                    return None
-                out.append(h)
-            if out:
-                return "\n".join(out)
+
+_SENT = re.compile(r"(?<=[.!?…])\s+")
+
+
+_DASH = re.compile(r"^[-–—]+\s*")
+# Büyük harfle başlayıp iki noktayla biten ama ad olmayan başlıklar; bunlar çevrilir (SubtitleSegmenter.notNames).
+NOT_NAMES = {
+    "note", "warning", "tip", "hint", "objective", "objectives", "quest", "goal", "new", "reward", "rewards",
+    "location", "chapter", "mission", "task", "tutorial", "update", "info", "status", "level", "controls",
+    "press", "hold", "tap", "remember", "example", "question", "answer", "result", "results", "time",
+    "listen", "look", "wait", "okay", "ok", "well", "so", "yes", "no", "now", "then", "and", "but",
+}
+
+
+def _caps_word(word: str, first: bool) -> bool:
+    rest = word[1:]
+    return word[:1].isupper() and (len(rest) >= 1 or not first) and \
+        all(ch.isupper() or unicodedata.category(ch) == "Nd" or ch in "'’.-" for ch in rest)
+
+
+def _title_word(word: str, first: bool) -> bool:
+    if not word[:1].isupper():
+        return False
+    rest = word[1:]
+    if first:
+        if not rest[:1].islower():
+            return False
+        rest = rest[1:]
+    return all(_is_letter(ch) or ch in "'’.-" for ch in rest)
+
+
+def speaker_label(line: str) -> str | None:
+    """Satır başındaki konuşmacı etiketi, boşluğuyla ("ATREUS: ", "Mimir Head: "): en çok üç sözcüklü ad ve iki nokta;
+    ya tümü büyük harf ya da her sözcüğü büyük harfle başlayan (SubtitleSegmenter.speakerLabel). Unicode harfler de
+    olur ("MİNER: "); tek sözcüklü başlıklar ("Note:", "Objective:") ad değildir."""
+    idx = line.find(":")
+    if idx <= 0:
         return None
+    end = idx + 1
+    while end < len(line) and line[end].isspace():
+        end += 1
+    if end == idx + 1:
+        return None
+    words = line[:idx].split(" ")
+    if not 1 <= len(words) <= 3 or any(not w for w in words):
+        return None
+    caps = all(_caps_word(w, i == 0) for i, w in enumerate(words))
+    title = all(_title_word(w, i == 0) for i, w in enumerate(words))
+    if not (caps or title):
+        return None
+    if len(words) == 1 and words[0].lower() in NOT_NAMES:
+        return None
+    return line[:end]
+
+
+def speaker_lead(line: str) -> tuple[str, str] | None:
+    """(ekranda kalacak diyalog tiresi ve etiket, aranacak gövde) ya da None."""
+    block = " ".join(line.split())
+    lead = ""
+    m = _DASH.match(block)
+    if m:
+        lead, block = m.group(0).strip() + " ", block[m.end():]
+    label = speaker_label(block)
+    if label:
+        lead, block = lead + label.strip()[:-1] + ": ", block[len(label):]
+    return (lead, block) if lead and block else None
+
+
+def _single(line: str, find: Callable[[str], str | None]) -> str | None:
+    """Tek satır: önce etiketsiz/tiresiz gövde (etiket çeviriye eklenir), sonra tamamı, sonra bozuk etiketsiz hâli."""
+    split = speaker_lead(line) if "\n" not in line else None
+    if split:
+        hit = find(split[1])
+        if hit:
+            return split[0] + hit
+    hit = find(line)
+    if hit:
+        return hit
+    loose = loose_label(line)
+    if loose:
+        hit = find(loose[1])
+        if hit:
+            return loose[0] + hit
+    return None
+
+
+def _phase(text: str, find: Callable[[str], str | None]) -> str | None:
+    hit = _single(text, find)
+    if hit:
+        return hit
+    # Her satır ayrı bir altyazı olabilir (iki konuşmacı alt alta); köşe yazısı satırları atlanır.
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if len(lines) > 1:
+        out = []
+        for ln in lines:
+            h = _single(ln, find)
+            if h is None:
+                if is_overlay_line(ln):
+                    continue
+                out = []
+                break
+            out.append(h)
+        if out:
+            return "\n".join(out)
+    # Cümle cümle (etiket ve tire olduğu gibi kalır).
+    lead, body = speaker_lead(text) or ("", text)
+    parts = [p for p in _SENT.split(body.strip()) if p.strip()]
+    if len(parts) <= 1:
+        return None
+    hits = [find(p) for p in parts]
+    return lead + " ".join(hits) if all(hits) else None
+
+
+def is_overlay_line(line: str) -> bool:
+    """Altyazı olmayan köşe yazısı satırı (PackLookup.isOverlay): en çok dört sözcük; "•" içerir ya da her sözcük büyük
+    harfle başlayıp yalnız harf/rakamdır ("San Andreas", "LOSNN")."""
+    words = line.split()
+    if not words or len(words) > 4:
+        return False
+    return "•" in line or all(map(capitalized, words))
+
+
+def loose_label(line: str) -> tuple[str, str] | None:
+    """OCR'ın bozduğu konuşmacı etiketi: "-GAETANO:", "M]:", "li LUCA:", "MİNE GUARD•" (ilk 32 karakterde iki nokta ya
+    da • ve önündeki sözcükte küçük harf yok) ya da iki noktasız "SEBASTIAN Where…". (ekranda kalacak etiket, aranacak
+    gövde) ya da None. Yalnız paket aramasında yeniden deneme içindir."""
+    n = len(line)
+
+    def name_like(token: str, minimum: int) -> bool:
+        letters = [ch for ch in token if _is_letter(ch)]
+        return len(letters) >= minimum and not any(ch.islower() for ch in letters)
+
+    for index in range(1, min(n, 33)):
+        if line[index] not in ":•":
+            continue
+        before = line[:index].split()
+        if not before or not name_like(before[-1], 1):
+            continue
+        start = index + 1
+        while start < n and not _is_letter(line[start]) and unicodedata.numeric(line[start], None) is None:
+            start += 1
+        body = line[start:].strip()
+        if not any(map(_is_letter, body)):
+            return None
+        return line[:index + 1].strip() + " ", body
+    start = 0
+    while start < n and not _is_letter(line[start]):
+        start += 1
+    for _ in range(3):
+        end = start
+        while end < n and not line[end].isspace():
+            end += 1
+        if not (end < n and line[start].isupper() and name_like(line[start:end], 2)):
+            break
+        while end < n and line[end].isspace():
+            end += 1
+        start = end
+        if start + 1 < n and line[start].isupper() and line[start + 1].islower():
+            return line[:start].strip() + " ", line[start:].strip()
+    return None
