@@ -101,7 +101,8 @@ cp "$WORK/native/couchsubs_native.dylib" "$NATIVE/bin/"
 # Yalnız sistem kütüphanelerine bağlı olmalı ve macOS 13'ten yenisini istememeli.
 DYLIB="$NATIVE/bin/couchsubs_native.dylib"
 otool -L "$DYLIB"
-bad=$(otool -L "$DYLIB" | tail -n +2 | awk '{print $1}' | grep -Ev '^(/usr/lib/|/System/Library/)' || true)
+bad=$(otool -L "$DYLIB" | tail -n +2 | awk '{print $1}' | grep -v 'couchsubs_native.dylib$' \
+  | grep -Ev '^(/usr/lib/|/System/Library/)' || true)
 [[ -z "$bad" ]] || { echo "HATA: sistem dışı bağımlılık: $bad" >&2; exit 1; }
 minos=$(otool -l "$DYLIB" | awk '/minos/ {print $2}' | sort -uV | tail -1)
 [[ "$(printf '%s\n%s\n' "$minos" "$MIN" | sort -V | tail -1)" == "$MIN" ]] || { echo "HATA: macOS $minos hedefleniyor" >&2; exit 1; }
