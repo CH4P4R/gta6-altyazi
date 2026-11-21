@@ -15,6 +15,7 @@ from .. import rehber
 from ..app import CHIAKI_DOWNLOAD, AppController
 from . import theme as T
 from .guide import REHBER, Guide
+from .parcalar import Backdrop, HelpFab, IconTile, PagerDots, SubtitlePreview
 from .widgets import (Card, Dot, IconBadge, Logo, PreviewArt, QrCode, Stepper, button, hbox, label,
                       scroll_page, vbox)
 
@@ -174,8 +175,7 @@ class Wizard(QDialog):
         sl.addWidget(label("Ayarları sonra istediğin zaman\nAyarlar sayfasından değiştirebilirsin.", "faint"))
         root.addWidget(side)
 
-        right = QFrame()
-        right.setObjectName("page")
+        right = Backdrop()                        # Nino gibi yumuşak ışıltılı zemin (bizim renklerle)
         rl = QVBoxLayout(right)
         rl.setContentsMargins(48, 40, 48, 30)
         rl.setSpacing(18)
@@ -185,8 +185,13 @@ class Wizard(QDialog):
         self.skip = button("Bu adımı atla", "ghost", self._next)
         self.next = button("Başlayalım", "primary", self._next)
         self.next.setMinimumWidth(210)
-        rl.addLayout(hbox(self.back, None, self.skip, self.next, spacing=10))
+        self.dots = PagerDots(len(STEPS))
+        rl.addLayout(hbox(self.back, None, self.dots, None, self.skip, self.next, spacing=10))
         root.addWidget(right, 1)
+        self.fab = HelpFab(right)
+        self.fab.clicked.connect(self._ask)
+        right.resizeEvent = lambda e: (QFrame.resizeEvent(right, e), self.fab.move(right.width() - 86,
+                                                                                   right.height() - 150))
 
         self.where = self.cfg.kaynak.oyun_yeri if self.cfg.kaynak.oyun_yeri in ("monitor", "tv", "ikisi") else "tv"
         for builder in (self._welcome, self._where, self._ps5, self._tv, self._translation, self._done):
@@ -199,14 +204,25 @@ class Wizard(QDialog):
         self._go(0)
 
     # ------------------------------------------------------------------ sayfalar
-    def _page(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
+    PAGE_ICONS = {"Nerede oynuyorsun?": "swap", "PS5 bağlantısı": "ps", "Televizyon": "tv", "Çeviri": "translate"}
+
+    def _ask(self) -> None:
+        from .yardim import AskDialog
+        if getattr(self, "_ask_dlg", None) is None:
+            self._ask_dlg = AskDialog(self.ctl, self)
+        self._ask_dlg.show()
+        self._ask_dlg.raise_()
+
+    def _page(self, title: str, subtitle: str, icon: str | None = None) -> tuple[QWidget, QVBoxLayout]:
         w = QWidget()
         lay = QVBoxLayout(w)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(14)
         t = label(title, "display")
         t.setWordWrap(True)
-        lay.addWidget(t)
+        icon = icon or self.PAGE_ICONS.get(title, "check")
+        w.icon = IconTile(icon, 58)                 # Nino: başlığın yanında degrade ikon kutusu
+        lay.addLayout(hbox(w.icon, t, 1, spacing=18))
         sub = label(subtitle, "lead", wrap=True)
         sub.setTextFormat(Qt.RichText)
         lay.addWidget(sub)
@@ -379,9 +395,25 @@ class Wizard(QDialog):
                                      spacing=10))
         self.pair_toggle = QCheckBox("Gelişmiş: TV'de USB hata ayıklama yok, kablosuz eşleştirme kodu kullanacağım")
         self.pair_toggle.toggled.connect(lambda on: self.pair_row.setVisible(on and self.tv_brand.currentData() == "android"))
+        # Deneyelim (Nino): TV bağlanınca örnek altyazı gider, "TV'de görüyor musun?" diye sorulur
+        self.try_box = Card(inner=True, margins=16, spacing=10)
+        self.try_box.add(label("Deneyelim", "h2"))
+        self.try_box.add(label("TV'ne örnek bir altyazı gönderildi. Ekranın altında, oyunun üstünde görünmeli.", "muted",
+                               wrap=True))
+        demo = SubtitlePreview("Bu bir deneme altyazısı. Oyunun üstünde görüyor musun?", "This is a test subtitle.")
+        demo.setMinimumHeight(150)
+        demo.setMaximumHeight(190)
+        self.try_box.add(demo)
+        self.try_yes = button("Evet, görüyorum", "primary", self._try_yes)
+        self.try_no = button("Hayır", None, self._try_no)
+        self.try_box.add(hbox(label("TV'de görüyor musun?", "h3"), None, self.try_no, self.try_yes,
+                              button("↻ Tekrar gönder", "ghost", self.ctl.tv_test), spacing=10))
+        self.try_msg = label("", "muted", wrap=True)
+        self.try_box.add(self.try_msg)
+        self.try_box.hide()
         conn.setLayout(vbox(hbox(self.tv_ip, self.tv_scan_btn, self.tv_found, self.tv_conn_btn, spacing=10),
                             self.lg_pass, self.pair_toggle, self.pair_row,
-                            hbox(self.tv_dot, self.tv_msg, 1, spacing=6), spacing=8))
+                            hbox(self.tv_dot, self.tv_msg, 1, spacing=6), self.try_box, spacing=8))
         self.tv_conn = conn
         from ..tv import local_ip
         try:
@@ -524,6 +556,8 @@ class Wizard(QDialog):
             self._fill_done()
         self.stack.setCurrentIndex(i)
         self.stepper.setCurrent(i)
+        if hasattr(self, "dots"):
+            self.dots.setCurrent(i)
         self.back.setVisible(i > 0)
         self.skip.setVisible(i in (P_PS5, P_TV, P_TRANSLATION))
         self._update_next()
@@ -645,6 +679,22 @@ class Wizard(QDialog):
         if hasattr(self, "tv_dot"):
             self.tv_dot.setState({"bagli": "ok", "baglaniyor": "warn", "onay": "info", "hata": "bad"}.get(state, "off"))
             self.tv_msg.setText(msg)
+        if hasattr(self, "try_box") and state == "bagli" and self.try_box.isHidden():
+            self.try_box.show()
+            self.try_msg.setText("")
+            self.ctl.tv_test()
+
+    def _try_yes(self) -> None:
+        self.try_msg.setText(f"<span style='color:{T.OK}'>✓ Harika, TV hazır.</span> Devam'a bas.")
+
+    def _try_no(self) -> None:
+        brand = self.tv_brand.currentData()
+        tips = ["TV uygulaması açık mı? TV'de GTA6 Altyazı uygulamasını aç ve Tekrar gönder'e bas.",
+                "Windows'ta güvenlik duvarı TV'yi engelliyor olabilir: programda Bağlantı › İzin ver."]
+        if brand == "android":
+            tips.insert(1, "Görüntü siyahsa ya da TV kendiliğinden PS5'in girişine geçiyorsa: Altyazı görünümü › "
+                           "Android TV görüntü modu › Katman.")
+        self.try_msg.setText("<br>".join(f"• {t}" for t in tips))
 
     # ------------------------------------------------------------------ çeviri
     ENGINE_HINTS = {

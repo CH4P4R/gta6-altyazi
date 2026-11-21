@@ -485,6 +485,41 @@ class QualityFallback:
         return False
 
 
+class StreamStats:
+    """Sistem sağlığı için: son bir dakikadaki görüntü hızı, donmalar (0.5 sn'den uzun boşluk) ve kopmalar."""
+    WINDOW, FREEZE = 60.0, 0.5
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.frames: list[float] = []
+        self.freezes: list[float] = []
+        self.drops: list[float] = []
+
+    def frame(self, now: float) -> None:
+        with self._lock:
+            if self.frames and now - self.frames[-1] > self.FREEZE:
+                self.freezes.append(now)
+            self.frames.append(now)
+            if len(self.frames) > 4000:
+                self.frames = self.frames[-2000:]
+
+    def drop(self, now: float) -> None:
+        with self._lock:
+            self.drops.append(now)
+
+    def summary(self, now: float) -> dict:
+        with self._lock:
+            recent = [t for t in self.frames if now - t <= self.WINDOW]
+            span = min(self.WINDOW, now - recent[0]) if recent else 0.0
+            fps = len(recent) / span if span >= 2 else 0.0
+            per_min = 60.0 / max(span, 1.0) if span else 0.0
+            freezes = sum(1 for t in self.freezes if now - t <= self.WINDOW) * per_min
+            drops = sum(1 for t in self.drops if now - t <= 600)
+            last = now - self.frames[-1] if self.frames else None
+        return {"fps": round(fps, 1), "donma_dk": round(freezes, 1), "kopma_10dk": drops,
+                "son_kare_sn": None if last is None else round(last, 1)}
+
+
 class PictureWatchdog:
     """Bağlıyken görüntü 15 sn (ilk görüntü 8 sn) gelmezse oturum yeniden kurulur."""
     STALL_AFTER, FIRST_AFTER = 15.0, 8.0
@@ -658,6 +693,7 @@ class StreamSession:
         self._search_answered = True
         self._next_relocate = 0.0
         self._last_frame = 0.0
+        self.stats = StreamStats()
         self._thread = threading.Thread(target=self._run, daemon=True, name="remoteplay")
         self._thread.start()
 
@@ -828,6 +864,7 @@ class StreamSession:
         self._post_after(1.0, check)
 
     def _note_drop(self) -> None:
+        self.stats.drop(time.monotonic())
         if self._quality.dropped(time.monotonic()):
             log.warning("PS5 bağlantısı 10 dk içinde 2 kez koptu; görüntü 720p'ye düşürülüyor (PS5'i modeme kabloyla "
                         "bağlamak kalıcı çözüm)")
@@ -837,6 +874,7 @@ class StreamSession:
         now = time.monotonic()
         self._watchdog.picture(now)
         self._last_frame = now
+        self.stats.frame(now)
         if not self.on_frame:
             return
         flat = np.ctypeslib.as_array(ptr, shape=(h * stride,))

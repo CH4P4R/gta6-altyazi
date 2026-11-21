@@ -22,8 +22,8 @@ from .. import __version__
 from ..app import CHIAKI_DOWNLOAD, AppController, open_path
 from ..config import BolgeCfg
 from . import theme as T
-from .parcalar import (TEXT_COLORS, Backdrop, Chips, ColorDots, HelpFab, IconTile, Pill, RadioCard, RadioGroup,
-                       SectionCard, Segmented, SubtitlePreview, Toggle)
+from .parcalar import (TEXT_COLORS, Backdrop, Chips, Collapsible, ColorDots, HealthRow, HelpFab, IconTile, Pill,
+                       RadioCard, RadioGroup, SectionCard, Segmented, StyleCard, SubtitlePreview, Toggle)
 from .region_editor import PRESETS, RegionCanvas
 from .widgets import Card, Icon, Logo, NavButton, QrCode, Sparkline, Toast, button, hbox, label, scroll_page, vbox
 
@@ -539,6 +539,20 @@ class AppearancePage(QWidget):
     """TV'deki ve bilgisayar ekranındaki altyazının görünümü: canlı önizleme, renk, boyut, zemin, yer (GameTranslator /
     CouchSubs). Değişiklik anında kaydedilir ve TV'ye gider."""
 
+    PRESETS = [
+        ("klasik", "Klasik", "Yarı saydam kutu", {"background": 72, "textColor": "white", "bold": False,
+                                                  "backgroundShape": "fit"}),
+        ("sinema", "Sinema", "Film gibi sarı", {"background": 0, "textColor": "yellow", "bold": True,
+                                                "backgroundShape": "fit"}),
+        ("minimal", "Minimal", "Görüntüyü kapatmaz", {"background": 35, "textColor": "white", "bold": False,
+                                                      "backgroundShape": "fit"}),
+        ("cam", "Gün batımı cam", "Buzlu cam, yuvarlak", {"background": 95, "textColor": "white", "bold": True,
+                                                          "backgroundShape": "fit"}),
+        ("kontrast", "Yüksek kontrast", "En kolay okunan", {"background": 100, "textColor": "white", "bold": True,
+                                                            "backgroundShape": "band"}),
+        ("kenar", "Kenarlıklı", "Oyun yazısı gibi", {"background": 0, "textColor": "white", "bold": True,
+                                                     "backgroundShape": "fit"}),
+    ]
     PLACES = [("cover", "İngilizce altyazının üstünü örtsün"), ("above", "İngilizce altyazının üstünde"),
               ("below", "İngilizce altyazının altında"), ("fixed", "Sabit yerde (alttan yükseklik)")]
 
@@ -561,7 +575,29 @@ class AppearancePage(QWidget):
         self.preview.setMaximumHeight(360)
         prev.add(hbox(label("CANLI ÖNİZLEME", "eyebrow"), None, label("1920 × 1080 (16:9)", "faint")))
         prev.add(self.preview)
-        root.addWidget(prev)
+        cols = QHBoxLayout()
+        cols.setSpacing(16)
+        left = QVBoxLayout()
+        left.setSpacing(16)
+        left.addWidget(prev)
+        presets = SectionCard("Hazır stiller", "Birine tıkla, ayarlar ona göre değişir; sonra istediğin gibi oynayabilirsin.",
+                              margins=16)
+        pg_ = QGridLayout()
+        pg_.setSpacing(10)
+        self.style_cards: dict[str, StyleCard] = {}
+        for i, (key, name, desc, st) in enumerate(self.PRESETS):
+            card = StyleCard(name, desc, st)
+            card.clicked.connect(lambda k=key: self._preset(k))
+            self.style_cards[key] = card
+            pg_.addWidget(card, i // 3, i % 3)
+        presets.add(pg_)
+        left.addWidget(presets)
+        left.addStretch(1)
+        cols.addLayout(left, 11)
+        right = QVBoxLayout()
+        right.setSpacing(16)
+        cols.addLayout(right, 9)
+        root.addLayout(cols)
 
         # --- TV ayarları
         self.tv_box = SectionCard("TV'de", "LG, Samsung ve Android TV uygulamasında.", "tv")
@@ -575,18 +611,16 @@ class AppearancePage(QWidget):
         self.bold = QCheckBox("Kalın yazı", t.kalin)
         self.stack = QCheckBox("Hızlı konuşmada önceki satırları üstte göster", t.onceki_satirlar)
         self.tv_box.add(field("Yazı rengi", self.colors))
-        g = QGridLayout()
-        g.setHorizontalSpacing(28)
-        g.setVerticalSpacing(14)
         self.size_row = slider_row("Yazı boyutu (sabit yerde)", self.size, lambda v: f"{v} px")
-        g.addLayout(slider_row("Yazı boyutu (İngilizceye göre)", self.scale, lambda v: f"{v / 100:.2f}×"), 0, 0)
-        g.addLayout(slider_row("Arka plan koyuluğu", self.bg, lambda v: f"%{v}"), 0, 1)
-        g.addLayout(self.size_row, 1, 0)
-        g.addLayout(slider_row("Ekran konumu (alttan yükseklik)", self.bottom, lambda v: f"%{v}"), 1, 1)
-        g.addLayout(field("Yeri", self.place), 2, 0)
-        g.addLayout(field("Arka plan alanı", self.shape, "Koyuluk %100'de oyundaki İngilizce yazı tamamen kapanır."), 2, 1)
-        self.tv_box.add(g)
-        self.tv_box.add(hbox(self.bold, 24, self.stack, None))
+        self.tv_box.add(field("Yeri", self.place, "Çeviri, oyunun kendi altyazısının çıktığı yerde görünür."))
+        self.tv_box.add(slider_row("Yazı boyutu (İngilizceye göre)", self.scale, lambda v: f"{v / 100:.2f}×"))
+        self.tv_box.add(slider_row("Arka plan koyuluğu", self.bg, lambda v: f"%{v}"))
+        self.tv_box.add(field("Arka plan alanı", self.shape, "Koyuluk %100'de oyundaki İngilizce yazı tamamen kapanır; "
+                              "tam genişlik bant yanları da örter."))
+        self.tv_box.add(self.size_row)
+        self.tv_box.add(slider_row("Ekran konumu (alttan yükseklik)", self.bottom, lambda v: f"%{v}"))
+        self.tv_box.add(self.bold)
+        self.tv_box.add(self.stack)
         self.mode = Segmented([("otomatik", "Otomatik"), ("hdmi", "Uygulama içinde"), ("katman", "Katman")],
                               ctl.cfg.tv.mod)
         self.mode.setMaximumWidth(460)
@@ -596,7 +630,7 @@ class AppearancePage(QWidget):
                               "LG ve Samsung'da bu ayarın etkisi yok."))
         self.test_btn = button("TV'ye deneme gönder", "primary", ctl.tv_test)
         self.tv_box.add(hbox(self.test_btn, None))
-        root.addWidget(self.tv_box)
+        right.addWidget(self.tv_box)
 
         # --- bilgisayar ekranı ayarları
         g = ctl.cfg.gosterim
@@ -612,16 +646,13 @@ class AppearancePage(QWidget):
         self.scale.valueChanged.connect(self.pc_scale.setValue)
         self.pc_bg.valueChanged.connect(self.bg.setValue)
         self.bg.valueChanged.connect(self.pc_bg.setValue)
-        pg = QGridLayout()
-        pg.setHorizontalSpacing(28)
-        pg.setVerticalSpacing(14)
-        pg.addLayout(field("Gösterim", self.pc_mode), 0, 0)
-        pg.addLayout(field("Yazı tipi", self.font_name), 0, 1)
-        pg.addLayout(slider_row("Yazı boyutu", self.pc_scale, lambda v: f"{v / 100:.2f}×"), 1, 0)
-        pg.addLayout(slider_row("Arka plan koyuluğu", self.pc_bg, lambda v: f"%{v}"), 1, 1)
-        self.pc_box.add(pg)
+        self.pc_box.add(field("Gösterim", self.pc_mode))
+        self.pc_box.add(field("Yazı tipi", self.font_name))
+        self.pc_box.add(slider_row("Yazı boyutu", self.pc_scale, lambda v: f"{v / 100:.2f}×"))
+        self.pc_box.add(slider_row("Arka plan koyuluğu", self.pc_bg, lambda v: f"%{v}"))
         self.pc_box.add(self.latency)
-        root.addWidget(self.pc_box)
+        right.addWidget(self.pc_box)
+        right.addStretch(1)
         root.addStretch(1)
 
         self._save_timer = QTimer(self, singleShot=True, interval=350, timeout=self.save)
@@ -640,6 +671,25 @@ class AppearancePage(QWidget):
     def _main_zone(self):  # noqa: ANN202
         return next((b for b in self.ctl.cfg.bolgeler if b.ad == "altyazi"), None)
 
+    def _preset(self, key: str) -> None:
+        st = next(p[3] for p in self.PRESETS if p[0] == key)
+        for w in (self.bg, self.bold, self.shape):
+            w.blockSignals(True)
+        self.bg.setValue(st["background"])
+        self.bold.setChecked(st["bold"])
+        self.shape.setCurrentIndex(max(0, self.shape.findData(st["backgroundShape"])))
+        for w in (self.bg, self.bold, self.shape):
+            w.blockSignals(False)
+        self.colors.setValue(st["textColor"])
+        self.bold.update()
+        self._changed()
+
+    def _mark_preset(self) -> None:
+        cur = {"background": self.bg.value(), "textColor": self.colors.current, "bold": self.bold.isChecked(),
+               "backgroundShape": self.shape.currentData()}
+        for key, card in self.style_cards.items():
+            card.setChecked(next(p[3] for p in self.PRESETS if p[0] == key) == cur)
+
     def _target(self, v: str) -> None:
         self.tv_box.setVisible(v == "tv")
         self.pc_box.setVisible(v == "pc")
@@ -656,6 +706,7 @@ class AppearancePage(QWidget):
                                bold=self.bold.isChecked(), textColor=self.colors.current,
                                bottomPercent=self.bottom.value(), backgroundShape=self.shape.currentData(),
                                lineScale=self.scale.value() / 100)
+        self._mark_preset()
 
     def save(self) -> None:
         cfg = self.ctl.edit_config()
@@ -1312,16 +1363,24 @@ class TranslationPage(QWidget):
                                   "bilgisayarda saklanır.", "muted", wrap=True), spacing=2))
         self.qual_group = RadioGroup(on_change=lambda _v: self._vis())
         self.cards: dict[str, RadioCard] = {}
+        self.more = Collapsible("Diğer çeviri motorları")
         for value, title, desc in self.ENGINES:
             card = self.qual_group.add(value, RadioCard(title, desc))
             self.cards[value] = card
-            root.addWidget(card)
+            (self.more.add if value in ("deepl", "yerelai") else root.addWidget)(card)
+        root.addWidget(self.more)
         import webbrowser as _wb
         # Gemini
         self.gem = QLineEdit(c.gemini_anahtar)
         self.gem.setEchoMode(QLineEdit.Password)
         self.gem.setPlaceholderText("Gemini API anahtarı")
+        self.key_rows: dict[str, tuple] = {}
         self.cards["gemini"].add(hbox(self.gem, button("Kaydet ve Dene", "primary", self._save_try), spacing=8))
+        self.cards["gemini"].add(self._key_row("gemini", self.gem))
+        self.cards["gemini"].add(label("Altyazı metni Google'a gönderilir; ücretsiz anahtarda Google bu metni ürünlerini "
+                                       "geliştirmek için kullanabilir. Yalnızca oyunun altyazıları gönderilir. Ücretsiz "
+                                       "anahtarın dakika başına bir sınırı var; sınır dolunca o satır ücretsiz çeviriyle "
+                                       "çevrilir.", "faint", wrap=True))
         self.cards["gemini"].add(hbox(button("Ücretsiz Gemini anahtarı al ›", "link",
                                              lambda: _wb.open(self._key_url("gemini"))), None))
         # Claude
@@ -1332,6 +1391,7 @@ class TranslationPage(QWidget):
                             ("claude-haiku-5-5", "Claude Haiku 5.5 (daha hızlı ve ucuz)")], c.claude_model)
         self.fastmode = QCheckBox("Hızlı mod (Opus 5.5: ~2.5 kat hızlı, 2 kat fiyat)", c.claude_hizli_mod)
         self.cards["claude"].add(hbox(self.key, button("Kaydet ve Dene", "primary", self._save_try), spacing=8))
+        self.cards["claude"].add(self._key_row("claude", self.key))
         self.cards["claude"].add(hbox(self.model, 12, self.fastmode, None, spacing=0))
         self.cards["claude"].add(hbox(button("Claude anahtarı al ›", "link", lambda: _wb.open(self._key_url("claude"))),
                                       None))
@@ -1340,6 +1400,7 @@ class TranslationPage(QWidget):
         self.deepl.setEchoMode(QLineEdit.Password)
         self.deepl.setPlaceholderText("DeepL anahtarı (ücretsiz planda sonu :fx)")
         self.cards["deepl"].add(hbox(self.deepl, button("Kaydet ve Dene", "primary", self._save_try), spacing=8))
+        self.cards["deepl"].add(self._key_row("deepl", self.deepl))
         self.cards["deepl"].add(hbox(button("Ücretsiz DeepL anahtarı al ›", "link",
                                             lambda: _wb.open(self._key_url("deepl"))), None))
         # Yerel yapay zekâ
@@ -1367,7 +1428,7 @@ class TranslationPage(QWidget):
         root.addWidget(test)
 
         # --- gelişmiş
-        adv = SectionCard("Gelişmiş", "", "settings")
+        adv = Collapsible("Gelişmiş")
         self.fast = combo([("yerel", "Yerel model (internetsiz)"), ("google", "Google Çeviri (anahtarsız)"),
                            ("yok", "Kapalı")], c.hizli)
         self.wait = QSpinBox()
@@ -1437,7 +1498,29 @@ class TranslationPage(QWidget):
                                                                                  else ""))
 
     def _vis(self) -> None:
-        pass                                        # kartlar seçilince kendi alanlarını açar
+        if self.qual_group.value() in ("deepl", "yerelai"):
+            self.more.setOpen(True)
+        self._key_states()
+
+    def _key_row(self, kind: str, edit: QLineEdit) -> QHBoxLayout:
+        ok = label("", "h3")
+        test = button("Dene", None, self._test)
+        rm = button("Anahtarı sil", None, lambda: self._remove_key(edit))
+        self.key_rows[kind] = (ok, test, rm, edit)
+        edit.textChanged.connect(lambda _t: self._key_states())
+        return hbox(ok, None, test, rm, spacing=8)
+
+    def _key_states(self) -> None:
+        for kind, (ok, test, rm, edit) in getattr(self, "key_rows", {}).items():
+            has = bool(edit.text().strip())
+            ok.setText(f"<span style='color:{T.OK}'>✓ Anahtar kayıtlı</span>" if has else
+                       f"<span style='color:{T.MUTED}'>Anahtar yok</span>")
+            test.setVisible(has)
+            rm.setVisible(has)
+
+    def _remove_key(self, edit: QLineEdit) -> None:
+        edit.clear()
+        self.save()
 
     def _key_url(self, kind: str | None = None) -> str:
         from .. import rehber
@@ -1840,6 +1923,99 @@ class GuidePage(QWidget):
                 return
 
 
+# ============================================================================ Sistem sağlığı
+class HealthPage(QWidget):
+    """Nino'nun Sistem sağlığı sayfası: ağ, PS5 bağlantısı ve görüntüsü, çeviri hızı, TV; cihaz bilgileri."""
+
+    def __init__(self, ctl: AppController):
+        super().__init__()
+        self.ctl = ctl
+        _transparent(self)
+        root = page_shell(self, "Sistem sağlığı", "Takılma ya da gecikme varsa sebebini ve ne yapacağını burada gör. "
+                          "Birkaç saniyede bir yenilenir.", "bolt")
+        self.card = SectionCard(margins=18, spacing=0)
+        self.rows: dict[str, HealthRow] = {}
+        root.addWidget(self.card)
+        info = SectionCard("Cihaz bilgileri", "Sorun bildirdiğinde eklenir; ne kullandığını sormadan görürüz. Ad, seri "
+                           "numarası ya da adres içermez.", margins=18)
+        self.info_grid = QGridLayout()
+        self.info_grid.setHorizontalSpacing(30)
+        self.info_grid.setVerticalSpacing(8)
+        info.add(self.info_grid)
+        info.add(hbox(button("Cihaz bilgilerini kopyala", None, self._copy),
+                      button("Sorun bildir", "primary", self._report), None, spacing=10))
+        root.addWidget(info)
+        self.log = Collapsible("Ayrıntılar (son kayıtlar)")
+        self.log_text = QPlainTextEdit()
+        self.log_text.setReadOnly(True)
+        self.log_text.setFixedHeight(220)
+        self.log.add(self.log_text)
+        root.addWidget(self.log)
+        root.addStretch(1)
+        self._kind = None
+        self._timer = QTimer(self, interval=3000, timeout=self.refresh)
+
+    def showEvent(self, e) -> None:  # noqa: ANN001, N802
+        super().showEvent(e)
+        self.refresh()
+        self._timer.start()
+
+    def hideEvent(self, e) -> None:  # noqa: ANN001, N802
+        self._timer.stop()
+        super().hideEvent(e)
+
+    def refresh(self) -> None:
+        from .. import saglik
+        if self._kind is None:
+            self._kind = saglik.network_kind()
+        rows = saglik.checks(self.ctl, self._kind)
+        for i, r in enumerate(rows):
+            w = self.rows.get(r["key"])
+            if w is None:
+                if self.rows:
+                    sep = QFrame()
+                    sep.setFixedHeight(1)
+                    sep.setStyleSheet(f"background:{T.BORDER};")
+                    self.card.add(sep)
+                w = HealthRow()
+                self.rows[r["key"]] = w
+                self.card.add(w)
+            w.set(r)
+        while self.info_grid.count():
+            it = self.info_grid.takeAt(0)
+            if it.widget():
+                it.widget().deleteLater()
+        for i, (k, v) in enumerate(saglik.device_info(self.ctl)):
+            self.info_grid.addWidget(label(k, "muted"), i, 0)
+            self.info_grid.addWidget(label(v, None), i, 1)
+        self.info_grid.setColumnStretch(1, 1)
+        if self.log.body.isVisible():
+            self.log_text.setPlainText(_log_tail())
+
+    def _copy(self) -> None:
+        from PySide6.QtWidgets import QApplication
+
+        from .. import saglik
+        QApplication.clipboard().setText(saglik.info_text(self.ctl))
+        self.window().toast.show_text("Cihaz bilgileri kopyalandı")
+
+    def _report(self) -> None:
+        from .. import saglik
+        webbrowser.open(saglik.issue_url(self.ctl))
+
+
+def _log_tail(n: int = 80) -> str:
+    try:
+        from .. import paths
+        p = paths.data("altyazi.log")
+        if not p.exists():
+            logs = sorted(paths.data_dir().glob("*.log"), key=lambda q: q.stat().st_mtime)
+            p = logs[-1] if logs else p
+        return "\n".join(p.read_text(encoding="utf-8", errors="replace").splitlines()[-n:])
+    except Exception as e:  # noqa: BLE001
+        return f"Kayıt okunamadı: {e}"
+
+
 # ============================================================================ Hakkında
 class AboutPage(QWidget):
     def __init__(self, ctl: AppController):
@@ -1873,8 +2049,10 @@ class AboutPage(QWidget):
         card.add(note)
         card.add(8)
         card.add(hbox(None, button("Kurulumu baştan yap", None, lambda: self.window().open_wizard()),
-                      button("Kayıt ve ayar klasörü", None, self._open_data),
-                      button("OBS katmanını kopyala", "ghost", self._copy_obs), None, spacing=10))
+                      button("Sorun bildir", None, self._report),
+                      button("Kayıt ve ayar klasörü", None, self._open_data), None, spacing=10))
+        card.add(hbox(None, button("OBS katmanını kopyala", "ghost", self._copy_obs),
+                      button("Ayarları sıfırla", "danger", self._reset), None, spacing=10))
         card.setMaximumWidth(760)
         root.addLayout(hbox(None, card, None))
         root.addStretch(1)
@@ -1887,6 +2065,33 @@ class AboutPage(QWidget):
         from PySide6.QtWidgets import QApplication
         QApplication.clipboard().setText(f"http://localhost:{self.ctl.cfg.sunucu.port}/obs")
         self.window().toast.show_text("OBS adresi kopyalandı")
+
+    def _report(self) -> None:
+        from .. import saglik
+        webbrowser.open(saglik.issue_url(self.ctl))
+
+    def _reset(self) -> None:
+        """Ayarları varsayılana döndür; anahtarlar, PS5 eşlemesi ve TV adresi korunur (yeniden kurmak zor olanlar)."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from .. import config as config_mod
+        if QMessageBox.question(self, "Ayarları sıfırla", "Görünüm, okuma alanları, kısayollar ve diğer ayarlar "
+                                "varsayılana dönsün mü? Anahtarların, PS5 eşlemen ve TV adresin korunur.") \
+                != QMessageBox.Yes:
+            return
+        old = self.ctl.cfg
+        new = config_mod.Config()
+        new.ceviri.claude_anahtar = old.ceviri.claude_anahtar
+        new.ceviri.gemini_anahtar = old.ceviri.gemini_anahtar
+        new.ceviri.deepl_anahtar = old.ceviri.deepl_anahtar
+        new.ceviri.yerelai_anahtar = old.ceviri.yerelai_anahtar
+        new.ceviri.kalite = old.ceviri.kalite
+        new.ps5 = old.ps5
+        new.tv.ip, new.tv.marka, new.tv.lg_parola = old.tv.ip, old.tv.marka, old.tv.lg_parola
+        new.kaynak.tur, new.kaynak.oyun_yeri = old.kaynak.tur, old.kaynak.oyun_yeri
+        new.gocler = list(old.gocler)
+        self.ctl.apply_config(new)
+        self.window().toast.show_text("Ayarlar sıfırlandı; yeni görünüm için programı yeniden aç")
 
 
 def _card_add_int(self, w, stretch: int = 0):  # noqa: ANN001, ANN202
@@ -1907,7 +2112,8 @@ class MainWindow(QMainWindow):
              ("look", "Altyazı görünümü", "translate", "AYARLAR"), ("regions", "Okuma alanı", "regions", None),
              ("translate", "Çeviri ve paketler", "bolt", None), ("tv", "Bağlantı", "tv", None),
              ("settings", "Ses ve kısayollar", "settings", None), ("history", "Altyazı geçmişi", "history", None),
-             ("guide", "Rehber", "guide", "YARDIM"), ("about", "Hakkında", "check", None)]
+             ("health", "Sistem sağlığı", "bolt", "YARDIM"), ("guide", "Rehber", "guide", None),
+             ("about", "Hakkında", "check", None)]
 
     def __init__(self, ctl: AppController):
         super().__init__()
@@ -1934,7 +2140,7 @@ class MainWindow(QMainWindow):
         _transparent(self.stack)
         factories = {"home": HomePage, "look": AppearancePage, "regions": RegionsPage, "tv": TvPage,
                      "translate": TranslationPage, "history": HistoryPage, "guide": GuidePage,
-                     "settings": SettingsPage, "about": AboutPage}
+                     "settings": SettingsPage, "about": AboutPage, "health": HealthPage}
         self.pages: dict[str, QWidget] = {}
         for key, text, icon, group in self.PAGES:
             if group:

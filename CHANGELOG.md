@@ -3,6 +3,23 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.8.0 · Yeni arayüz
+GameTranslator, CouchSubs ve Nino'dan esinlenen düzen; renkler ve kimlik bizim.
+- **Ana ekran:** ortada büyük durum ("Çeviri kapalı.") ve tek Başlat düğmesi; PS5 / Bilgisayar / TV kartları renkli
+  durum etiketleriyle; son çeviri büyük Türkçe + İngilizcesi + okuma / çeviri / gecikme süreleri; "Oyun", "Okunan yer",
+  "TV'deki görünüm" kısayolları. TV'de oynayana artık chiaki-ng'den hiç söz edilmez.
+- **Altyazı görünümü (yeni):** canlı önizleme, TV ve bilgisayar ekranı ayrı; yazı rengi (beyaz, sarı, camgöbeği, yeşil,
+  turuncu), boyut, arka plan koyuluğu ve alanı, yer (örterek / üstünde / altında / sabit), kalın yazı, önceki satırlar;
+  6 hazır stil (Klasik, Sinema, Minimal, Gün batımı cam, Yüksek kontrast, Kenarlıklı). Değişiklik anında TV'ye gider.
+- **Bağlantı:** PS5 ve TV tek sayfada, görüntü kaynağı seçim kartlarıyla, ikinci ekran QR kodu, güvenlik duvarı izni.
+- **Çeviri ve paketler:** oyun paketleri kart kart; çeviri motoru seçim kartlarıyla; "✓ Anahtar kayıtlı · Dene · Anahtarı
+  sil"; diğer motorlar ve gelişmiş ayarlar katlanır.
+- **Sistem sağlığı (yeni):** bilgisayarın ağı (Wi-Fi / kablo), PS5 bağlantısı ve görüntüsü (kare hızı, donma), çeviri hızı,
+  TV; her biri "İyi / İyileştirilebilir" ve ne yapılacağı. Cihaz bilgilerini kopyala, Sorun bildir.
+- **Kurulum:** PS5 kodu 8 ayrı kutuya (yapıştırınca dağılır), ikonlu başlıklar, adım noktaları, "Deneyelim: TV'de
+  görüyor musun?" adımı, sağ altta yardım düğmesi.
+- Açma/kapama anahtarları, yumuşak ışıltılı zemin, Altyazı geçmişi TXT / JSON olarak kaydedilir, Ayarları sıfırla.
+
 ## 0.7.0 · Telefon, harita ve mesajlar Türkçe; seslendirme; daha akıllı çeviri
 Nino Game Translator'ın (CouchSubs türevi, AGPL-3.0) en iyi özellikleri eklendi, Xbox hariç:
 - **Oyundaki telefon Türkçe:** telefon ekranı görüntüden bulunur (eğik tutulsa da); sohbetin Türkçesi telefonun yanında,

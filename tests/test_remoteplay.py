@@ -162,6 +162,7 @@ def test_frame_conversion_bgra_with_stride():
     got = []
     s = rp.StreamSession.__new__(rp.StreamSession)
     s._watchdog = rp.PictureWatchdog()
+    s.stats = rp.StreamStats()
     s.on_frame = lambda f, t: got.append(f)
     w, h, stride = 3, 2, 16                        # satır başına 4 piksel yer, 3'ü dolu
     raw = (ctypes.c_uint8 * (stride * h))(*range(stride * h))

@@ -671,3 +671,101 @@ def row(*items, spacing: int = 12) -> QHBoxLayout:  # noqa: ANN002
         else:
             lay.addLayout(it)
     return lay
+
+
+class Collapsible(QFrame):
+    """'› Gelişmiş' gibi açılıp kapanan kart (Nino)."""
+
+    def __init__(self, title: str, opened: bool = False):
+        super().__init__()
+        self.setObjectName("card")
+        self.lay = QVBoxLayout(self)
+        self.lay.setContentsMargins(20, 14, 20, 14)
+        self.lay.setSpacing(12)
+        self.head = QPushButton()
+        self.head.setObjectName("collapseHead")
+        self.head.setCursor(Qt.PointingHandCursor)
+        self.head.clicked.connect(lambda: self.setOpen(not self.body.isVisible()))
+        self.title = title
+        self.lay.addWidget(self.head)
+        self.body = QWidget()
+        self.body.setObjectName("clearBody")
+        self.body.setStyleSheet("#clearBody { background: transparent; }")
+        self.body_l = QVBoxLayout(self.body)
+        self.body_l.setContentsMargins(0, 0, 0, 4)
+        self.body_l.setSpacing(12)
+        self.lay.addWidget(self.body)
+        self.setOpen(opened)
+
+    def add(self, w):  # noqa: ANN001
+        (self.body_l.addWidget if isinstance(w, QWidget) else self.body_l.addLayout)(w)
+        return w
+
+    def setOpen(self, on: bool) -> None:  # noqa: N802
+        self.body.setVisible(on)
+        self.head.setText(("⌄  " if on else "›  ") + self.title)
+
+
+class StyleCard(QFrame):
+    """Hazır altyazı stili kartı: küçük önizleme + ad + açıklama; seçilince vurgulu (Nino)."""
+    clicked = Signal()
+
+    def __init__(self, name: str, desc: str, style: dict):
+        super().__init__()
+        self.setObjectName("radioCard")
+        self.setCursor(Qt.PointingHandCursor)
+        self.style_ = style
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(10, 10, 10, 12)
+        lay.setSpacing(6)
+        self.prev = SubtitlePreview("Kim var orada?", "Who's there?")
+        self.prev.set_style(**style)
+        self.prev.setMinimumHeight(74)
+        self.prev.setMaximumHeight(90)
+        self.prev.setAttribute(Qt.WA_TransparentForMouseEvents)
+        lay.addWidget(self.prev)
+        lay.addWidget(label(name, "h3"))
+        lay.addWidget(label(desc, "faint"))
+        self.setMinimumWidth(150)
+
+    def setChecked(self, on: bool) -> None:  # noqa: N802
+        self.setProperty("checked", on)
+        self.style().unpolish(self)
+        self.style().polish(self)
+
+    def mouseReleaseEvent(self, e) -> None:  # noqa: ANN001, N802
+        if e.button() == Qt.LeftButton:
+            self.clicked.emit()
+
+
+class HealthRow(QFrame):
+    """Sistem sağlığı satırı: ikon, başlık, alt yazı, öneri ve sağda ● İyi / İyileştirilebilir."""
+
+    def __init__(self):
+        super().__init__()
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 12, 0, 12)
+        lay.setSpacing(14)
+        self.icon = IconTile("check", 36, glow=False, colors=(T.SURFACE3, T.SURFACE2))
+        lay.addWidget(self.icon, 0, Qt.AlignTop)
+        col = QVBoxLayout()
+        col.setSpacing(2)
+        self.title = label("", "h3")
+        self.sub = label("", "muted", wrap=True)
+        self.advice = label("", None, wrap=True)
+        col.addWidget(self.title)
+        col.addWidget(self.sub)
+        col.addWidget(self.advice)
+        lay.addLayout(col, 1)
+        self.state = label("", "h3")
+        lay.addWidget(self.state, 0, Qt.AlignTop)
+
+    def set(self, row: dict) -> None:
+        from ..saglik import STATE_TEXT
+        self.icon.setIcon(row["icon"])
+        self.title.setText(row["title"])
+        self.sub.setText(row["sub"])
+        self.advice.setText(row["advice"])
+        self.advice.setVisible(bool(row["advice"]))
+        c = Pill.COLORS.get(row["state"], T.FAINT)
+        self.state.setText(f"<span style='color:{c}'>●&nbsp; {STATE_TEXT.get(row['state'], '')}</span>")

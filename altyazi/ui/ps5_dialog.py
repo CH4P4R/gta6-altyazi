@@ -32,7 +32,7 @@ LOGIN_HELP = (
 PAIR_HELP = (
     "1. PS5'te <b>ikinci kullanıcıya geç</b>.<br>"
     "2. <b>Ayarlar › Sistem › Uzaktan Oynatma › Cihazı Eşleştir</b>'i aç; ekranda 8 haneli kod çıkar.<br>"
-    "3. Aşağıda PS5'ini seç, kodu yaz, <b>Eşle</b>'ye bas (30 saniyeye kadar sürebilir).<br>"
+    "3. Aşağıda PS5'ini seç, kodu kutulara yaz, <b>Bağlan</b>'a bas (30 saniyeye kadar sürebilir).<br>"
     "4. Bitince PS5'te <b>kendi kullanıcına geri dön</b>. Bunu yalnız bir kez yaparsın.")
 
 PLAY_TIP = ("Oynarken kolu açınca PS5'te <b>kendi (ana) hesabını</b> seç. İkinci hesapla oynama; yoksa kol kendiliğinden "
@@ -82,11 +82,12 @@ class Ps5Panel(QWidget):
         self.consoles.lineEdit().setPlaceholderText("PS5 aranıyor... (bulunmazsa IP adresini yaz)")
         self.search_btn = button("Yeniden ara", None, self._search)
         c2.add(hbox(self.consoles, self.search_btn, spacing=8))
-        self.pin = QLineEdit()
-        self.pin.setPlaceholderText("8 haneli kod")
-        self.pin.setMaxLength(12)
-        self.pair_btn = button("Eşle", "primary", self._pair)
-        c2.add(hbox(self.pin, self.pair_btn, spacing=8))
+        from .parcalar import PinInput
+        self.pin = PinInput(8)                    # Nino gibi 8 ayrı kutu; yapıştırınca kutulara dağılır
+        self.pair_btn = button("Bağlan", "primary", self._pair)
+        self.pin.changed.connect(lambda t: self.pair_btn.setEnabled(len(t) == 8))
+        self.pair_btn.setEnabled(False)
+        c2.add(hbox(self.pin, 12, self.pair_btn, None, spacing=0))
         self.pair_state = label("", "muted", wrap=True)
         c2.add(self.pair_state)
         lay.addWidget(c2)

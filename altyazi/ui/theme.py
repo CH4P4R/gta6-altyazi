@@ -82,6 +82,9 @@ QPushButton#chip:checked {{ border: 1px solid {A1}; background: rgba(255, 79, 16
 #liveEn {{ font-size: 10.5pt; color: {MUTED}; }}
 #prevTr {{ font-size: 12.5pt; font-weight: 600; color: {TEXT}; }}
 #mono {{ font-family: "JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace; color: {INFO}; font-size: 9.5pt; }}
+QPushButton#collapseHead {{ background: transparent; border: 0; text-align: left; padding: 4px 0; font-size: 12pt;
+    font-weight: 700; color: {TEXT}; }}
+QPushButton#collapseHead:hover {{ color: {A2}; }}
 #kbd {{ background: {SURFACE2}; border: 1px solid {BORDER_HI}; border-radius: 8px; padding: 6px 12px; font-weight: 700; }}
 #cardInner {{ background: {SURFACE2}; border: 1px solid {BORDER}; border-radius: 12px; }}
 #h1 {{ font-size: 20pt; font-weight: 700; }}
