@@ -1342,6 +1342,9 @@ class MainWindow(QMainWindow):
             self.pages[key] = page
             self.stack.addWidget(page)
         sl.addStretch(1)
+        ask = button("💬  Sor (yardım)", "primary", self._ask, "Takıldığın yeri yaz; rehberi bilen yapay zekâ anlatsın")
+        sl.addWidget(ask)
+        sl.addSpacing(8)
         self.foot = label("", "faint", wrap=True)
         sl.addWidget(self.foot)
         lay.addWidget(side)
@@ -1353,6 +1356,13 @@ class MainWindow(QMainWindow):
         ctl.stateChanged.connect(self._foot)
         ctl.enginesReady.connect(lambda _i: self._foot(ctl.state))
         self._foot(ctl.state)
+
+    def _ask(self) -> None:
+        from .yardim import AskDialog
+        if getattr(self, "_ask_dlg", None) is None:
+            self._ask_dlg = AskDialog(self.ctl, self)
+        self._ask_dlg.show()
+        self._ask_dlg.raise_()
 
     def go(self, key: str) -> None:
         for k, b in self.nav.items():

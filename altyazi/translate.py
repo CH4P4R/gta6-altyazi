@@ -340,6 +340,18 @@ class ClaudeMT:
             log.exception("Harcama hesaplanamadı")
         return r
 
+    def chat(self, system: str, turns: list[tuple[str, str]], image: bytes | None = None) -> str:
+        """Yardım sohbeti (yardimci.py): rehber bağlamıyla serbest cevap."""
+        from .yardimci import to_messages
+        kwargs = dict(model=self.model, max_tokens=1500, system=[{"type": "text", "text": system}],
+                      messages=to_messages(turns, image, claude=True), output_config={"effort": "medium"})
+        fast, self.fast = self.fast, False
+        try:
+            r = self._create(kwargs)
+        finally:
+            self.fast = fast
+        return "".join(getattr(b, "text", "") for b in r.content if getattr(b, "type", "") == "text")
+
     def read_screen(self, jpeg: bytes, regions: list[tuple[int, str]]) -> list[dict]:
         """Ekran görüntüsündeki yazıları Claude okusun ve çevirsin (tam ekran çeviri için)."""
         import base64
@@ -413,6 +425,20 @@ class GeminiMT:
             return "".join(p.get("text", "") for p in parts).strip() or None
         return None
 
+    def chat(self, system: str, turns: list[tuple[str, str]], image: bytes | None = None) -> str:
+        import base64
+        contents = []
+        for k, (q, a) in enumerate(turns):
+            parts = [{"text": q}]
+            if image and k == len(turns) - 1:
+                parts.insert(0, {"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(image).decode()}})
+            contents.append({"role": "user", "parts": parts})
+            if a:
+                contents.append({"role": "model", "parts": [{"text": a}]})
+        body = {"system_instruction": {"parts": [{"text": system}]}, "contents": contents,
+                "generationConfig": {"temperature": 0.4, "maxOutputTokens": 1500}}
+        return self._call(body, timeout=40) or ""
+
     def read_screen(self, jpeg: bytes, regions: list[tuple[int, str]]) -> list[dict]:
         """Ekran (ya da tuş simgeli satır) görüntüsünü Gemini okusun ve çevirsin (Claude'daki read_screen ile aynı)."""
         import base64
@@ -466,6 +492,15 @@ class LocalAIMT:
         if cfg.yerelai_anahtar:
             self.s.headers["Authorization"] = f"Bearer {cfg.yerelai_anahtar}"
         self.system = SYSTEM_PROMPT.format(glossary=_glossary_text(cfg.sozluk))
+
+    def chat(self, system: str, turns: list[tuple[str, str]], image: bytes | None = None) -> str:
+        from .yardimci import to_messages
+        body = {"model": self.model, "temperature": 0.4, "stream": False, "max_tokens": 1500,
+                "messages": [{"role": "system", "content": system}, *to_messages(turns, image, claude=False)]}
+        r = self.s.post(self.url, json=body, timeout=90)
+        r.raise_for_status()
+        out = (r.json()["choices"][0]["message"].get("content") or "").strip()
+        return re.sub(r"<think>.*?</think>", "", out, flags=re.S).strip()
 
     def translate(self, text: str, kind: str = "", context=None) -> str | None:
         body = {"model": self.model, "temperature": 0.3, "stream": False, "max_tokens": 512,
