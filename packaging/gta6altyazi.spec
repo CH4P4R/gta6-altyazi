@@ -40,8 +40,8 @@ elif os.environ.get("CI"):
 else:
     print(f"UYARI: Remote Play kütüphanesi yok ({_rp}); PS5'e arka planda bağlanma çalışmayacak")
 
-hidden = collect_submodules("anthropic") + collect_submodules("paramiko") + [
-    "sounddevice", "segno", "rapidfuzz.fuzz", "rapidfuzz.process"]
+hidden = collect_submodules("anthropic") + collect_submodules("paramiko") + collect_submodules("edge_tts") + [
+    "sounddevice", "segno", "rapidfuzz.fuzz", "rapidfuzz.process", "edge_tts", "miniaudio"]
 if IS_WIN:
     hidden += ["windows_capture"]
 if IS_MAC:

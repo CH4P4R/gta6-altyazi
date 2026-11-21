@@ -338,6 +338,8 @@ class AppController(QObject):
 
     def stop(self) -> None:
         winutil.keep_awake(False)
+        if getattr(self, "_speaker", None) is not None:
+            self._speaker.interrupt()
         if self.pipe:
             self.pipe.stop()
             self.pipe = None
@@ -476,6 +478,7 @@ class AppController(QObject):
 
     # Sink arayüzü (Pipeline buraya yazar; başka iş parçacığından gelir, sinyaller kuyruğa alınır)
     def show(self, item: DisplayItem) -> None:
+        self._maybe_speak(item)
         self.bridge.shown.emit(item)
         self.itemShown.emit(item)
         updated = item.seq in self._hist_index
@@ -495,6 +498,25 @@ class AppController(QObject):
     def clear(self, zone: str) -> None:
         self.bridge.cleared.emit(zone)
         self.itemCleared.emit(zone)
+
+    def _maybe_speak(self, item: DisplayItem) -> None:
+        """Dublaj: altyazının son (en kaliteli) çevirisi okunur; hızlı ön çeviri kalite katmanı varsa okunmaz."""
+        g = self.cfg.gosterim
+        if not g.seslendir or item.zone != "altyazi" or not item.text:
+            return
+        from .translate import REFINED
+        if self.engine is not None and self.engine.refine is not None and item.quality < REFINED:
+            return
+        sp = getattr(self, "_speaker", None)
+        if sp is None:
+            from .seslendirme import Speaker
+            sp = self._speaker = Speaker(rate=g.ses_hizi)
+        sp.rate = g.ses_hizi
+        sp.say(item.text)
+
+    def set_overlay(self, items: list[dict]) -> None:
+        """Ekran yazılarının Türkçeleri bilgisayardaki katmana da (monitörde oynayan için)."""
+        self.bridge.overlaid.emit(items)
 
     def avg_latency(self) -> float | None:
         return sum(self.latencies) / len(self.latencies) if self.latencies else None

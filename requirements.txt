@@ -22,6 +22,8 @@ pyobjc-framework-ApplicationServices; sys_platform == "darwin"
 pyobjc-framework-libdispatch; sys_platform == "darwin"
 # Capture kart sesi
 sounddevice
+edge-tts           # Türkçe seslendirme (doğal sesler)
+miniaudio          # seslendirmenin sesini çözer ve çalar
 # Kalite katmanı
 anthropic
 requests

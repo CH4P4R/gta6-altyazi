@@ -104,6 +104,8 @@ class GosterimCfg:
     yazi_tipi: str = "Segoe UI Semibold"
     gecikme_goster: bool = True   # köşede ms cinsinden gecikme
     tam_ekran: bool = False
+    seslendir: bool = False       # altyazının Türkçesini sesli oku (dublaj; oyunun konuşma sesini kısmak gerekir)
+    ses_hizi: int = 10            # konuşma hızı (yüzde, -50 … +50)
 
 
 @dataclass

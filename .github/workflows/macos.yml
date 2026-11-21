@@ -25,7 +25,7 @@ jobs:
       - name: Bağımlılıklar
         run: |
           python -m pip install --upgrade pip
-          pip install numpy opencv-python pyyaml rapidfuzz PySide6-Essentials ctranslate2 sentencepiece sounddevice anthropic requests segno "paramiko>=3.4,<5" cryptography pyinstaller pillow pyclipper shapely six pytest
+          pip install numpy opencv-python pyyaml rapidfuzz PySide6-Essentials ctranslate2 sentencepiece sounddevice edge-tts miniaudio anthropic requests segno "paramiko>=3.4,<5" cryptography pyinstaller pillow pyclipper shapely six pytest
           pip install pyobjc-core pyobjc-framework-Cocoa pyobjc-framework-Quartz pyobjc-framework-ScreenCaptureKit pyobjc-framework-CoreMedia pyobjc-framework-ApplicationServices pyobjc-framework-libdispatch
           pip install --no-deps rapidocr_onnxruntime
           pip install onnxruntime

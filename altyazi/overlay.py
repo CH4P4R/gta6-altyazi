@@ -32,6 +32,7 @@ class Bridge(QObject):
     shown = Signal(object)
     cleared = Signal(str)
     frame_ready = Signal()
+    overlaid = Signal(object)        # ekran yazıları (telefon, harita kartı, mesaj): ScreenItem.to_json listesi
 
 
 class QtSink:
@@ -65,9 +66,15 @@ class Painter:
         self.show_latency = show_latency
         self.items: dict[str, DisplayItem] = {}
         self.last: DisplayItem | None = None
+        self.overlay: list[dict] = []
 
     def paint(self, p: QPainter, area: QRectF) -> None:
         p.setRenderHint(QPainter.Antialiasing)
+        for ov in list(self.overlay):
+            try:
+                self._overlay_item(p, area, ov)
+            except Exception:  # noqa: BLE001
+                pass
         for it in list(self.items.values()):
             self._item(p, area, it)
         if self.show_latency and self.last:
@@ -127,6 +134,70 @@ class Painter:
             p.fillPath(path, QColor(255, 255, 255))
             y += spacing
 
+    def _overlay_item(self, p: QPainter, A: QRectF, ov: dict) -> None:
+        """Ekran yazısı (TV'deki çizimin bilgisayar karşılığı): sade gölgeli yazı, balon, kart; eğik telefon için açılı."""
+        b = ov.get("box") or {}
+        R = QRectF(A.x() + b.get("left", 0) * A.width(), A.y() + b.get("top", 0) * A.height(),
+                   (b.get("right", 0) - b.get("left", 0)) * A.width(), (b.get("bottom", 0) - b.get("top", 0)) * A.height())
+        if R.width() <= 2 or R.height() <= 2:
+            return
+        p.save()
+        angle = float(ov.get("angle") or 0)
+        if angle:
+            p.translate(R.center())
+            p.rotate(angle)
+            p.translate(-R.center())
+        alpha = float(ov.get("alpha") if ov.get("alpha") is not None else 1.0)
+        radius = R.height() * (0.25 if ov.get("side") else 0.12)
+        if ov.get("backdrop"):
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(12, 12, 16, int(150 * alpha)))
+            p.drawRoundedRect(R, 18, 18)
+            p.restore()
+            return
+        line_px = max(12.0, float(ov.get("line") or 0.03) * A.height())
+        font = QFont(self.family)
+        font.setWeight(QFont.DemiBold)
+        font.setItalic(bool(ov.get("italic")))
+        font.setPixelSize(int(line_px * 0.9))
+        fm = QFontMetricsF(font)
+        pad = line_px * 0.3
+        plain = bool(ov.get("plain"))
+        fill, ink = ov.get("fill"), ov.get("ink")
+        if not plain:
+            p.setPen(Qt.NoPen)
+            if fill:
+                c = QColor(fill)
+                c.setAlphaF(max(0.0, min(1.0, alpha)))
+                p.setBrush(c)
+            else:
+                p.setBrush(QColor(0, 0, 0, int(200 * (alpha if ov.get("alpha") is not None else 1.0))))
+            p.drawRoundedRect(R, radius, radius)
+        lines = []
+        for para in str(ov.get("text") or "").split("\n"):
+            lines += _wrap(para, fm, R.width() - 2 * pad)
+        card = bool(ov.get("card"))
+        if card:                                   # kart: solda vurgu çizgisi, başlık renkli (Nino'nun kartı gibi)
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(255, 79, 163))
+            p.drawRect(QRectF(R.left(), R.top() + pad * 0.6, max(3.0, line_px * 0.12), R.height() - pad * 1.2))
+            pad *= 1.6
+            lines = []
+            for para in str(ov.get("text") or "").split("\n"):
+                lines += _wrap(para, fm, R.width() - 2 * pad)
+        y = R.top() + pad * (0.6 if card else 1) + fm.ascent()
+        color = QColor(ink) if ink else QColor(255, 255, 255)
+        shadow = QPen(QColor(0, 0, 0, 230), max(2.0, line_px * 0.12))
+        shadow.setJoinStyle(Qt.RoundJoin)
+        for i, s in enumerate(lines):
+            path = QPainterPath()
+            path.addText(QPointF(R.left() + pad, y), font, s)
+            if plain or not fill:
+                p.strokePath(path, shadow)
+            p.fillPath(path, QColor(255, 120, 180) if card and i == 0 else color)
+            y += fm.height() * 1.05
+        p.restore()
+
     def _hud(self, p: QPainter, A: QRectF) -> None:
         it = self.last
         txt = f"{it.latency_ms:.0f} ms  (OCR {it.ocr_ms:.0f} · {it.source} {it.mt_ms:.0f})"
@@ -162,6 +233,7 @@ class OverlayWindow(QWidget):
         self.hwnd = hwnd
         bridge.shown.connect(self._show)
         bridge.cleared.connect(self._clear)
+        bridge.overlaid.connect(self._overlaid)
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._follow)
         self._timer.start(150)
@@ -196,11 +268,14 @@ class OverlayWindow(QWidget):
         self.painter_.on_clear(zone)
         self.update()
 
+    def _overlaid(self, items: list) -> None:
+        self.painter_.overlay = list(items or [])
+        self.update()
+
     def paintEvent(self, _e) -> None:  # noqa: ANN001, N802
         p = QPainter(self)
         self.painter_.paint(p, QRectF(self.rect()))
         p.end()
-
 
     def closeEvent(self, e) -> None:  # noqa: ANN001, N802
         # Kullanıcı bu pencereyi kapatamaz (çerçevesiz, tıklamayı geçirir); kapatma isteği yalnız sistemden gelir
@@ -224,6 +299,7 @@ class VideoWindow(QWidget):
         self._pending = False
         bridge.shown.connect(lambda it: (painter.on_show(it), self.update()))
         bridge.cleared.connect(lambda z: (painter.on_clear(z), self.update()))
+        bridge.overlaid.connect(lambda items: (setattr(painter, "overlay", list(items or [])), self.update()))
         bridge.frame_ready.connect(self._on_frame, Qt.QueuedConnection)
         QShortcut(QKeySequence("F11"), self, self._toggle_fs)
         QShortcut(QKeySequence("Esc"), self, self.showNormal)
