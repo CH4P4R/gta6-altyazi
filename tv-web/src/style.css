@@ -67,7 +67,44 @@ html, body {
   word-wrap: break-word;
   overflow: hidden;
 }
-#screen .item.paragraphs { text-align: left; white-space: pre-line; }
+#screen .item.paragraphs { text-align: left; text-align: start; white-space: pre-line; }
+
+/* Ekran öğelerinin yeni biçimleri Nino Game Translator'dan (CouchSubs çatalı, AGPL-3.0) alındı (app.js showScreen).
+   Bu sınıfları taşımayan öğeler yukarıdaki gibi çizilir. */
+/* plain: oyunun görev yazısının altına konan Türkçe: çerçevesiz, oyunun yazısı gibi gölgeli sade yazı. */
+#screen .item.plain { background: rgba(0, 0, 0, 0.38); box-shadow: 0 0 10px 6px rgba(0, 0, 0, 0.38); padding: 2px 8px;
+  border-radius: 8px; text-align: left; font-weight: 600; line-height: 1.3; text-shadow: 0 0 3px #000, 0 2px 3px #000;
+  overflow: visible; width: auto !important; max-width: 46%; }
+/* italic: eğik, ince yazı (telefon araması: "Paradise Taxi aranıyor…"). */
+#screen .item.italic { font-style: italic; font-weight: 500; }
+/* bubble (fill/ink): oyunun kutusunun (telefon mesaj balonu) tam üstü; zemin ve yazı rengi öğeyle gelir, gölge ve pay yok. */
+#screen .item.bubble { box-shadow: none; border-radius: 4px; padding: 0 2px; font-weight: 500; line-height: 1.12;
+  text-align: left; text-align: start; white-space: normal; overflow: hidden; letter-spacing: 0; text-shadow: none;
+  font-family: "Altyazi Modern", Roboto, Arial, sans-serif;
+  -webkit-transition: left 0.25s ease-out, top 0.25s ease-out; transition: left 0.25s ease-out, top 0.25s ease-out; }
+/* side: telefonun yanında duran balon: yuvarlak, hafif gölgeli, sırayla yumuşakça belirir. */
+#screen .item.bubble.side { border-radius: 12px; padding: 3px 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28); line-height: 1.18;
+  -webkit-animation: tv-bubble-in 0.32s ease-out both; animation: tv-bubble-in 0.32s ease-out both; }
+/* backdrop: telefonun yanındaki yazısız mesajlaşma paneli: yuvarlak, gölgeli, yumuşakça belirir. */
+#screen .item.backdrop { padding: 0; border-radius: 22px; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  -webkit-animation: tv-panel-in 0.35s ease-out both; animation: tv-panel-in 0.35s ease-out both;
+  -webkit-transition: left 0.25s ease-out, top 0.25s ease-out; transition: left 0.25s ease-out, top 0.25s ease-out; }
+/* Panelin başlığı (gönderenin adı), telefondaki gibi üstte ortada. */
+#screen .item.backdrop .panel-title { position: absolute; left: 0; right: 0; top: 2.2%; text-align: center; font-weight: 700;
+  color: #1c1c1e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 12%; text-shadow: none; }
+#screen.leaving { opacity: 0; -webkit-transition: opacity 0.3s ease-in; transition: opacity 0.3s ease-in; }
+#screen.steady .item.backdrop { -webkit-animation: none; animation: none; }
+@-webkit-keyframes tv-panel-in { from { opacity: 0; -webkit-transform: translateX(-10px) scale(0.98); } to { opacity: 1; -webkit-transform: none; } }
+@keyframes tv-panel-in { from { opacity: 0; transform: translateX(-10px) scale(0.98); } to { opacity: 1; transform: none; } }
+@-webkit-keyframes tv-bubble-in { from { opacity: 0; -webkit-transform: translateY(8px) scale(0.96); } to { opacity: 1; -webkit-transform: none; } }
+@keyframes tv-bubble-in { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+/* card: harita kartının Türkçesi oyunun kartı gibi: koyu, hafif saydam zemin, üstte kırmızı-beyaz şerit, sola yaslı;
+   ilk satır başlık. */
+#screen .item.card { background: rgba(38, 38, 50, 0.92); border-top: 4px solid transparent; border-radius: 3px;
+  border-image: linear-gradient(to right, #e30a17 0, #e30a17 50%, #ffffff 50%, #ffffff 100%) 1 / 4px 0 0 0;
+  padding: 8px 16px 10px; text-align: left !important; white-space: pre-line; direction: ltr; text-shadow: none; font-weight: 500;
+  color: #f2f2f5; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35); line-height: 1.32; }
+#screen .item.card::first-line { font-weight: 700; letter-spacing: 0.02em; }
 
 /* Ek alanlar (görev, telefon, bildirim): çeviri İngilizce yazının yerinde küçük bir kutuda; altyazının ve "ekranı
    çevir"in altında kalır. */
@@ -243,3 +280,28 @@ body.band #subtitle-text, body.band #subtitle-prev-text, body.band #subtitle-pre
 #source-tip.hidden { display: none; }
 #source-tip b { display: block; color: #F5B83D; font-size: 30px; margin-bottom: 8px; }
 #source-tip .close { display: block; margin-top: 12px; font-size: 22px; color: #A9A59C; }
+
+/* Yeni altyazı stili (Nino Game Translator'dan, AGPL-3.0): zemin koyuluğu %90 ve üstündeyse (app.js applyStyle,
+   body.glass) altyazı oyunun kendi altyazısı gibi durur: koyu, yuvarlak, yarı saydam zemin; yuvarlak hatlı, ince siyah
+   konturlu beyaz yazı. Örterken (body.covering) zemini örtü verir: tek koyu yuvarlak kutu, içinde düz yazı. */
+@font-face { font-family: "Altyazi Modern"; src: url("fonts/Barlow-SemiBold.ttf") format("truetype"); font-weight: 600; }
+@font-face { font-family: "Altyazi Rounded"; src: url("fonts/Nunito-Variable.ttf") format("truetype"); font-weight: 200 1000; }
+body.glass #subtitle-cover {
+  border: 0; border-radius: 30px;
+  background: rgb(10, 10, 10) !important;
+  box-shadow: 0 0 24px 6px rgba(10, 10, 10, 0.8);
+}
+body.glass #subtitle-text, body.glass #subtitle-prev-text, body.glass #subtitle-prev2-text {
+  border: 0; border-radius: 40px; box-shadow: none;
+  background: radial-gradient(ellipse at center, rgba(8, 8, 8, 0.75) 0%, rgba(8, 8, 8, 0.7) 55%, rgba(8, 8, 8, 0) 100%) !important;
+}
+body.glass #subtitle, body.glass #subtitle-text, body.glass #subtitle-prev-text, body.glass #subtitle-prev2-text {
+  font-family: "Altyazi Rounded", "LG Smart UI", "SamsungOne", Roboto, Arial, sans-serif !important;
+  letter-spacing: 0.01em;
+  text-shadow: -1px -1px 0 rgba(0,0,0,0.75), 1px -1px 0 rgba(0,0,0,0.75), -1px 1px 0 rgba(0,0,0,0.75), 1px 1px 0 rgba(0,0,0,0.75), 0 1px 3px rgba(0,0,0,0.6) !important;
+}
+body.glass #subtitle-text { line-height: 1.18; padding: 6px 18px; }
+body.glass.covering #subtitle-text { background: transparent !important; }
+body.glass.band #subtitle-cover, body.glass.band #subtitle-text, body.glass.band #subtitle-prev-text, body.glass.band #subtitle-prev2-text {
+  border-radius: 0;
+}

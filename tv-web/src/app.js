@@ -382,21 +382,56 @@
   var screenTimer = null;
   var SCREEN_PAD = 0.004;
   var SCREEN_MIN_FONT = 14;
+  // Balonun (fill) içine sığdırılan çevirinin en küçük yazısı (px).
+  var BUBBLE_MIN_FONT = 11;
+  var HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
-  function showScreen(items, duration) {
+  // Ekran öğelerinin yeni alanları (plain, italic, fill/ink, angle, alpha, side, backdrop, card) ve 'overlay' bayrağı
+  // Nino Game Translator'dan (CouchSubs çatalı, AGPL-3.0) alındı. Bu alanları taşımayan öğeler eskisi gibi çizilir.
+  function hexColor(value) {
+    return typeof value === 'string' && HEX_COLOR.test(value) ? value : null;
+  }
+
+  function rgba(hex, alpha) {
+    return 'rgba(' + parseInt(hex.substr(1, 2), 16) + ',' + parseInt(hex.substr(3, 2), 16) + ',' +
+      parseInt(hex.substr(5, 2), 16) + ',' + alpha + ')';
+  }
+
+  // overlay: köşe/ipucu çevirisi oyun sürerken sürekli gelir; o zaman altyazı silinmez, ikisi aynı anda görünür.
+  function showScreen(items, duration, overlay) {
     var host = $('screen');
+    // Telefon balonlarının örtüleri sık gelir (telefon elde sallanır). Yazılar aynıysa silinip yeniden çizilmez
+    // (yazı boyu zıplıyordu); yalnız yerleri yumuşakça güncellenir.
+    if (moveBubbles(host, items, duration)) return;
+    // Panel zaten görünüyorsa (yeni mesaj, kaydırma) zemin yeniden belirmez; yalnız balonlar yumuşakça gelir.
+    var panelShown = (host.className === '' || host.className === 'steady') && !!host.querySelector('.item.backdrop');
     // "Ekran çevriliyor…" yazısı sonuçların üstünde kalmasın.
-    hideSubtitle('screen');
+    if (overlay !== true) hideSubtitle('screen');
     host.innerHTML = '';
-    host.className = '';
+    host.className = panelShown ? 'steady' : '';
     var width = window.innerWidth || 1920;
     var height = window.innerHeight || 1080;
     for (var i = 0; i < (items || []).length; i++) {
       var item = items[i];
       var box = validBox(item && item.box);
+      var fill = item ? hexColor(item.fill) : null;
+      // Yazısız zemin (telefonun yanındaki mesajlaşma paneli); balonlar onun üstünde durur.
+      if (box && item.backdrop === true && fill) {
+        host.appendChild(backdropElement(item, box, fill, width, height));
+        continue;
+      }
       if (!box || !item.text) continue;
+      if (fill) {
+        bubbleElement(host, item, box, fill, i, width, height);
+        continue;
+      }
       var el = document.createElement('div');
       el.className = item.paragraphs === true ? 'item paragraphs' : 'item';
+      // Kutusuz sade yazı (görev yazısının altındaki Türkçesi): sola yaslı, oyunun yazısı gibi gölgeli.
+      if (item.plain === true) el.className += ' plain';
+      // Harita kartının Türkçesi, oyunun kartı gibi (style.css .item.card).
+      if (item.card === true) el.className += ' card';
+      if (item.italic === true) el.className += ' italic';
       el.textContent = item.text;
       var left = Math.max(0, box.left - SCREEN_PAD);
       var top = Math.max(0, box.top - SCREEN_PAD);
@@ -420,10 +455,95 @@
     screenTimer = setTimeout(hideScreen, duration || 20000);
   }
 
+  // Telefonun yanındaki zemin: verilen renkte (alpha ile saydam), yuvarlak, gölgeli. Yazısı varsa gönderenin adıdır ve
+  // telefonun başlığı gibi üstte ortada durur.
+  function backdropElement(item, box, fill, width, height) {
+    var panel = document.createElement('div');
+    panel.className = 'item backdrop';
+    panel.setAttribute('data-text', '');
+    panel.style.background = rgba(fill, typeof item.alpha === 'number' ? Math.max(0, Math.min(1, item.alpha)) : 1);
+    panel.style.left = (box.left * 100) + '%';
+    panel.style.top = (box.top * 100) + '%';
+    panel.style.width = ((box.right - box.left) * width) + 'px';
+    panel.style.height = ((box.bottom - box.top) * height) + 'px';
+    if (typeof item.text === 'string' && item.text) {
+      var head = document.createElement('div');
+      head.className = 'panel-title';
+      head.textContent = item.text;
+      var headLine = typeof item.line === 'number' && item.line > 0 ? item.line * height : 24;
+      head.style.fontSize = Math.max(BUBBLE_MIN_FONT, Math.round(headLine * 1.05)) + 'px';
+      panel.appendChild(head);
+    }
+    return panel;
+  }
+
+  // Oyunun kendi kutusunun (telefon mesaj balonu) tam üstü: aynı zemin (fill) ve yazı rengiyle (ink), kutunun içine
+  // sığdırılır; orijinal yazı gibi durur. side: kutunun üstünde değil yanında duran, yuvarlak ve gölgeli balon.
+  function bubbleElement(host, item, box, fill, index, width, height) {
+    var el = document.createElement('div');
+    el.className = 'item bubble';
+    el.setAttribute('data-text', item.text);
+    el.textContent = item.text;
+    el.style.background = typeof item.alpha === 'number' && item.alpha >= 0 && item.alpha < 1 ? rgba(fill, item.alpha) : fill;
+    if (item.side === true) {
+      el.className += ' side';
+      // Balonlar sırayla, hafifçe yukarı kayarak gelir.
+      el.style.animationDelay = el.style.webkitAnimationDelay = (Math.min(index, 8) * 60) + 'ms';
+    }
+    el.style.color = hexColor(item.ink) || '#1c1c1e';
+    el.style.left = (box.left * 100) + '%';
+    el.style.top = (box.top * 100) + '%';
+    var bubbleWidth = Math.max(40, (box.right - box.left) * width);
+    var bubbleHeight = Math.max(12, (box.bottom - box.top) * height);
+    el.style.width = bubbleWidth + 'px';
+    el.style.height = bubbleHeight + 'px';
+    var bubbleLine = typeof item.line === 'number' && item.line > 0 ? item.line * height : bubbleHeight;
+    var size = Math.max(BUBBLE_MIN_FONT, Math.min(64, Math.round(bubbleLine * 0.98)));
+    el.style.fontSize = size + 'px';
+    // Eğik tutulan telefonun balonları eğiktir: Türkçe de aynı açıyla (derece, saat yönü artı), ortasından döner.
+    if (typeof item.angle === 'number' && Math.abs(item.angle) >= 0.3 && Math.abs(item.angle) <= 30) {
+      el.style.webkitTransform = el.style.transform = 'rotate(' + item.angle + 'deg)';
+    }
+    host.appendChild(el);
+    // Türkçe çoğu zaman İngilizceden uzundur: balondan taşmasın diye yazı küçülür.
+    while ((el.scrollHeight > bubbleHeight + 1 || el.scrollWidth > bubbleWidth + 1) && size > BUBBLE_MIN_FONT) {
+      size -= 1;
+      el.style.fontSize = size + 'px';
+    }
+  }
+
+  // Aynı balonlar (aynı sayıda, aynı yazılar) yeniden gelince yalnız yerleri güncellenir.
+  function moveBubbles(host, items, duration) {
+    var list = items || [];
+    if (!list.length || host.className === 'hidden' || host.className === 'leaving' || host.children.length !== list.length) return false;
+    for (var i = 0; i < list.length; i++) {
+      if (!list[i] || !hexColor(list[i].fill) || !validBox(list[i].box) ||
+          host.children[i].getAttribute('data-text') !== (list[i].text || '')) return false;
+    }
+    for (var j = 0; j < list.length; j++) {
+      var box = validBox(list[j].box);
+      host.children[j].style.left = (box.left * 100) + '%';
+      host.children[j].style.top = (box.top * 100) + '%';
+    }
+    clearTimeout(screenTimer);
+    screenTimer = setTimeout(hideScreen, duration || 20000);
+    return true;
+  }
+
   function hideScreen() {
     clearTimeout(screenTimer);
-    $('screen').className = 'hidden';
-    $('screen').innerHTML = '';
+    var host = $('screen');
+    // Telefonun yanındaki panel ve balonlar yumuşakça solar (birden kaybolmaz).
+    if (host.className !== 'hidden' && host.className !== 'leaving' && host.querySelector('.item.side, .item.backdrop')) {
+      host.className = 'leaving';
+      screenTimer = setTimeout(function () {
+        host.className = 'hidden';
+        host.innerHTML = '';
+      }, 320);
+      return;
+    }
+    host.className = 'hidden';
+    host.innerHTML = '';
   }
 
   // --- Ek alanlar ---
@@ -516,6 +636,7 @@
     el.style.top = 'auto';
     el.style.bottom = bottomPercent + '%';
     cover.className = 'hidden';
+    setBodyClass('covering', false);
     $('subtitle-text').style.background = textBackground;
     // Altyazı yokken (ör. ayar değişince yeniden yerleşirken) örtü tek başına boş siyah kutu olarak kalmasın.
     if (!box || el.className === 'hidden') return;
@@ -540,6 +661,8 @@
       placeCover(cover, box, $('subtitle-text').getBoundingClientRect());
       // Zemini örtü verir; çevirinin kendi yarı saydam zemini örtünün üstünde ikinci bir kutu gibi görünmesin.
       $('subtitle-text').style.background = 'transparent';
+      // Yeni altyazı stilinde (body.glass) örtülürken tek koyu kutu, içinde düz yazı görünsün (style.css body.covering).
+      setBodyClass('covering', true);
     } else if (mode === 'above') {
       el.style.bottom = Math.round((1 - box.top) * height + gap) + 'px';
     } else {
@@ -593,6 +716,7 @@
     el.style.top = 'auto';
     el.style.bottom = bottomPercent + '%';
     cover.className = 'hidden';
+    setBodyClass('covering', false);
     $('subtitle-text').style.background = textBackground;
   }
 
@@ -602,6 +726,15 @@
   // Zemin %100 mü (tamamen opak) ve tam genişlik bant mı; eski bilgisayar uygulamaları alanı göndermez, yazı kadar kalır.
   var solidBackground = false;
   var bandShape = false;
+
+  // body'deki tek bir sınıfı açar ya da kapatır; diğerleri kalır. Eskiden className baştan yazılıyordu ve Android TV
+  // katmanının 'overlay' sınıfı ilk style olayında siliniyordu (Nino Game Translator'daki düzeltme).
+  function setBodyClass(name, on) {
+    var body = document.body;
+    if (!body) return;
+    var rest = (' ' + body.className + ' ').replace(' ' + name + ' ', ' ');
+    body.className = (on ? rest + name : rest).replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
+  }
 
   // Bilgisayardaki "Yazı rengi" seçimi; bilinmeyen değer gelirse renk değişmez.
   var TEXT_COLORS = { white: '#FFFFFF', yellow: '#FFE135' };
@@ -618,7 +751,11 @@
     if (typeof style.lineScale === 'number') lineScale = style.lineScale;
     if (PLACEMENTS[style.placement]) placement = style.placement;
     bandShape = style.backgroundShape === 'band';
-    document.body.className = bandShape ? 'band' : '';
+    setBodyClass('band', bandShape);
+    // Yeni altyazı stili (Nino Game Translator'dan): zemin koyuluğu %90 ve üstündeyse koyu, yuvarlak, yarı saydam zemin
+    // ve yuvarlak hatlı beyaz yazı (style.css body.glass). İsteğe bağlı 'glass' alanı (true/false) bu seçimi ezer.
+    if (typeof style.glass === 'boolean') setBodyClass('glass', style.glass);
+    else if (typeof style.background === 'number') setBodyClass('glass', style.background >= 90);
     if (typeof style.background === 'number') {
       var alpha = Math.max(0, Math.min(100, style.background)) / 100;
       solidBackground = style.background >= 100;
@@ -728,7 +865,7 @@
       if (data.text) showSubtitle(data.text, data.duration, data.box, data.paragraphs === true, data.replace === true, data.line);
     });
     onEvent('clear', onClear);
-    onEvent('screen', function (data) { showScreen(data.items, data.duration); });
+    onEvent('screen', function (data) { showScreen(data.items, data.duration, data.overlay === true); });
     onEvent('screen-clear', hideScreen);
     onEvent('region', showRegion);
     onEvent('region-clear', hideRegions);
