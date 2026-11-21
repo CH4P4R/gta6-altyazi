@@ -157,6 +157,17 @@ def draw_icon(p: QPainter, name: str, r: QRectF, color: QColor, width: float = 1
     elif name == "stop":
         p.setBrush(color)
         p.drawRoundedRect(QRectF(x + w * .26, y + h * .26, w * .48, h * .48), 3, 3)
+    elif name == "monitor":                             # masaüstü ekranı
+        p.drawRoundedRect(QRectF(x + w * .08, y + h * .14, w * .84, h * .56), 3, 3)
+        p.drawLine(QPointF(cx, y + h * .70), QPointF(cx, y + h * .84))
+        p.drawLine(QPointF(x + w * .30, y + h * .86), QPointF(x + w * .70, y + h * .86))
+    elif name == "swap":                                # iki yönlü ok
+        p.drawLine(QPointF(x + w * .15, y + h * .35), QPointF(x + w * .85, y + h * .35))
+        p.drawLine(QPointF(x + w * .68, y + h * .20), QPointF(x + w * .85, y + h * .35))
+        p.drawLine(QPointF(x + w * .68, y + h * .50), QPointF(x + w * .85, y + h * .35))
+        p.drawLine(QPointF(x + w * .85, y + h * .68), QPointF(x + w * .15, y + h * .68))
+        p.drawLine(QPointF(x + w * .32, y + h * .53), QPointF(x + w * .15, y + h * .68))
+        p.drawLine(QPointF(x + w * .32, y + h * .83), QPointF(x + w * .15, y + h * .68))
     elif name == "check":
         path = QPainterPath()
         path.moveTo(x + w * .2, cy)
@@ -532,11 +543,16 @@ class Toast(QLabel):
 class Stepper(QWidget):
     """Sihirbazın sol tarafındaki adım listesi."""
 
-    def __init__(self, steps: list[str]):
+    def __init__(self, steps: list[str], big: bool = False):
         super().__init__()
         self.steps = steps
         self.current = 0
-        self.setFixedWidth(230)
+        self.big = big
+        self.setFixedWidth(260 if big else 230)
+
+    def setSteps(self, steps: list[str]) -> None:  # noqa: N802
+        self.steps = steps
+        self.update()
 
     def setCurrent(self, i: int) -> None:  # noqa: N802
         self.current = i
@@ -545,13 +561,14 @@ class Stepper(QWidget):
     def paintEvent(self, _e) -> None:  # noqa: ANN001, N802
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        y0, gap = 150, 62
+        y0, gap, rad = (130, 70, 17) if self.big else (150, 62, 14)
+        fs_num, fs_name = (11, 13) if self.big else (9, 10.5)
         for i, name in enumerate(self.steps):
             cy = y0 + i * gap
             if i < len(self.steps) - 1:
                 p.setPen(QPen(QColor(T.A1 if i < self.current else T.BORDER_HI), 2))
-                p.drawLine(QPointF(44, cy + 15), QPointF(44, cy + gap - 15))
-            r = QRectF(30, cy - 14, 28, 28)
+                p.drawLine(QPointF(30 + rad, cy + rad + 1), QPointF(30 + rad, cy + gap - rad - 1))
+            r = QRectF(30, cy - rad, rad * 2, rad * 2)
             p.setPen(Qt.NoPen)
             if i < self.current:
                 p.setBrush(QBrush(T.accent_gradient(r.left(), r.top(), r.right(), r.bottom())))
@@ -560,7 +577,7 @@ class Stepper(QWidget):
             elif i == self.current:
                 p.setBrush(QBrush(T.accent_gradient(r.left(), r.top(), r.right(), r.bottom())))
                 p.drawEllipse(r)
-                f = T.font(9, QFont.Bold)
+                f = T.font(fs_num, QFont.Bold)
                 p.setFont(f)
                 p.setPen(QColor("white"))
                 p.drawText(r, Qt.AlignCenter, str(i + 1))
@@ -568,12 +585,12 @@ class Stepper(QWidget):
                 p.setBrush(QColor(T.SURFACE2))
                 p.setPen(QPen(QColor(T.BORDER_HI), 1.5))
                 p.drawEllipse(r)
-                p.setFont(T.font(9, QFont.Bold))
+                p.setFont(T.font(fs_num, QFont.Bold))
                 p.setPen(QColor(T.MUTED))
                 p.drawText(r, Qt.AlignCenter, str(i + 1))
-            p.setFont(T.font(10.5, QFont.DemiBold if i == self.current else QFont.Normal))
+            p.setFont(T.font(fs_name, QFont.DemiBold if i == self.current else QFont.Normal))
             p.setPen(QColor(T.TEXT if i <= self.current else T.MUTED))
-            p.drawText(QPointF(72, cy + 5), name)
+            p.drawText(QPointF(30 + rad * 2 + 16, cy + (6 if self.big else 5)), name)
 
 
 class PreviewArt(QWidget):
@@ -669,3 +686,31 @@ def fit_font_metrics(text: str, f: QFont, width: float) -> float:
 __all__ = ["Card", "Icon", "NavButton", "Logo", "Dot", "StatusCard", "StartButton", "Sparkline", "QrCode",
            "FeedItem", "Toast", "Stepper", "PreviewArt", "label", "button", "hbox", "vbox", "scroll_page", "draw_icon",
            "QSize", "QSizePolicy", "Property"]
+
+
+class IconBadge(QWidget):
+    """Degrade daire içinde ikon (sihirbazın kartları)."""
+
+    def __init__(self, icon: str, size: int = 52, active: bool = True):
+        super().__init__()
+        self.icon, self.active = icon, active
+        self.setFixedSize(size, size)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+
+    def setActive(self, on: bool) -> None:  # noqa: N802
+        self.active = on
+        self.update()
+
+    def paintEvent(self, _e) -> None:  # noqa: ANN001, N802
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        r = QRectF(1, 1, self.width() - 2, self.height() - 2)
+        p.setPen(Qt.NoPen)
+        if self.active:
+            p.setBrush(QBrush(T.accent_gradient(r.left(), r.top(), r.right(), r.bottom())))
+        else:
+            p.setBrush(QColor(T.SURFACE3))
+        p.drawEllipse(r)
+        m = r.width() * 0.26
+        draw_icon(p, self.icon, r.adjusted(m, m, -m, -m), QColor("white" if self.active else T.A2),
+                  max(2.0, r.width() / 22))

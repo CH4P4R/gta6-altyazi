@@ -71,6 +71,8 @@ class Guide(QWidget):
         self.extra = QStackedWidget()
         self.extra.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         lay.addWidget(self.extra)
+        lay.addStretch(0)                  # görselsiz adımda boşluk metnin üstünde değil altında kalsın
+        self._tail = lay.count() - 1
         self._empty = QWidget()
         self.extra.addWidget(self._empty)
         self.dots = QHBoxLayout()
@@ -119,6 +121,7 @@ class Guide(QWidget):
         self.index = i
         st = self.steps[i]
         self.image.set_image(st.get("img"))
+        self.layout().setStretch(self._tail, 0 if self.image.isVisibleTo(self) or self.image.pix else 1)
         self.title.setText(st["title"])
         self.counter.setText(f"ADIM {i + 1} / {len(self.steps)}")
         self.text.setText(rehber.to_html(st, T.FAINT))

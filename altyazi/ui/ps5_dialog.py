@@ -39,26 +39,25 @@ PLAY_TIP = ("Oynarken kolu açınca PS5'te <b>kendi (ana) hesabını</b> seç. �
             "kapanır ya da oyunda çalışmaz.")
 
 
-class Ps5Dialog(QDialog):
-    def __init__(self, ctl, parent: QWidget | None = None):  # noqa: ANN001
+class Ps5Panel(QWidget):
+    """PS5 bağlantı adımları (ikinci hesap girişi, eşleme, oynarken). Hem pencerede hem sihirbazın içinde kullanılır."""
+
+    def __init__(self, ctl, parent: QWidget | None = None, intro: bool = True):  # noqa: ANN001
         super().__init__(parent)
         self.ctl = ctl
-        self.setWindowTitle("PS5'i bağla")
-        self.resize(680, 760)
-        self.setStyleSheet(f"QDialog {{ background: {T.BG}; }}")
-        body = QWidget()
-        lay = QVBoxLayout(body)
-        lay.setContentsMargins(28, 24, 28, 24)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(16)
-        lay.addLayout(vbox(label("PS5'i bağla", "h1"),
-                           label("Oyunu TV'de oynarsın; bilgisayar PS5'e arka planda ikinci hesapla bağlanıp yalnız "
-                                 "altyazıyı okur, Türkçesini TV'ye gönderir. chiaki-ng penceresi gerekmez.",
-                                 "muted", wrap=True), spacing=4))
+        if intro:
+            lay.addLayout(vbox(label("PS5'i bağla", "h1"),
+                               label("Oyunu TV'de oynarsın; bilgisayar PS5'e arka planda ikinci hesapla bağlanıp yalnız "
+                                     "altyazıyı okur, Türkçesini TV'ye gönderir. chiaki-ng penceresi gerekmez.",
+                                     "muted", wrap=True), spacing=4))
 
         # 1. ikinci hesap
-        c1 = Card(margins=18, spacing=10)
+        c1 = Card(margins=20, spacing=10)
         self.acc_state = label("", "muted", wrap=True)
-        c1.add(label("1. İkinci PSN hesabı", "h2"))
+        c1.add(step_head("1", "İkinci PSN hesabı"))
         c1.add(rich(ACCOUNT_STEPS))
         c1.add(label("Giriş", "h3"))
         c1.add(rich(LOGIN_HELP))
@@ -75,8 +74,8 @@ class Ps5Dialog(QDialog):
         lay.addWidget(c1)
 
         # 2. eşleme
-        c2 = Card(margins=18, spacing=10)
-        c2.add(label("2. PS5'i eşle", "h2"))
+        c2 = Card(margins=20, spacing=10)
+        c2.add(step_head("2", "PS5'i eşle"))
         c2.add(rich(PAIR_HELP))
         self.consoles = QComboBox()
         self.consoles.setEditable(True)
@@ -92,32 +91,32 @@ class Ps5Dialog(QDialog):
         c2.add(self.pair_state)
         lay.addWidget(c2)
 
-        c3 = Card(margins=18, spacing=8)
-        c3.add(label("Oynarken", "h2"))
+        c3 = Card(margins=20, spacing=8)
+        c3.add(step_head("3", "Oynarken"))
         c3.add(rich(PLAY_TIP))
         self.pass_edit = QLineEdit(ctl.cfg.ps5.giris_sifresi)
         self.pass_edit.setPlaceholderText("PS5 giriş şifresi (yalnız ikinci hesapta açıksa, 4 hane)")
         self.pass_edit.setMaxLength(4)
+        self.pass_edit.editingFinished.connect(self.save_passcode)
         c3.add(self.pass_edit)
         lay.addWidget(c3)
-        lay.addStretch(1)
-
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll_page(body), 1)
-        self.close_btn = button("Bitti", "primary", self.accept)
-        outer.addLayout(hbox(None, self.close_btn, margins=(28, 10, 28, 18)))
 
         ctl.ps5Paired.connect(self._on_result)
         ctl.ps5Consoles.connect(self._on_consoles)
         self._mode = ""
         self._seen_clip = ""
+        self._searched = False
         QApplication.clipboard().dataChanged.connect(self._clipboard)
-        self._refresh()
-        self._search()
+        self.refresh()
+
+    def showEvent(self, e) -> None:  # noqa: ANN001, N802
+        super().showEvent(e)
+        if not self._searched:            # PS5 araması panel ilk görününce (sihirbazda sayfaya gelince)
+            self._searched = True
+            self._search()
 
     # ------------------------------------------------------------------ durum
-    def _refresh(self) -> None:
+    def refresh(self) -> None:
         p = self.ctl.cfg.ps5
         if p.hesap:
             self.acc_state.setText("✓ İkinci hesapla giriş yapıldı.")
@@ -190,13 +189,46 @@ class Ps5Dialog(QDialog):
         target.setText(("✓ " if ok else "") + msg)
         target.setStyleSheet(f"color: {T.OK if ok else T.BAD};")
 
-    def accept(self) -> None:
+    def save_passcode(self) -> None:
         pw = self.pass_edit.text().strip()
         if pw != self.ctl.cfg.ps5.giris_sifresi:
             cfg = self.ctl.edit_config()
             cfg.ps5.giris_sifresi = pw
             self.ctl.apply_config(cfg)
+
+
+class Ps5Dialog(QDialog):
+    def __init__(self, ctl, parent: QWidget | None = None):  # noqa: ANN001
+        super().__init__(parent)
+        self.setWindowTitle("PS5'i bağla")
+        self.resize(720, 800)
+        self.setStyleSheet(f"QDialog {{ background: {T.BG}; }}")
+        body = QWidget()
+        lay = QVBoxLayout(body)
+        lay.setContentsMargins(28, 24, 28, 24)
+        self.panel = Ps5Panel(ctl, body)
+        lay.addWidget(self.panel)
+        lay.addStretch(1)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(scroll_page(body), 1)
+        self.close_btn = button("Bitti", "primary", self.accept)
+        outer.addLayout(hbox(None, self.close_btn, margins=(28, 10, 28, 18)))
+
+    def accept(self) -> None:
+        self.panel.save_passcode()
         super().accept()
+
+
+def step_head(num: str, title: str):  # noqa: ANN201
+    badge = label(num)
+    badge.setFixedSize(30, 30)
+    badge.setAlignment(Qt.AlignCenter)
+    badge.setStyleSheet("color: white; font-weight: 700; border-radius: 15px; "
+                        f"background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {T.A1}, stop:1 {T.A2});")
+    w = QWidget()
+    w.setLayout(hbox(badge, label(title, "h2"), None, spacing=10))
+    return w
 
 
 def rich(html: str):  # noqa: ANN201

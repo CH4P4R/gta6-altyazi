@@ -254,7 +254,9 @@ def test_ps5_dialog_builds(monkeypatch):
     ctl = types.SimpleNamespace(cfg=cfg, ps5Paired=Sig(), ps5Consoles=Sig(), ps5_paired=lambda: False,
                                 ps5_search=lambda: calls.append("ara"), psn_login_url=lambda: rp.PSN_LOGIN_URL,
                                 psn_finish=lambda t: calls.append(("psn", t)))
-    d = Ps5Dialog(ctl)
+    dialog = Ps5Dialog(ctl)
+    d = dialog.panel
+    dialog.show()                                       # PS5 araması panel görününce başlar
     assert "ara" in calls
     d._on_consoles([rp.ConsoleInfo("192.168.1.30", "PS5-777", True)])
     assert d._host() == "192.168.1.30"

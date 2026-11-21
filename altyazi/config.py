@@ -50,7 +50,7 @@ class KaynakCfg:
     tur: str = "pencere"          # pencere | remoteplay (yerleşik, chiaki penceresi gerekmez) | capture | video | resim
     pencere_adi: str = "chiaki"   # başlıkta geçen metin (ör. "chiaki", "PS Remote Play")
     chiaki_yolu: str = ""         # chiaki-ng programının yeri (boşsa bilinen yerlerde aranır)
-    oyun_yeri: str = "ikisi"      # monitor (chiaki ile kasada oynar) | tv (TV'de oynar, kasa izler) | ikisi
+    oyun_yeri: str = "tv"         # tv (TV'de oynar, kasa izler) | monitor (chiaki ile kasada oynar) | ikisi
     capture_cihaz: int = 0
     capture_genislik: int = 1920
     capture_yukseklik: int = 1080

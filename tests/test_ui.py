@@ -45,13 +45,25 @@ def test_main_window_and_wizard_build(tmp_path, monkeypatch):
         wiz._go(i)
         app.processEvents()
     # resimli rehber: her seçimde adımlar baştan sona gezilir, görseller var
-    for where in ("monitor", "tv", "ikisi"):
+    # TV'de: chiaki rehberi yok, PS5'e arka planda bağlanma paneli; Devam doğrudan TV adımına
+    wiz._set_where("tv")
+    wiz._go(P_PS5)
+    assert wiz.ps5_stack.currentIndex() == 0 and wiz.seg_row.isHidden()
+    assert wiz._guide(P_PS5) is None
+    wiz.next.click()
+    assert wiz.stack.currentIndex() == P_TV
+    # Monitörde ve ikisinde: chiaki-ng resimli rehberi baştan sona gezilir, görseller var
+    for where in ("monitor", "ikisi"):
         wiz._set_where(where)
         wiz._go(P_PS5)
+        if where == "ikisi":
+            assert not wiz.seg_row.isHidden() and wiz.ps5_stack.currentIndex() == 0
+            wiz.seg_chiaki.click()
+        assert wiz.ps5_stack.currentIndex() == 1
         g = wiz.ps5_guide
         names = [st.get("img") for st in g.steps if st.get("img")]
         assert all((REHBER / f"{n}.png").exists() for n in names)
-        assert any(st.get("img") == "kol-usb" for st in g.steps) == (where != "tv")
+        assert any(st.get("img") == "kol-usb" for st in g.steps)
         assert (g.steps[0]["title"].startswith("İkinci PSN")) == (where != "monitor")
         steps = 0
         while g.can_next():
@@ -60,6 +72,13 @@ def test_main_window_and_wizard_build(tmp_path, monkeypatch):
         assert steps == len(g.steps) - 1
         wiz.next.click()                       # rehber bitti: sonraki ana adım
         assert wiz.stack.currentIndex() == (P_TV if where != "monitor" else P_TV + 1)
+    # Son sayfa seçime göre
+    wiz._set_where("tv")
+    wiz._go(len(STEPS) - 1)
+    assert "kendiliğinden" in wiz.done_page.subtitle.text() and "chiaki" not in wiz.auto_cb.text()
+    wiz._set_where("monitor")
+    wiz._go(len(STEPS) - 1)
+    assert "chiaki" in wiz.done_page.subtitle.text()
     assert all((REHBER / f"{st['img']}.png").exists() for st in wiz.tv_guide.steps)
     # TV adımı: marka seçince o markanın resimli adımları gelir, LG parolası yalnız LG'de görünür
     wiz._go(P_TV)

@@ -3,6 +3,15 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.6.1 · Yeni kurulum sihirbazı
+- **Kurulum sihirbazı baştan tasarlandı:** daha büyük yazılar ve düğmeler, büyük ikonlu seçim kartları, "TV'de
+  oynuyorum" en üstte ve önerilen.
+- TV'de oynayan için PS5 adımı artık doğrudan PS5 bağlantısı (ikinci hesapla giriş ve eşleme sihirbazın içinde);
+  chiaki-ng adımları yalnız monitörde oynayana gösteriliyor. "Bazen ikisi" seçilince iki sekme var.
+- Son sayfa seçime göre: TV'de "PS5 açılınca kendiliğinden başlar", monitörde chiaki adımları.
+- Rehberde görseli olmayan adımlarda metnin üstünde kalan boşluk giderildi.
+- Sistem katman penceresini kapatınca (Windows kapanışı) program da tamamen kapanıyor.
+
 ## 0.6.0 · PS5'i TV'de oyna, chiaki gerekmez
 - **Yerleşik Remote Play:** Oyunu TV'de, HDMI'dan oynarsın; bilgisayar PS5'e arka planda **ikinci PSN hesabıyla**
   bağlanıp yalnız altyazıyı okur, Türkçesini TV'ye gönderir. chiaki-ng penceresi açmak gerekmez (CouchSubs'ın

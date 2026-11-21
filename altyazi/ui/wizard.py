@@ -15,12 +15,44 @@ from .. import rehber
 from ..app import CHIAKI_DOWNLOAD, AppController
 from . import theme as T
 from .guide import REHBER, Guide
-from .widgets import Card, Dot, Icon, Logo, PreviewArt, QrCode, Stepper, button, hbox, label, vbox
+from .widgets import (Card, Dot, IconBadge, Logo, PreviewArt, QrCode, Stepper, button, hbox, label,
+                      scroll_page, vbox)
 
-STEPS = ["Hoş geldin", "Nerede oynayacaksın?", "PS5 ve chiaki-ng", "Televizyon", "Çeviri", "Hazır"]
+STEPS = ["Hoş geldin", "Nerede oynuyorsun?", "PS5 bağlantısı", "Televizyon", "Çeviri", "Hazır"]
 P_WELCOME, P_WHERE, P_PS5, P_TV, P_TRANSLATION, P_DONE = range(6)
 __all__ = ["Wizard", "STEPS", "REHBER", "P_WELCOME", "P_WHERE", "P_PS5", "P_TV", "P_TRANSLATION", "P_DONE"]
 PSN_SIGNUP = rehber.PSN_SIGNUP
+
+
+# Sihirbaz uygulamanın geri kalanından daha büyük ve iddialı yazılarla: ilk izlenim burada.
+WIZ_QSS = f"""
+QWidget {{ font-size: 12pt; }}
+#display {{ font-size: 30pt; font-weight: 800; }}
+#hero {{ font-size: 34pt; font-weight: 800; }}
+#lead {{ font-size: 13.5pt; color: {T.MUTED}; }}
+#h1 {{ font-size: 24pt; font-weight: 800; }}
+#h2 {{ font-size: 16.5pt; font-weight: 700; }}
+#h3 {{ font-size: 13pt; font-weight: 700; }}
+#muted {{ color: {T.MUTED}; font-size: 12pt; }}
+#faint {{ color: {T.FAINT}; font-size: 11pt; }}
+#tag {{ color: {T.A2}; font-size: 10pt; font-weight: 800; letter-spacing: 1px; }}
+#badge {{ color: white; font-size: 9.5pt; font-weight: 800; letter-spacing: 1px; padding: 4px 10px;
+          border-radius: 11px; background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {T.A1}, stop:1 {T.A2}); }}
+QPushButton {{ font-size: 12.5pt; padding: 12px 20px; border-radius: 12px; }}
+QPushButton#primary {{ font-size: 13.5pt; padding: 14px 26px; }}
+QPushButton#ghost {{ font-size: 12.5pt; padding: 10px 14px; }}
+QLineEdit, QComboBox, QSpinBox {{ font-size: 12.5pt; padding: 11px 14px; border-radius: 11px; }}
+QCheckBox {{ font-size: 12.5pt; spacing: 12px; }}
+QCheckBox::indicator {{ width: 22px; height: 22px; border-radius: 6px; }}
+QPushButton#choice {{ text-align: left; padding: 0; border-radius: 18px; background: {T.SURFACE};
+                      border: 2px solid {T.BORDER}; }}
+QPushButton#choice:hover {{ border-color: {T.BORDER_HI}; background: {T.SURFACE2}; }}
+QPushButton#choice:checked {{ border-color: {T.A1}; background: {T.SURFACE2}; }}
+QPushButton#seg {{ padding: 10px 18px; border-radius: 10px; background: transparent; border: 1px solid {T.BORDER_HI};
+                   color: {T.MUTED}; }}
+QPushButton#seg:checked {{ color: white; border: 0;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {T.A1}, stop:1 {T.A2}); }}
+"""
 
 
 class Hero(QWidget):
@@ -45,8 +77,53 @@ class Hero(QWidget):
 
 
 def feature(icon: str, title: str, text: str) -> QHBoxLayout:
-    ic = Icon(icon, 26, T.A2)
-    return hbox(vbox(ic, None), vbox(label(title, "h3"), label(text, "muted", wrap=True), spacing=2), spacing=14)
+    return hbox(vbox(IconBadge(icon, 44), None), vbox(label(title, "h3"), label(text, "muted", wrap=True), spacing=3),
+                spacing=16)
+
+
+def tile(icon: str, title: str, text: str) -> Card:
+    """Hoş geldin sayfasındaki büyük özellik kartı."""
+    c = Card(margins=20, spacing=10)
+    c.setMinimumHeight(190)
+    c.add(IconBadge(icon, 52))
+    c.add(label(title, "h2"))
+    t = label(text, "muted", wrap=True)
+    c.add(t)
+    c.layout().addStretch(1)
+    return c
+
+
+class ChoiceCard(QPushButton):
+    """'Nerede oynuyorsun?' seçeneği: büyük ikon, başlık, açıklama, önerilen etiketi, seçilince onay işareti."""
+
+    def __init__(self, icon: str, title: str, text: str, badge: str = ""):
+        super().__init__()
+        self.setObjectName("choice")
+        self.setCheckable(True)
+        self.setMinimumHeight(140)
+        self.setCursor(Qt.PointingHandCursor)
+        self.icon = IconBadge(icon, 60, active=False)
+        t1, t2 = label(title, "h2"), label(text, "muted", wrap=True)
+        heads = [t1]
+        if badge:
+            b = label(badge, "badge")
+            b.setFixedHeight(26)
+            b.setAlignment(Qt.AlignCenter)
+            heads += [b]
+        for w in (t1, t2, *heads):
+            w.setAttribute(Qt.WA_TransparentForMouseEvents)
+            w.setStyleSheet(w.styleSheet() + "background: transparent;" if w.objectName() != "badge" else w.styleSheet())
+        self.tick = IconBadge("check", 30)
+        self.tick.setVisible(False)
+        text_box = vbox(hbox(*heads, None, spacing=10), t2, spacing=6)
+        inner = hbox(self.icon, text_box, 1, self.tick, spacing=18)
+        inner.setContentsMargins(22, 18, 22, 18)
+        self.setLayout(inner)
+        self.toggled.connect(self._toggled)
+
+    def _toggled(self, on: bool) -> None:
+        self.icon.setActive(on)
+        self.tick.setVisible(on)
 
 
 def check_row(title: str, text: str, *buttons) -> Card:  # noqa: ANN002
@@ -60,13 +137,13 @@ def check_row(title: str, text: str, *buttons) -> Card:  # noqa: ANN002
     return c
 
 
-CHOICES = [("monitor", "tv", "🖥️  Bilgisayar monitöründe",
-            "chiaki-ng ile PS5'i bilgisayarda oynarım. Türkçe, chiaki penceresinin üstünde çıkar."),
-           ("tv", "tv", "📺  TV'de",
-            "PS5 HDMI ile TV'de, ben TV'den oynarım. Bilgisayar PS5'e arka planda bağlanıp izler (chiaki "
-            "gerekmez), Türkçe TV'de çıkar."),
-           ("ikisi", "tv", "🔁  Bazen monitörde, bazen TV'de",
-            "İkisini de kurarız; o gün hangisinde oynuyorsan o çalışır.")]
+CHOICES = [("tv", "ps", "TV'de oynuyorum",
+            "PS5 HDMI ile TV'de, sen kendi kolunla oynarsın. Bilgisayar arka planda izler; Türkçe TV'de, oyunun "
+            "üstünde çıkar. chiaki-ng gerekmez.", "ÖNERİLEN"),
+           ("monitor", "monitor", "Bilgisayar monitöründe",
+            "chiaki-ng ile PS5'i bilgisayarda oynarsın. Türkçe, chiaki penceresinin üstünde çıkar.", ""),
+           ("ikisi", "swap", "Bazen TV'de, bazen monitörde",
+            "İkisini de kurarız; o gün hangisinde oynuyorsan o çalışır.", "")]
 
 
 class Wizard(QDialog):
@@ -76,18 +153,23 @@ class Wizard(QDialog):
         self.cfg = ctl.edit_config()
         self.setWindowTitle("GTA6 Altyazı · Kurulum")
         self.setModal(True)
-        self.resize(1120, 780)
-        self.setMinimumSize(1000, 700)
+        self.setStyleSheet(WIZ_QSS)
+        self.setMinimumSize(1040, 700)
+        screen = self.screen().availableGeometry() if self.screen() else None
+        w, h = 1260, 860
+        if screen is not None:
+            w, h = min(w, screen.width() - 40), min(h, screen.height() - 40)
+        self.resize(max(w, 1040), max(h, 700))
         root = QHBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
         side = Hero()
-        side.setFixedWidth(270)
+        side.setFixedWidth(300)
         sl = QVBoxLayout(side)
-        sl.setContentsMargins(24, 26, 16, 22)
+        sl.setContentsMargins(26, 28, 16, 24)
         sl.addWidget(Logo())
-        self.stepper = Stepper(STEPS)
+        self.stepper = Stepper(STEPS, big=True)
         sl.addWidget(self.stepper, 1)
         sl.addWidget(label("Ayarları sonra istediğin zaman\nAyarlar sayfasından değiştirebilirsin.", "faint"))
         root.addWidget(side)
@@ -95,18 +177,18 @@ class Wizard(QDialog):
         right = QFrame()
         right.setObjectName("page")
         rl = QVBoxLayout(right)
-        rl.setContentsMargins(40, 34, 40, 26)
-        rl.setSpacing(16)
+        rl.setContentsMargins(48, 40, 48, 30)
+        rl.setSpacing(18)
         self.stack = QStackedWidget()
         rl.addWidget(self.stack, 1)
         self.back = button("Geri", "ghost", self._back)
         self.skip = button("Bu adımı atla", "ghost", self._next)
         self.next = button("Başlayalım", "primary", self._next)
-        self.next.setMinimumWidth(170)
+        self.next.setMinimumWidth(210)
         rl.addLayout(hbox(self.back, None, self.skip, self.next, spacing=10))
         root.addWidget(right, 1)
 
-        self.where = self.cfg.kaynak.oyun_yeri if self.cfg.kaynak.oyun_yeri in ("monitor", "tv", "ikisi") else "ikisi"
+        self.where = self.cfg.kaynak.oyun_yeri if self.cfg.kaynak.oyun_yeri in ("monitor", "tv", "ikisi") else "tv"
         for builder in (self._welcome, self._where, self._ps5, self._tv, self._translation, self._done):
             self.stack.addWidget(builder())
         ctl.sourceStatus.connect(self._on_source)
@@ -123,55 +205,55 @@ class Wizard(QDialog):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(14)
         t = label(title, "display")
+        t.setWordWrap(True)
         lay.addWidget(t)
-        lay.addWidget(label(subtitle, "muted", wrap=True))
-        lay.addSpacing(6)
+        sub = label(subtitle, "lead", wrap=True)
+        sub.setTextFormat(Qt.RichText)
+        lay.addWidget(sub)
+        w.subtitle = sub
+        w.title = t
+        lay.addSpacing(8)
         return w, lay
 
     def _welcome(self) -> QWidget:
-        w, lay = self._page("Oyun İngilizce, sen Türkçe oyna.",
-                            "GTA 6'daki yazıları anında okuyup Türkçesini İngilizcenin tam yerine yazar. "
-                            "Kurulum birkaç dakika sürer.")
-        lay.addLayout(feature("translate", "Her yazı Türkçe",
-                              "Diyalog altyazıları, sol üstteki yardım kutusu, sağ üstteki bildirimler. Telefon "
-                              "ve menüler için tek tuşla tüm ekran."))
-        lay.addLayout(feature("tv", "TV'de ve Discord yayınında",
-                              "Sen TV'de gecikmesiz oynarsın; altyazı TV'de oyunun üstünde ve arkadaşlarının "
-                              "izlediği yayında görünür."))
-        lay.addLayout(feature("bolt", "Bekletmez",
-                              "Ekran kartındaki model ilk çeviriyi ~50 ms'de gösterir, yapay zeka birkaç yüz ms sonra "
-                              "daha doğal haliyle günceller. Aynı yazı tekrar çıkınca anında gelir."))
-        lay.addSpacing(6)
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(16)
+        lay.addWidget(label("GTA 6 · CANLI TÜRKÇE ÇEVİRİ", "tag"))
+        head = label(f"Oyun İngilizce,<br><span style='color:{T.A1}'>sen Türkçe oyna.</span>", "hero")
+        head.setTextFormat(Qt.RichText)
+        lay.addWidget(head)
+        lay.addWidget(label("Ekrandaki İngilizce yazıları anında okur, Türkçesini oyunun üstüne yazar. Kurulum 5 dakika.",
+                            "lead", wrap=True))
+        lay.addSpacing(4)
+        tiles = QHBoxLayout()
+        tiles.setSpacing(16)
+        for icon, title, text in (("translate", "Her yazı Türkçe", "Diyaloglar, yardım kutuları, bildirimler, "
+                                   "telefon ve menüler."),
+                                  ("tv", "TV'de oyunun üstünde", "Sen TV'de oynarsın; Türkçe, İngilizcenin tam "
+                                   "yerinde çıkar."),
+                                  ("bolt", "Bekletmez", "İlk çeviri anında gelir, yapay zekâ hemen ardından "
+                                   "cilalar.")):
+            tiles.addWidget(tile(icon, title, text), 1)
+        lay.addLayout(tiles)
         lay.addWidget(PreviewArt(), 1)
         return w
 
     def _where(self) -> QWidget:
-        w, lay = self._page("Nerede oynayacaksın?",
-                            "Kurulumu buna göre anlatacağım. Sonra Ayarlar'dan değiştirebilirsin.")
+        w, lay = self._page("Nerede oynuyorsun?", "Kurulumu buna göre anlatacağım; sonra Ayarlar'dan değiştirebilirsin.")
         self.where_group = QButtonGroup(self)
         self.where_group.setExclusive(True)
-        for key, icon, title, text in CHOICES:
-            b = QPushButton()
-            b.setCheckable(True)
+        self.choice_cards = {}
+        for key, icon, title, text, badge in CHOICES:
+            b = ChoiceCard(icon, title, text, badge)
             b.setChecked(key == self.where)
-            b.setMinimumHeight(92)
-            t1, t2 = label(title, "h2"), label(text, "muted", wrap=True)
-            for t in (t1, t2):
-                t.setAttribute(Qt.WA_TransparentForMouseEvents)
-                t.setStyleSheet("background: transparent;")
-            inner = vbox(t1, t2, spacing=4)
-            inner.setContentsMargins(20, 14, 20, 14)
-            b.setLayout(inner)
-            b.setStyleSheet(
-                f"QPushButton {{ text-align: left; padding: 0; border-radius: 14px;"
-                f" background: {T.SURFACE2}; border: 2px solid {T.BORDER}; color: {T.TEXT}; }}"
-                f"QPushButton:hover {{ border-color: {T.BORDER_HI}; }}"
-                f"QPushButton:checked {{ border-color: {T.A1}; background: {T.SURFACE3}; }}")
             b.clicked.connect(lambda _=False, k=key: self._set_where(k))
             self.where_group.addButton(b)
+            self.choice_cards[key] = b
             lay.addWidget(b)
-        lay.addWidget(label("Monitörde oynarken kendi PSN hesabını, TV'de oynarken ikinci bir PSN hesabı kullanırsın "
-                            "(TV'deki kolun kopmasın diye). Hepsini adım adım göstereceğim.", "faint", wrap=True))
+        lay.addWidget(label("TV'de oynarken bilgisayar ikinci bir PSN hesabı kullanır (kolun kopmasın diye). "
+                            "Hepsini adım adım göstereceğim.", "faint", wrap=True))
         lay.addStretch(1)
         return w
 
@@ -182,13 +264,20 @@ class Wizard(QDialog):
             self.cfg.kaynak.tur = "pencere"
         self.ps5_guide.set_steps(self._ps5_steps(), self._ps5_extras())
         self.ps5_guide.show_step(0)
-        if hasattr(self, "rp_card"):
-            self._refresh_rp()
+        if hasattr(self, "ps5_stack"):
+            self._ps5_mode("chiaki" if key == "monitor" else "rp")
 
     def _ps5(self) -> QWidget:
-        w, lay = self._page("PS5 ve chiaki-ng",
-                            "chiaki-ng, PS5'in görüntüsünü ağ üzerinden bilgisayara getiren ücretsiz programdır. "
-                            "Adımları sırayla yap; her adımda neye basacağın resimde işaretli.")
+        w, lay = self._page("PS5 bağlantısı", "")
+        self.ps5_page = w
+        # Monitörde ve TV'de ikisini birden kuranlar için iki sekme
+        self.seg_rp = button("TV için: arka planda bağlan", "seg", lambda: self._ps5_mode("rp"))
+        self.seg_chiaki = button("Monitör için: chiaki-ng", "seg", lambda: self._ps5_mode("chiaki"))
+        for b in (self.seg_rp, self.seg_chiaki):
+            b.setCheckable(True)
+        self.seg_row = QWidget()
+        self.seg_row.setLayout(hbox(self.seg_rp, self.seg_chiaki, None, spacing=8))
+        lay.addWidget(self.seg_row)
         # 1. adımın düğmeleri: indir / gözat / aç + bulundu mu
         self.chiaki_btn_open = button("chiaki-ng'yi aç", None, self._open_chiaki)
         self.chiaki_state = label("", "muted", wrap=True)
@@ -205,45 +294,49 @@ class Wizard(QDialog):
         self.act_conn = QWidget()
         self.act_conn.setLayout(hbox(self.conn_dot, self.conn_state, 1, spacing=6))
         self.act_chiaki = act1
-        # TV'de oynarken chiaki gerekmez: PS5'e arka planda ikinci hesapla bağlanılır (CouchSubs gibi)
-        self.rp_card = Card(margins=16, spacing=8)
-        self.rp_card.setStyleSheet(f"#card {{ border: 2px solid {T.A1}; }}")
-        self.rp_state = label("Oyunu TV'de oynuyorsan chiaki-ng'ye gerek yok: bilgisayar PS5'e arka planda ikinci "
-                              "PSN hesabıyla bağlanıp yalnız altyazıyı okur. Bir kez eşlersin, sonra hep kendiliğinden "
-                              "çalışır.", "muted", wrap=True)
-        self.rp_btn = button("PS5'i arka planda bağla (önerilen)", "primary", self._open_rp)
-        self.rp_card.add(label("TV'de oynuyorum", "h2"))
-        self.rp_card.add(self.rp_state)
-        self.rp_card.add(hbox(self.rp_btn, None))
-        lay.addWidget(self.rp_card)
+        self.ps5_stack = QStackedWidget()
+        # TV: yerleşik Remote Play (chiaki penceresi gerekmez)
+        from .ps5_dialog import Ps5Panel
+        self.rp_panel = Ps5Panel(self.ctl, intro=False)
+        rp_page = QWidget()
+        rpl = QVBoxLayout(rp_page)
+        rpl.setContentsMargins(0, 0, 8, 0)
+        rpl.addWidget(self.rp_panel)
+        rpl.addStretch(1)
+        self.ps5_stack.addWidget(scroll_page(rp_page))
+        # Monitör: chiaki-ng resimli rehberi
         self.ps5_guide = Guide()
-        lay.addWidget(self.ps5_guide, 1)
+        self.ps5_stack.addWidget(self.ps5_guide)
+        lay.addWidget(self.ps5_stack, 1)
         self.ps5_guide.set_steps(self._ps5_steps(), self._ps5_extras())
+        self.ctl.ps5Paired.connect(lambda ok, _m: ok and self._sync_rp())
         self._refresh_chiaki()
-        self._refresh_rp()
+        self._ps5_mode("chiaki" if self.where == "monitor" else "rp")
         return w
 
-    def _refresh_rp(self) -> None:
-        tv = self.where in ("tv", "ikisi")
-        self.rp_card.setVisible(tv)
-        self.ps5_guide.setVisible(not (tv and self.ctl.ps5_paired() and self.cfg.kaynak.tur == "remoteplay"))
-        if self.ctl.ps5_paired():
-            self.rp_state.setText(f"✓ PS5 eşli ({self.ctl.cfg.ps5.ad or self.ctl.cfg.ps5.ip}). Görüntü arka planda "
-                                  "alınacak; chiaki-ng adımlarını atlayabilirsin.")
-            self.rp_state.setStyleSheet(f"color: {T.OK};")
-            self.rp_btn.setText("PS5 ayarları")
+    def _ps5_mode(self, mode: str) -> None:
+        self._ps5_view = mode
+        self.seg_row.setVisible(self.where == "ikisi")
+        self.seg_rp.setChecked(mode == "rp")
+        self.seg_chiaki.setChecked(mode == "chiaki")
+        self.ps5_stack.setCurrentIndex(0 if mode == "rp" else 1)
+        if mode == "rp":
+            self.ps5_page.subtitle.setText("Bilgisayar PS5'e arka planda <b>ikinci PSN hesabıyla</b> bağlanıp yalnız "
+                                           "altyazıyı okur; sen TV'de kendi hesabınla oynarsın. Bir kez yaparsın, "
+                                           "sonra hep kendiliğinden çalışır.")
+        else:
+            self.ps5_page.subtitle.setText("chiaki-ng, PS5'in görüntüsünü bilgisayara getiren ücretsiz programdır. "
+                                           "Adımları sırayla yap; her adımda neye basacağın resimde işaretli.")
+        if hasattr(self, "stack"):
+            self._update_next()
 
-    def _open_rp(self) -> None:
+    def _sync_rp(self) -> None:
+        """Eşleme ayarlara yazıldı; sihirbazın kendi ayar kopyası Bitir'de bunu geri silmesin."""
         import copy
-
-        from .ps5_dialog import Ps5Dialog
-        Ps5Dialog(self.ctl, self).exec()
-        # Sihirbazın kendi ayar kopyası, eşlemeyi Bitir'de geri silmesin
         self.cfg.ps5 = copy.deepcopy(self.ctl.cfg.ps5)
         if self.ctl.ps5_paired():
             self.cfg.kaynak.tur = "remoteplay"
             self.cfg.kaynak.oyun_yeri = self.where if self.where in ("tv", "ikisi") else "tv"
-        self._refresh_rp()
 
     def _ps5_steps(self) -> list[dict]:
         return rehber.chiaki_steps(self.where)
@@ -368,38 +461,67 @@ class Wizard(QDialog):
         return w
 
     def _done(self) -> QWidget:
-        w, lay = self._page("Her şey hazır!",
-                            "Oyunda İngilizce altyazıyı aç, chiaki-ng'de PS5'e bağlan ve ana ekranda başlat'a bas.")
-        tips = Card(inner=True, margins=16, spacing=10)
-        tips.add(feature("play", "Başlat", "Ana ekrandaki büyük düğme. Altyazı kasada, TV'de ve OBS'de birlikte görünür."))
-        tips.add(feature("tv", "Discord yayını",
-                         "Bilgisayarda ikinci bir Discord hesabıyla sesli kanala gir, sesini kapat ve TÜM EKRANI "
-                         "paylaş. Sen telefondan ya da başka bir cihazdan kendi hesabınla konuş (kulaklıkla)."))
-        tips.add(feature("regions", "GTA 6 çıkınca",
-                         "Okuma alanları sayfasında Görüntü al'a bas, kutuları gerçek altyazının üstüne çek."))
-        lay.addWidget(tips)
-        self.auto_cb = QCheckBox("Her şey kendiliğinden olsun: bilgisayar açılınca uygulama açılsın, PS5'i açınca "
-                                 "chiaki bağlansın ve çeviri başlasın")
+        w, lay = self._page("Her şey hazır! 🎉", "")
+        self.done_page = w
+        self.done_tips = Card(margins=20, spacing=14)
+        lay.addWidget(self.done_tips)
+        self._done_items: list = []
+        self.auto_cb = QCheckBox()
         self.auto_cb.setChecked(True)
         lay.addWidget(self.auto_cb)
-        qr = QrCode(110)
+        qr = QrCode(120)
         qr.setData(self.ctl.server_url("kumanda"))
         lay.addLayout(hbox(qr, vbox(label("Telefon kumandası", "h3"),
                                     label("TV'den oynarken telefonla okut: Ekranı çevir ve Duraklat düğmeleri burada.",
                                           "muted", wrap=True),
                                     label(self.ctl.server_url("kumanda").replace("http://", ""), "faint"), None),
-                           spacing=16))
+                           spacing=18))
         lay.addStretch(1)
+        self._fill_done()
         return w
+
+    def _fill_done(self) -> None:
+        """Son sayfa seçime göre: TV'de PS5 kendiliğinden bağlanır, monitörde chiaki ile."""
+        tv = self.where in ("tv", "ikisi")
+        self.done_page.subtitle.setText(
+            "PS5'i aç, kolu açınca <b>kendi hesabını</b> seç ve oyunda İngilizce altyazıyı aç. Çeviri kendiliğinden "
+            "başlar, Türkçe TV'de çıkar." if tv else
+            "Oyunda İngilizce altyazıyı aç, chiaki-ng'de PS5'e bağlan ve ana ekranda Başlat'a bas.")
+        lay = self.done_tips.layout()
+        for item in self._done_items:
+            lay.removeItem(item)
+            while item.count():
+                wdg = item.takeAt(0).widget()
+                if wdg is not None:
+                    wdg.deleteLater()
+        tips = [("ps", "PS5 açılınca kendiliğinden", "Bilgisayar PS5'e arka planda bağlanır, çeviri başlar. PS5'i "
+                 "kapatınca bekler, açınca yeniden bağlanır.")] if tv else \
+            [("play", "Başlat", "Ana ekrandaki büyük düğme. Türkçe chiaki penceresinin üstünde çıkar.")]
+        tips += [("translate", "Ekranın tamamını çevir", f"Telefon, menü, harita: {self.cfg.kisayol.tam_ekran.upper()} "
+                  "ya da telefon kumandasındaki Ekranı çevir düğmesi."),
+                 ("regions", "Altyazı kayık mı?", "Okuma alanları sayfasında Görüntü al'a bas, kutuları gerçek "
+                  "altyazının üstüne çek.")]
+        self._done_items = []
+        for icon, title, text in tips:
+            row = feature(icon, title, text)
+            lay.addLayout(row)
+            self._done_items.append(row)
+        self.auto_cb.setText("Bilgisayar açılınca uygulama da açılsın; PS5 açılınca çeviri kendiliğinden başlasın"
+                             if tv else "Her şey kendiliğinden olsun: bilgisayar açılınca uygulama açılsın, PS5'i "
+                             "açınca chiaki bağlansın ve çeviri başlasın")
 
     # ------------------------------------------------------------------ gezinme
     def _guide(self, i: int) -> Guide | None:
-        return {P_PS5: getattr(self, "ps5_guide", None), P_TV: getattr(self, "tv_guide", None)}.get(i)
+        if i == P_PS5:
+            return self.ps5_guide if getattr(self, "_ps5_view", "") == "chiaki" else None
+        return {P_TV: getattr(self, "tv_guide", None)}.get(i)
 
     def _skipped(self, i: int) -> bool:
         return i == P_TV and self.where == "monitor"
 
     def _go(self, i: int) -> None:
+        if i == P_DONE and hasattr(self, "done_page"):
+            self._fill_done()
         self.stack.setCurrentIndex(i)
         self.stepper.setCurrent(i)
         self.back.setVisible(i > 0)
@@ -442,13 +564,16 @@ class Wizard(QDialog):
         if i == P_DONE:
             if self.where == "monitor":
                 self.cfg.tv.ip = ""
+            self._sync_rp()
             o = self.cfg.otomatik
             on = self.auto_cb.isChecked()
             o.windows_ile_baslat = on
             o.chiaki_gorunce_baslat = True
-            o.ps5_acilinca_baglan = on
+            self.cfg.ps5.acilinca_baslat = on
+            uses_chiaki = self.cfg.kaynak.tur != "remoteplay"
+            o.ps5_acilinca_baglan = on and uses_chiaki
             self.ctl.apply_config(self.cfg)
-            if on and not (o.ps5_adi and o.ps5_ip):
+            if on and uses_chiaki and not (o.ps5_adi and o.ps5_ip):
                 self.ctl.find_ps5(save=True)
             self.accept()
             return
