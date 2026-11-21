@@ -51,7 +51,7 @@ def test_phone_thread_becomes_side_bubbles_with_context():
     fake.panel = telefon.find(frame)
     assert fake.panel is not None
     w = make(fake)
-    w.phone_mode = "yan"
+    assert w.phone_mode == "yan"       # varsayılan: telefonun yanında mesaj paneli (Nino)
     w._watch_phone(frame)              # ilk okuma: bekletilir (kaydırma bitsin)
     assert not w.phone_items
     w._watch_phone(frame)              # aynı okuma ikinci kez: çevrilir
@@ -103,13 +103,13 @@ def test_message_card_needs_two_readings_and_goes_above():
     assert it.translation.splitlines()[0] == "Donnie" and it.box.bottom <= 0.78
 
 
-def test_phone_translation_sits_on_the_bubbles_by_default():
-    """Varsayılan: Türkçe her mesaj balonunun tam üstünde, balonun renginde (telefon Türkçe görünür), panel yok."""
+def test_phone_translation_on_the_bubbles_when_chosen():
+    """Ayar 'üstünde': Türkçe her mesaj balonunun tam üstünde, balonun renginde, panel yok."""
     frame = synthetic_phone()
     fake = Fake()
     fake.panel = telefon.find(frame)
     w = make(fake)
-    assert w.phone_mode == "ust"
+    w.phone_mode = "ust"
     w._watch_phone(frame)
     w._watch_phone(frame)
     items = w.phone_items

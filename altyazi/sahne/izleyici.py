@@ -103,7 +103,7 @@ class SceneWatcher:
         self.tr_pool = ThreadPoolExecutor(2, thread_name_prefix="sahne-ceviri")
         self.lock = threading.Lock()
         self.enabled = True
-        self.phone_mode = "ust"                       # ust: Türkçe balonların üstünde | yan: telefonun yanında panel
+        self.phone_mode = "yan"                       # yan: telefonun yanında mesaj paneli (Nino) | ust: balonların üstünde
         self.tracker = telefon.Tracker()
         # telefon
         self.phone_items: list[ScreenItem] = []

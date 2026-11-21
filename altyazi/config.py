@@ -98,7 +98,7 @@ class CeviriCfg:
     ekran_yazilari: bool = True     # telefon, harita görev kartı ve telefona gelen mesajlar kendiliğinden çevrilsin (Nino)
     # Telefondaki mesajların Türkçesi: ust (her balonun tam üstünde, balonun renginde; telefon Türkçe görünür) | yan
     # (telefonun yanında ayrı panelde)
-    telefon_yeri: str = "ust"
+    telefon_yeri: str = "yan"
 
 
 @dataclass

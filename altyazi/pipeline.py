@@ -412,7 +412,7 @@ class Pipeline:
                 overlay([it.to_json() for it in items])
 
         w = SceneWatcher(read_lines, self.engine.translate_now, on_items, lookup=self.engine.lookup)
-        w.phone_mode = getattr(self.cfg.ceviri, "telefon_yeri", "ust")
+        w.phone_mode = getattr(self.cfg.ceviri, "telefon_yeri", "yan")
         return w
 
     # ------------------------------------------------------------------ yaşam döngüsü

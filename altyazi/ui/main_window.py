@@ -1445,14 +1445,14 @@ class TranslationPage(QWidget):
                                c.argo_duzelt)
         self.scene_cb = QCheckBox("Oyundaki telefonu, harita görev kartını ve gelen mesajları kendiliğinden çevir",
                                   c.ekran_yazilari)
-        self.phone_where = Segmented([("ust", "Telefonun üstünde (telefon Türkçe görünür)"),
-                                      ("yan", "Telefonun yanında (ayrı panel)")], getattr(c, "telefon_yeri", "ust"))
+        self.phone_where = Segmented([("yan", "Telefonun yanında, mesaj panelinde (önerilen)"),
+                                      ("ust", "Balonların üstünde")], getattr(c, "telefon_yeri", "yan"))
         self.phone_where.setMaximumWidth(620)
         adv.add(self.slang)
         adv.add(self.scene_cb)
         adv.add(field("Telefon mesajlarının Türkçesi", self.phone_where,
-                      "Üstünde: her mesajın Türkçesi kendi balonunun tam üstünde, balonun renginde; TV'de telefon "
-                      "Türkçeymiş gibi görünür. Yanında: telefonun yanında ayrı bir mesaj panelinde."))
+                      "Yanında: telefonun yanında, oyundaki sırayla, her mesaj kendi balonunda (Nino'daki gibi). "
+                      "Üstünde: her mesajın Türkçesi kendi balonunun tam üstünde."))
         adv.add(label("Sözlük", "h3"))
         adv.add(label("Her satıra bir terim: <b>İngilizce = Türkçe</b>. İsimleri olduğu gibi bırakmak için iki tarafa "
                       "aynısını yaz (ör. Vice City = Vice City).", "faint", wrap=True))
@@ -1628,7 +1628,7 @@ class TranslationPage(QWidget):
         c.hizli = self.fast.currentData()
         c.argo_duzelt = self.slang.isChecked()
         c.ekran_yazilari = self.scene_cb.isChecked()
-        c.telefon_yeri = self.phone_where.value() or "ust"
+        c.telefon_yeri = self.phone_where.value() or "yan"
         c.kalite_bekleme_ms = self.wait.value()
         c.kalite = self.qual_group.value() or "yok"
         c.claude_anahtar = self.key.text().strip()
