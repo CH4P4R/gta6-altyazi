@@ -58,7 +58,26 @@ class Ps5Panel(QWidget):
         c1 = Card(margins=20, spacing=10)
         self.acc_state = label("", "muted", wrap=True)
         c1.add(step_head("1", "İkinci PSN hesabı"))
-        c1.add(rich(ACCOUNT_STEPS))
+        c1.add(rich("<b>Neden ikinci hesap?</b> Bilgisayar oyunu Remote Play'den izler. Kendi hesabınla bağlansaydı PS5 "
+                    "kolunu kapatırdı; ikinci hesapla sen oynamaya devam edersin. PS Plus gerekmez."))
+        for i, text in enumerate((
+                "playstation.com'da <b>farklı bir e-postayla</b> ücretsiz yeni PSN hesabı aç.",
+                "PS5'te <b>Kullanıcı Ekle</b>'yi seç ve yeni hesapla bir kez giriş yap.",
+                "Yeni hesaptayken <b>Ayarlar › Sistem › Uzaktan Oynatma › Uzaktan Oynatmayı Etkinleştir</b>'i ve en "
+                "alttaki <b>Bağlantı Durumunu Gizle</b>'yi aç.",
+                "Kendi hesabında <b>Ayarlar › Bildirimler</b>'den bildirimleri kapat; altyazının üstünde uyarı çıkmaz."),
+                start=1):
+            row_ = Card(inner=True, margins=10, spacing=0)
+            num = label(str(i), "h3")
+            num.setFixedSize(30, 30)
+            num.setAlignment(Qt.AlignCenter)
+            num.setStyleSheet(f"color: white; border-radius: 15px; background: qlineargradient(x1:0, y1:0, x2:1, y2:1, "
+                              f"stop:0 {T.A1}, stop:1 {T.A2});")
+            t_ = rich(text)
+            row_.add(hbox(num, 12, t_, 1, spacing=0))
+            c1.add(row_)
+        c1.add(label("Oynamak için kolu açınca PS5'te ANA hesabını seç; ikinci hesapla oynama, yoksa kol oyunda "
+                     "çalışmaz.", "faint", wrap=True))
         c1.add(label("Giriş", "h3"))
         c1.add(rich(LOGIN_HELP))
         self.paste = QLineEdit()
@@ -86,7 +105,25 @@ class Ps5Panel(QWidget):
         # 2. eşleme
         c2 = Card(margins=20, spacing=10)
         c2.add(step_head("2", "PS5'i eşle"))
-        c2.add(rich(PAIR_HELP))
+        # Nino: üç numaralı küçük kart (ikinci hesaba geç · Cihazı Eşleştir'i aç · kodu gir)
+        from PySide6.QtWidgets import QHBoxLayout
+        from .parcalar import IconTile
+        steps = QHBoxLayout()
+        steps.setSpacing(10)
+        for num, icon, title, text in (("1", "swap", "İkinci hesaba geç", "PS düğmesi › profil resmi › Kullanıcı Değiştir"),
+                                       ("2", "settings", "Cihazı Eşleştir'i aç",
+                                        "Ayarlar › Sistem › Uzaktan Oynatma › Cihazı Eşleştir"),
+                                       ("3", "check", "Kodu gir", "Ekrandaki 8 haneli kodu aşağıya yaz. Kod 5 dakika "
+                                                                   "geçerlidir.")):
+            card = Card(inner=True, margins=12, spacing=4)
+            n = label(num, "h2")
+            n.setStyleSheet(f"color:{T.FAINT};")
+            card.add(hbox(IconTile(icon, 34, glow=False), None, n, spacing=0))
+            card.add(label(title, "h3"))
+            card.add(label(text, "faint", wrap=True))
+            steps.addWidget(card, 1)
+        c2.add(steps)
+        c2.add(label("Bitince PS5'te kendi kullanıcına geri dön. Bunu yalnız bir kez yaparsın.", "faint", wrap=True))
         self.consoles = QComboBox()
         self.consoles.setEditable(True)
         self.consoles.lineEdit().setPlaceholderText("PS5 aranıyor... (bulunmazsa IP adresini yaz)")
