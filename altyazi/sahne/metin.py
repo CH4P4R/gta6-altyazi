@@ -9,6 +9,7 @@ alanın kenarlarına oranladır (0–1, üstten ve soldan).
 from __future__ import annotations
 
 import math
+from fractions import Fraction
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -36,6 +37,14 @@ def swift_round(v: float) -> int:
     return -int(math.floor(-v + 0.5))
 
 
+def _fma(x: float, y: float, z: float) -> float:
+    """x*y+z tek yuvarlamayla (Python 3.13 öncesinde math.fma yok; Fraction ile aynı sonuç)."""
+    f = getattr(math, "fma", None)
+    if f is not None:
+        return f(x, y, z)
+    return float(Fraction(x) * Fraction(y) + Fraction(z))
+
+
 def stride_to(start: float, end: float, step: float) -> Iterator[float]:
     """Swift `stride(from:to:by:)` (Double): değerler start + i·step (FMA ile), `end` dahil değil."""
     i = 0
@@ -43,7 +52,7 @@ def stride_to(start: float, end: float, step: float) -> Iterator[float]:
     while (value < end) if step > 0 else (value > end):
         yield value
         i += 1
-        value = math.fma(float(i), step, start)
+        value = _fma(float(i), step, start)
 
 
 def stride_through(start: float, end: float, step: float) -> Iterator[float]:
@@ -57,7 +66,7 @@ def stride_through(start: float, end: float, step: float) -> Iterator[float]:
             return
         yield value
         i += 1
-        value = math.fma(float(i), step, start)
+        value = _fma(float(i), step, start)
 
 
 def is_letter(c: str) -> bool:
