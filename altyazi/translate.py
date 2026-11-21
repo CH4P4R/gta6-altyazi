@@ -586,6 +586,15 @@ class TranslationEngine:
         self.ctx_lock = threading.Lock()
         # Oynanan oyunun paketi (oyun/oyun_algi.py tanır); bulanık arama yalnız onda yapılır (Nino gibi).
         # Oyun bilinmiyorsa GTA 6 paketi (bu programın asıl oyunu).
+        self.local_chain = None
+        if self.fast is not None and self.fast.name == "yerel":
+            try:                                  # Nino'nun yerel çeviri kalite zinciri (kalite/yerel_cevirmen.py)
+                from .gta_terms import KEEP
+                from .kalite.yerel_cevirmen import QualityLocal
+                self.local_chain = QualityLocal.build(self.fast.translate, cfg.sozluk, KEEP, user_dir=paths.data("sozluk"),
+                                                      slang=slang.normalize if cfg.argo_duzelt else None)
+            except Exception:  # noqa: BLE001
+                log.exception("Yerel çeviri kalite zinciri kurulamadı; düz çeviri kullanılacak")
         self.game_pack: str | None = None
         self._fuzzy: dict[str, object] = {}
         self._fuzzy_loading: set[str] = set()
@@ -712,6 +721,30 @@ class TranslationEngine:
                 return tr, f"{fz.id}~"
         return None
 
+    def _local_quality(self, text: str) -> str | None:
+        if self.local_chain is None:
+            return None
+        try:
+            return self.local_chain.translate(text) or None
+        except Exception:  # noqa: BLE001
+            log.exception("Yerel çeviri kalite zinciri")
+            return None
+
+    def _refine_text(self, text: str, kind: str, ctx) -> str | None:  # noqa: ANN001
+        """Yapay zekâ çevirisi: konuşan adı ("LUCIA: ...") modele gitmez, sonra geri eklenir; model cümleyi
+        çevirmeden geri verdiyse (yankı) sonuç yok sayılır (Nino AITranslation)."""
+        from .kalite import konusan
+        from .kalite.metin_eslesme import is_similar, normalize
+        sp = konusan.split(text)
+        body = sp.body if sp else text
+        tr = self.refine.translate(body, kind, ctx)
+        if not tr:
+            return None
+        if len(body) > 12 and is_similar(normalize(body), normalize(tr), 0.90):
+            log.info("Yapay zekâ çevirmeden geri verdi, yok sayıldı: %s", body[:60])
+            return None
+        return konusan.present(tr, text, True) if sp else tr
+
     def lookup(self, text: str) -> str | None:
         """Hazır paket ya da önbellekteki kaliteli çeviri (beklemeden); yoksa None."""
         hit = self.pack_lookup(text)
@@ -727,7 +760,7 @@ class TranslationEngine:
             return found
         if self.refine:
             try:
-                tr = self.refine.translate(text, kind, context or [])
+                tr = self._refine_text(text, kind, context or [])
             except Exception as e:  # noqa: BLE001
                 log.warning("%s çeviri hatası: %s", self.refine.name, e)
                 tr = None
@@ -740,7 +773,8 @@ class TranslationEngine:
             return cached[0]
         if self.fast:
             try:
-                tr = self._post(self.fast.translate(slang.normalize(text) if self.cfg.argo_duzelt else text))
+                tr = self._local_quality(text) or \
+                    self._post(self.fast.translate(slang.normalize(text) if self.cfg.argo_duzelt else text))
             except Exception as e:  # noqa: BLE001
                 log.warning("Hızlı çeviri hatası: %s", e)
                 return None
@@ -779,8 +813,8 @@ class TranslationEngine:
         t = time.perf_counter()
         try:
             src = slang.normalize(text) if self.cfg.argo_duzelt else text
-            tr = None
-            if self.fast.name == "yerel" and self.cfg.sozluk:
+            tr = self._local_quality(text)
+            if tr is None and self.fast.name == "yerel" and self.cfg.sozluk:
                 protected, mapping = terms.protect(src, self.cfg.sozluk)
                 if mapping:
                     tr = terms.restore(self.fast.translate(protected), mapping)
@@ -811,7 +845,7 @@ class TranslationEngine:
         t = time.perf_counter()
         tr = None
         try:
-            tr = self.refine.translate(text, kind, ctx)
+            tr = self._refine_text(text, kind, ctx)
         except Exception as e:  # noqa: BLE001
             log.warning("%s çeviri hatası: %s", self.refine.name, e)
         if not tr:

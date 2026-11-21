@@ -340,6 +340,15 @@ def match_keys(zone: str, prev: dict[str, tuple[int, int]], spans: list[tuple[in
     return keys
 
 
+def _ocr_clean(text: str) -> str:
+    """Nino OcrNoise: süslü/solan yazıda okunan çöp sözcükler ("ou$3e") satır birleşmeden önce atılır."""
+    try:
+        from .kalite.ocr_gurultu import clean
+        return clean(text)
+    except Exception:  # noqa: BLE001
+        return text
+
+
 def _reread(newer: str, older: str) -> bool:
     """Nino Rereads: yeni okuma eskinin yarım ya da bozuk tekrarı mı (çevirmene ikinci kez gitmesin)."""
     try:
@@ -626,7 +635,7 @@ class Pipeline:
             t_ocr = time.perf_counter()
             results = self.rec.recognize([ln.image for ln in ev.lines])
             ocr_ms = (time.perf_counter() - t_ocr) * 1000
-            texts = [r.text if (r.score >= zcfg.min_skor and r.text) else "" for r in results]
+            texts = [_ocr_clean(r.text) if (r.score >= zcfg.min_skor and r.text) else "" for r in results]
             rows = [(clean_ocr(tx), b) for tx, b in rows_of([ln.box for ln in ev.lines], texts)]
             names = set(self.cfg.ceviri.sozluk)
             # Tuş simgesi okunamamış ipuçları: Claude varsa satırın resmi okunup simgeyle çevrilir, yoksa atlanır

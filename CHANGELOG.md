@@ -3,6 +3,25 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.7.0 · Telefon, harita ve mesajlar Türkçe; seslendirme; daha akıllı çeviri
+Nino Game Translator'ın (CouchSubs türevi, AGPL-3.0) en iyi özellikleri eklendi, Xbox hariç:
+- **Oyundaki telefon Türkçe:** telefon ekranı görüntüden bulunur (eğik tutulsa da); sohbetin Türkçesi telefonun yanında,
+  her mesaj kendi balonunda ve oyundaki sırayla; mesajlar önceki mesajlarla birlikte çevrilir. Banka/haber
+  uygulamalarında her yazının altında Türkçesi. Telefon açıkken içindeki yazılar altyazı sanılmaz.
+- **Harita görev kartı Türkçe:** seçili görevin kartının Türkçesi kartın altında, kart gibi. Dükkân adları çevrilmez.
+- **Gelen mesaj ve arama kartı:** Türkçesi kartın üstünde, gönderenin adıyla; "Paradise Taxi aranıyor…".
+- **TV'de yeni altyazı stili** (büyük, yuvarlak köşeli yarı saydam kutu) ve telefon balonları, yan panel, kart, eğik yazı
+  (LG, Samsung, Android TV). Bilgisayar ekranındaki katmanda da.
+- **Türkçe seslendirme (dublaj):** doğal Türkçe sesler (Ahmet/Emel), konuşan adına göre kadın/erkek; yeni satırda
+  kesilir. Ayarlar › Ekran › Türkçe seslendir.
+- **Sor (yardım sohbeti):** rehberi ve programın durumunu bilen yapay zekâ; fotoğraf eklenebilir (kendi anahtarınla).
+- **Daha akıllı çeviri:** bulanık paket araması (okuma bir iki harf hatalı olsa da oyunun paketinden anında Türkçe),
+  konuşan adı çeviriye karışmaz, özel adlar korunup Türkçe ekiyle geri konur, kısa satır önceki cümleyle çevrilir,
+  sen/siz uyumu, oyun deyimleri ("got your six"), OCR çöpü temizliği, yapay zekâ çevirmeden geri verirse yok sayılır.
+- **Oyunu kendiliğinden tanır** (PS5'in bildirdiği oyun ve paketten gelen satırlar) ve **altyazının yerini öğrenir**
+  (yalnız o şerit okunur: daha hızlı, HUD karışmaz). Yarım okunan satır ikinci kez çevrilmez.
+- **Hız:** yerel çeviri en hızlı ayarı ölçerek seçer (Mac'te float32/int8, yavaş işlemcide ışın 1).
+
 ## 0.6.1 · Yeni kurulum sihirbazı
 - **Kurulum sihirbazı baştan tasarlandı:** daha büyük yazılar ve düğmeler, büyük ikonlu seçim kartları, "TV'de
   oynuyorum" en üstte ve önerilen.
