@@ -346,9 +346,17 @@ class SceneWatcher:
         self._emit()
 
     # ------------------------------------------------------------------ harita ve mesaj kartı
+    KEYS_REGION = TextBox(0.80, 0.68, 1.0, 0.97)       # haritanın tuş listesi ("RECENTER", "SET DESTINATION")
+    CARD_REGION = TextBox(0.50, 0.40, 1.0, 1.0)        # telefona gelen mesaj/arama kartı (sağ alt)
+
     def _watch_screen(self, frame: np.ndarray) -> None:
-        reading = self._reading(frame, max_width=1280)
-        if harita.is_map_screen(reading):
+        """Ucuz önce: yalnız haritanın tuş listesinin yeri okunur; harita açıksa bütün ekran (kart için)."""
+        keys = self._reading(frame, self.KEYS_REGION)
+        map_open = sum(1 for ln in keys.lines if normalize(ln.text) in MAP_KEYS) >= 2 or \
+            (self.map_items and self.map_missing == 0 and harita.is_map_screen(keys))
+        reading = self._reading(frame, max_width=1280) if map_open else \
+            Reading([]) if self.phone_items else self._reading(frame, self.CARD_REGION, max_width=960)
+        if map_open and harita.is_map_screen(reading):
             self.map_seen_until = self.now() + 8
             self.map_missing = 0
             card = harita.find(reading)
