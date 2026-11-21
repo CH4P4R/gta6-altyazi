@@ -16,6 +16,7 @@ windows-capture; sys_platform == "win32"
 pyobjc-core; sys_platform == "darwin"
 pyobjc-framework-Cocoa; sys_platform == "darwin"
 pyobjc-framework-Quartz; sys_platform == "darwin"
+pyobjc-framework-Vision; sys_platform == "darwin"     # Apple yazı tanıma (Neural Engine)
 pyobjc-framework-ScreenCaptureKit; sys_platform == "darwin"
 pyobjc-framework-CoreMedia; sys_platform == "darwin"
 pyobjc-framework-ApplicationServices; sys_platform == "darwin"

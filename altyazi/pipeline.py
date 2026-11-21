@@ -401,7 +401,7 @@ class Pipeline:
         def read_lines(img):  # noqa: ANN001, ANN202
             if "r" not in holder:                    # ilk kullanımda (model yüklemesi altyazıyı bekletmesin)
                 from .fullscreen import FullScreenReader
-                holder["r"] = FullScreenReader(min_score=0.5)
+                holder["r"] = FullScreenReader(min_score=0.5, motor=getattr(self.cfg.ocr, "motor", "otomatik"))
             return holder["r"].read_lines(img)
 
         def on_items(items) -> None:  # noqa: ANN001
@@ -526,7 +526,7 @@ class Pipeline:
             self._say("Ekran çevriliyor...")
             if self._fs_reader is None:
                 from .fullscreen import FullScreenReader
-                self._fs_reader = FullScreenReader()
+                self._fs_reader = FullScreenReader(motor=getattr(self.cfg.ocr, "motor", "otomatik"))
             blocks = self._fs_reader.read(frame)
             names = set(self.cfg.ceviri.sozluk)
             blocks = [b for b in blocks if not is_plate_or_name(b.text, names)]   # plakalar, yalnız özel adlar

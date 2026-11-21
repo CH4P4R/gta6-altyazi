@@ -30,9 +30,9 @@ def _setup_logging(verbose: bool) -> None:
 
 
 def _recognizer(cfg):
-    from .ocr import Recognizer
+    from .ocr import make_recognizer
 
-    rec = Recognizer(cfg.ocr.model or None, cfg.ocr.anahtar_dosyasi or None, use_gpu=cfg.ocr.gpu)
+    rec = make_recognizer(cfg.ocr)
     rec.warmup()
     return rec
 

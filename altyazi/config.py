@@ -63,6 +63,8 @@ class KaynakCfg:
 @dataclass
 class OcrCfg:
     gpu: bool = True
+    # otomatik: Mac'te Apple Vision (Neural Engine; kendini sınar, okuyamazsa PP-OCR), diğerlerinde PP-OCR
+    motor: str = "otomatik"       # otomatik | vision | ppocr
     model: str = ""               # boşsa paketteki PP-OCR tanıma modeli
     anahtar_dosyasi: str = ""
 

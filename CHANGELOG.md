@@ -20,6 +20,8 @@ Nino Game Translator'ın (CouchSubs türevi, AGPL-3.0) en iyi özellikleri eklen
   sen/siz uyumu, oyun deyimleri ("got your six"), OCR çöpü temizliği, yapay zekâ çevirmeden geri verirse yok sayılır.
 - **Oyunu kendiliğinden tanır** (PS5'in bildirdiği oyun ve paketten gelen satırlar) ve **altyazının yerini öğrenir**
   (yalnız o şerit okunur: daha hızlı, HUD karışmaz). Yarım okunan satır ikinci kez çevrilmez.
+- **Mac'te Apple'ın yazı tanıması (Neural Engine):** altyazı, telefon ve harita yazıları Mac'in kendi Vision motoruyla
+  okunur (GameTranslator'daki gibi); açılışta kendini sınar, okuyamazsa eski motora geçer.
 - **Hız:** yerel çeviri en hızlı ayarı ölçerek seçer (Mac'te float32/int8, yavaş işlemcide ışın 1).
 
 ## 0.6.1 · Yeni kurulum sihirbazı

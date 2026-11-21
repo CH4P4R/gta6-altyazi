@@ -203,11 +203,11 @@ class AppController(QObject):
     def _warmup(self) -> None:
         info = {}
         try:
-            from .ocr import Recognizer
+            from .ocr import make_recognizer
             from .translate import TranslationEngine
             c = self.cfg
             if self.rec is None:
-                self.rec = Recognizer(c.ocr.model or None, c.ocr.anahtar_dosyasi or None, use_gpu=c.ocr.gpu)
+                self.rec = make_recognizer(c.ocr)
                 self.rec.warmup()
             self.engine = TranslationEngine(c.ceviri)
             info["ocr"] = self.rec.device

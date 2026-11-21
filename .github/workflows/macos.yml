@@ -26,7 +26,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install numpy opencv-python pyyaml rapidfuzz PySide6-Essentials ctranslate2 sentencepiece sounddevice edge-tts miniaudio anthropic requests segno "paramiko>=3.4,<5" cryptography pyinstaller pillow pyclipper shapely six pytest
-          pip install pyobjc-core pyobjc-framework-Cocoa pyobjc-framework-Quartz pyobjc-framework-ScreenCaptureKit pyobjc-framework-CoreMedia pyobjc-framework-ApplicationServices pyobjc-framework-libdispatch
+          pip install pyobjc-core pyobjc-framework-Cocoa pyobjc-framework-Quartz pyobjc-framework-Vision pyobjc-framework-ScreenCaptureKit pyobjc-framework-CoreMedia pyobjc-framework-ApplicationServices pyobjc-framework-libdispatch
           pip install --no-deps rapidocr_onnxruntime
           pip install onnxruntime
 
@@ -79,7 +79,7 @@ jobs:
       - name: Testler
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m pytest -q tests/test_sahne_izleyici.py tests/test_kalite_zincir.py tests/test_bulanik_cevirmen.py tests/test_seslendirme.py tests/test_yardimci.py tests/test_remoteplay.py tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py tests/test_adb_native.py tests/test_samsung_direct.py tests/test_updater.py tests/test_harcama.py tests/test_tv_brands.py tests/test_auto.py
+        run: python -m pytest -q tests/test_ocr_vision.py tests/test_sahne_izleyici.py tests/test_kalite_zincir.py tests/test_bulanik_cevirmen.py tests/test_seslendirme.py tests/test_yardimci.py tests/test_remoteplay.py tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py tests/test_adb_native.py tests/test_samsung_direct.py tests/test_updater.py tests/test_harcama.py tests/test_tv_brands.py tests/test_auto.py
 
       - name: macOS platform denemesi (pencere listesi, Quartz, kısayol ayrıştırma)
         run: |
@@ -92,6 +92,39 @@ jobs:
           print("kısayol:", Hotkeys.parse_mac("ctrl+shift+9"))
           import ScreenCaptureKit, CoreMedia, Quartz, AppKit  # paketlenecek modüller yükleniyor mu
           print("pyobjc tamam")
+          PY
+
+      - name: Apple Vision yazı tanıma (gerçek Mac'te okuma ve hız)
+        run: |
+          python - <<'PY'
+          import time, cv2, numpy as np
+          from altyazi import ocr_vision
+          from altyazi.config import OcrCfg
+          from altyazi.ocr import make_recognizer
+          from altyazi.fullscreen import FullScreenReader
+          assert ocr_vision.available(), "Vision yüklenemedi"
+          rec = make_recognizer(OcrCfg())
+          print("tanıyıcı:", rec.device)
+          assert "Vision" in rec.device, rec.device
+          def line(text):
+              img = np.full((56, 1100, 3), 255, np.uint8)
+              cv2.putText(img, text, (10, 40), cv2.FONT_HERSHEY_DUPLEX, 1.25, (0, 0, 0), 2)
+              return img
+          a, b = "You said this would be easy, Lucia.", "I never said that. Get in the car!"
+          t = time.perf_counter(); out = rec.recognize([line(a), line(b)]); ms = (time.perf_counter() - t) * 1000
+          print(f"iki satır: {ms:.0f} ms ->", [(o.text, o.score) for o in out])
+          assert "lucia" in out[0].text.lower() and "car" in out[1].text.lower(), out
+          frame = np.full((1080, 1920, 3), 40, np.uint8)
+          cv2.putText(frame, "BUY FLOWERS FOR LUCIA", (1300, 300), cv2.FONT_HERSHEY_DUPLEX, 1.4, (255, 255, 255), 2)
+          cv2.putText(frame, "Meet me at the docks tonight", (200, 900), cv2.FONT_HERSHEY_DUPLEX, 1.4, (255, 255, 255), 2)
+          fs = FullScreenReader(min_score=0.5)
+          t = time.perf_counter(); lines = fs.read_lines(frame); ms = (time.perf_counter() - t) * 1000
+          print(f"tam ekran: {ms:.0f} ms ->", lines)
+          texts = " | ".join(t for t, _ in lines).lower()
+          assert fs.vision and "flowers" in texts and "docks" in texts, lines
+          box = next(b for t, b in lines if "docks" in t.lower())
+          assert 150 < box[0] < 260 and 850 < box[1] < 920, box          # koordinatlar piksel ve doğru yönde
+          print("Apple Vision tamam")
           PY
 
       - name: Simge, TV paketleri, hazır paketler

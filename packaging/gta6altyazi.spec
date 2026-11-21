@@ -45,7 +45,7 @@ hidden = collect_submodules("anthropic") + collect_submodules("paramiko") + coll
 if IS_WIN:
     hidden += ["windows_capture"]
 if IS_MAC:
-    hidden += ["Quartz", "AppKit", "Foundation", "ScreenCaptureKit", "CoreMedia", "ApplicationServices", "objc"]
+    hidden += ["Quartz", "Vision", "AppKit", "Foundation", "ScreenCaptureKit", "CoreMedia", "ApplicationServices", "objc"]
     try:
         import libdispatch  # noqa: F401
         hidden += ["libdispatch"]

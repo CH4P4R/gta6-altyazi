@@ -62,35 +62,51 @@ def useful(text: str) -> bool:
 
 
 class FullScreenReader:
-    def __init__(self, min_score: float = 0.6):
-        from rapidocr_onnxruntime import RapidOCR
+    """Mac'te Apple Vision (Neural Engine), olmazsa PP-OCR tespit + tanıma (rapidocr)."""
 
-        self.engine = RapidOCR()
+    def __init__(self, min_score: float = 0.6, motor: str = "otomatik"):
         self.min_score = min_score
+        self.vision = False
+        self.engine = None
+        if motor in ("otomatik", "vision"):
+            from . import ocr_vision
+
+            self.vision = ocr_vision.available()
+        if not self.vision:
+            from rapidocr_onnxruntime import RapidOCR
+
+            self.engine = RapidOCR()
+
+    def _raw(self, img: np.ndarray) -> list[tuple[str, float, tuple[float, float, float, float]]]:
+        img = np.ascontiguousarray(img[..., :3])
+        if self.vision:
+            from . import ocr_vision
+
+            try:
+                # Vision'ın güveni PP-OCR'dan farklı ölçekli: okunan her satır genelde 0.3-1.0; çok düşükleri at
+                return [(t, 1.0 if c >= 0.3 else c, b) for t, c, b in ocr_vision.read(img)]
+            except Exception as e:  # noqa: BLE001
+                log.warning("Apple Vision tam ekran okuyamadı, PP-OCR'a geçiliyor: %s", e)
+                from rapidocr_onnxruntime import RapidOCR
+
+                self.vision = False
+                self.engine = RapidOCR()
+        result, _ = self.engine(img, use_cls=False)
+        out = []
+        for box, text, score in result or []:
+            xs = [p[0] for p in box]
+            ys = [p[1] for p in box]
+            out.append((text, float(score), (float(min(xs)), float(min(ys)), float(max(xs)), float(max(ys)))))
+        return out
 
     def read_lines(self, img: np.ndarray) -> list[tuple[str, tuple[float, float, float, float]]]:
         """Tek tek satırlar: [(metin, (x0, y0, x1, y1) piksel)] (ekran yazıları izleyicisi kullanır)."""
-        result, _ = self.engine(np.ascontiguousarray(img[..., :3]), use_cls=False)
-        out = []
-        for box, text, score in result or []:
-            if float(score) < self.min_score or not text.strip():
-                continue
-            xs = [p[0] for p in box]
-            ys = [p[1] for p in box]
-            out.append((text.strip(), (float(min(xs)), float(min(ys)), float(max(xs)), float(max(ys)))))
-        return out
+        return [(t.strip(), b) for t, score, b in self._raw(img) if score >= self.min_score and t.strip()]
 
     def read(self, frame: np.ndarray) -> list[Block]:
         img = frame[..., :3]
         h, w = img.shape[:2]
-        result, _ = self.engine(np.ascontiguousarray(img), use_cls=False)
-        lines = []
-        for box, text, score in result or []:
-            if float(score) < self.min_score or not text.strip():
-                continue
-            xs = [p[0] for p in box]
-            ys = [p[1] for p in box]
-            lines.append(_Line(text.strip(), min(xs), min(ys), max(xs), max(ys)))
+        lines = [_Line(t.strip(), *b) for t, score, b in self._raw(img) if score >= self.min_score and t.strip()]
         blocks = []
         for group in group_lines(lines):
             text = " ".join(l.text for l in group)
