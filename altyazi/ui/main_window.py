@@ -701,6 +701,10 @@ class TranslationPage(QWidget):
         self.slang = QCheckBox("Argo düzeltme: \"gonna, ain't, homie\" gibi ifadeleri yerel modele düzgün İngilizce ver")
         self.slang.setChecked(c.argo_duzelt)
         fast.add(self.slang)
+        self.scene_cb = QCheckBox("Oyundaki telefonu, harita görev kartını ve gelen mesajları kendiliğinden çevir "
+                                  "(Türkçesi TV'de yanlarında çıkar)")
+        self.scene_cb.setChecked(c.ekran_yazilari)
+        fast.add(self.scene_cb)
         self.wait = QSpinBox()
         self.wait.setRange(0, 1500)
         self.wait.setSingleStep(50)
@@ -917,6 +921,7 @@ class TranslationPage(QWidget):
         c = cfg.ceviri
         c.hizli = self.fast.currentData()
         c.argo_duzelt = self.slang.isChecked()
+        c.ekran_yazilari = self.scene_cb.isChecked()
         c.kalite_bekleme_ms = self.wait.value()
         c.kalite = self.qual.currentData()
         c.claude_anahtar = self.key.text().strip()

@@ -93,6 +93,7 @@ class CeviriCfg:
     onbellek: str = "cache.sqlite"
     benzerlik: int = 92           # OCR küçük hata yapsa da önbellekten bulmak için (0-100)
     sozluk: dict[str, str] = field(default_factory=dict)  # zorunlu terimler: "Vice City": "Vice City"
+    ekran_yazilari: bool = True     # telefon, harita görev kartı ve telefona gelen mesajlar kendiliğinden çevrilsin (Nino)
 
 
 @dataclass

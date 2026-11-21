@@ -155,6 +155,7 @@ class EventServer:
                          "textColor": "white", "stackPrevious": True, "bottomPercent": 7, "backgroundShape": "fit",
                          "displayMode": "inApp"}
         self._screen: dict[str, dict] = {}
+        self._overlay: list[dict] = []   # telefon, harita kartı, mesaj kartı (sahne/izleyici.py); altyazıyı silmez
         self._sub_seq = -1
         self._tv_state: dict[str, str] = {}      # yeni bağlanan TV'ye gönderilecek son çerçeveler
 
@@ -197,8 +198,8 @@ class EventServer:
             self._tv_state[MAIN_ZONE] = f
         elif it.zone.startswith("tam"):
             self._screen[it.zone] = {"box": _box(it.rect), "line": round(it.line_h, 4), "text": it.text}
-            f = frame("screen", {"duration": self.screen_ms, "items": [self._screen[k] for k in sorted(self._screen)]})
-            self._tv_state["tam"] = f
+            self._send_screen_locked()
+            return
         else:
             data = {"id": it.zone, "text": it.text, "box": _box(it.rect), "line": round(it.line_h, 4)}
             if it.zone.startswith(MAIN_ZONE + "."):   # altyazı alanından ayrılan paragraf: altyazı gibi büyük ve örten
@@ -218,11 +219,33 @@ class EventServer:
             self._tv_send(frame("clear", {}))
         elif zone.startswith("tam"):
             if self._screen.pop(zone, None) is not None and not self._screen:
-                self._tv_state.pop("tam", None)
-                self._tv_send(frame("screen-clear", {}))
+                self._send_screen_locked()
         else:
             if self._tv_state.pop(zone, None) is not None:
                 self._tv_send(frame("region", {"id": zone, "text": ""}))
+
+    def set_overlay(self, items: list[dict]) -> None:
+        """Ekran yazılarının Türkçeleri (ScreenItem.to_json listesi); boş liste kaldırır."""
+        with self.lock:
+            if items == self._overlay:
+                return
+            self._overlay = list(items)
+            self._send_screen_locked()
+        self._broadcast({"type": "overlay", "items": items})
+
+    def _send_screen_locked(self) -> None:
+        """'Ekranı çevir' sonuçları ve ekran yazıları tek 'screen' olayında (TV öncekinin yerine bunları koyar)."""
+        shots = [self._screen[k] for k in sorted(self._screen)]
+        if shots:
+            f = frame("screen", {"duration": self.screen_ms, "items": shots + self._overlay})
+        elif self._overlay:
+            f = frame("screen", {"duration": 120000, "items": self._overlay, "overlay": True})
+        else:
+            self._tv_state.pop("tam", None)
+            self._tv_send(frame("screen-clear", {}))
+            return
+        self._tv_state["tam"] = f
+        self._tv_send(f)
 
     def _tv_send(self, f: str) -> None:
         with self.lock:

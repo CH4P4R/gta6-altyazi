@@ -65,6 +65,13 @@ class MultiSink:
         for s in self.sinks:
             s.clear(zone)
 
+    def overlay(self, items: list[dict]) -> None:
+        """Ekran yazılarının Türkçeleri (telefon, harita kartı, mesaj): yalnız destekleyen çıkışlara (TV sunucusu)."""
+        for s in self.sinks:
+            fn = getattr(s, "set_overlay", None)
+            if fn:
+                fn(items)
+
 
 _LETTER = re.compile(r"[A-Za-z]")
 
@@ -361,6 +368,31 @@ class Pipeline:
         self._fs_zones: list[str] = []
         self._fs_until = 0.0
         self._fs_busy = False
+        self.scene = None                      # ekran yazıları: telefon, harita kartı, mesaj kartı (sahne/izleyici.py)
+        if getattr(cfg.ceviri, "ekran_yazilari", False) and hasattr(engine, "translate_now"):
+            try:
+                self.scene = self._make_scene()
+            except Exception:  # noqa: BLE001
+                log.exception("Ekran yazıları izleyicisi açılamadı")
+
+    def _make_scene(self):  # noqa: ANN202
+        from .sahne.izleyici import SceneWatcher
+        holder: dict = {}
+
+        def read_lines(img):  # noqa: ANN001, ANN202
+            if "r" not in holder:                    # ilk kullanımda (model yüklemesi altyazıyı bekletmesin)
+                from .fullscreen import FullScreenReader
+                holder["r"] = FullScreenReader(min_score=0.5)
+            return holder["r"].read_lines(img)
+
+        def on_items(items) -> None:  # noqa: ANN001
+            if self._stopped:
+                return
+            overlay = getattr(self.sink, "overlay", None)
+            if overlay:
+                overlay([it.to_json() for it in items])
+
+        return SceneWatcher(read_lines, self.engine.translate_now, on_items, lookup=self.engine.lookup)
 
     # ------------------------------------------------------------------ yaşam döngüsü
     def start(self) -> None:
@@ -376,6 +408,11 @@ class Pipeline:
         with self._lock:          # durdurulduktan sonra gelen geç çeviriler ekrana basılmasın (TV'de takılı kalırdı)
             self._current.clear()
             self._seq += 1
+        if self.scene is not None:
+            self.scene.enabled = False
+            overlay = getattr(self.sink, "overlay", None)
+            if overlay:
+                overlay([])
         if self.source is not None:
             self.source.stop()
         with self._cond:
@@ -560,6 +597,8 @@ class Pipeline:
             self._clear_fullscreen()
         if self.paused:
             return
+        if self.scene is not None:
+            self.scene.offer(frame)
         h, w = frame.shape[:2]
         for zcfg, det in self.zones:
             x0, y0, x1, y1 = zone_rect(zcfg, w, h)
@@ -592,7 +631,12 @@ class Pipeline:
             keys = match_keys(zcfg.ad, prev, [(b[1], b[3]) for _, b in blocks])
             self._blocks[zcfg.ad] = {k: (b[1], b[3]) for k, (_, b) in zip(keys, blocks)}
             self._drop_keys([k for k in prev if k not in keys])
+            phone = self.scene.phone_box() if self.scene is not None else None
             for key, (text, (bx0, by0, bx1, by1)) in zip(keys, blocks):
+                if phone is not None and (self.scene.is_phone_text(text) or (
+                        phone.left < (x0 + bx1) / w and (x0 + bx0) / w < phone.right
+                        and phone.top < (y0 + by1) / h and (y0 + by0) / h < phone.bottom)):
+                    continue                      # telefondaki yazı altyazı değil: telefonun yanında çevriliyor
                 with self._lock:
                     cur = self._current.get(key)
                     if cur and (cur[1] == text or worse_reread(cur[1], text)):

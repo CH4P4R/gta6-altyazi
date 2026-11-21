@@ -68,6 +68,18 @@ class FullScreenReader:
         self.engine = RapidOCR()
         self.min_score = min_score
 
+    def read_lines(self, img: np.ndarray) -> list[tuple[str, tuple[float, float, float, float]]]:
+        """Tek tek satırlar: [(metin, (x0, y0, x1, y1) piksel)] (ekran yazıları izleyicisi kullanır)."""
+        result, _ = self.engine(np.ascontiguousarray(img[..., :3]), use_cls=False)
+        out = []
+        for box, text, score in result or []:
+            if float(score) < self.min_score or not text.strip():
+                continue
+            xs = [p[0] for p in box]
+            ys = [p[1] for p in box]
+            out.append((text.strip(), (float(min(xs)), float(min(ys)), float(max(xs)), float(max(ys)))))
+        return out
+
     def read(self, frame: np.ndarray) -> list[Block]:
         img = frame[..., :3]
         h, w = img.shape[:2]

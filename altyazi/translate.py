@@ -219,6 +219,7 @@ Output only the Turkish translation: no quotes, labels, notes or explanations.
 
 kind=subtitle (spoken dialogue): write natural, spoken, everyday Turkish the way a good Turkish fansub would. Keep the tone, slang, swearing, threats and humor as strong as the original; do not soften or censor. Keep it about as short as the English. Characters address each other with "sen" unless the scene is clearly formal.
 kind=ui (help boxes, notifications, objectives, menus): concise standard Turkish game-UI style; objectives in the imperative ("Araca bin.", "Lucia'yı takip et."). Keep button and control names exactly as written (X, O, L2, R1, Options, ~INPUT~ and similar).
+kind=message (phone text messages between characters): casual Turkish texting style. Keep the sender's tone, slang, abbreviations and ALL-CAPS shouting (in Turkish capitals), keep emojis and money signs ($$$). Short and natural, like a real Turkish text message ("Karavanıma! Anladın mı?").
 
 Never translate proper names: characters, gangs, places, businesses, brands, vehicles, weapons and radio stations stay as they are (Jason, Lucia, Vice City, Leonida, Port Gellhorn, Ambrosia, Grassrivers, Mount Kalaga...). Add Turkish suffixes with an apostrophe (Lucia'yla, Vice City'de).
 
@@ -273,10 +274,11 @@ def _required_terms(sozluk: dict[str, str]) -> str:
 def _user_message(text: str, kind: str, context: list[tuple[str, str]]) -> str:
     parts = []
     if context:
-        parts.append("Previous dialogue lines, for context only (do not translate again):")
-        parts += [f"EN: {en}\nTR: {tr}" for en, tr in context]
+        parts.append("Previous lines, for context only (do not translate again):")
+        parts += [f"EN: {en}\nTR: {tr}" if tr else f"EN: {en}" for en, tr in context]
         parts.append("")
-    parts.append(f"kind={'subtitle' if kind == 'altyazi' else 'ui'}")
+    label = {"altyazi": "subtitle", "mesaj": "message"}.get(kind, "ui")
+    parts.append(f"kind={label}")
     parts.append(f"<text>{text}</text>")
     return "\n".join(parts)
 
@@ -591,6 +593,42 @@ class TranslationEngine:
             on_result(Result(tr, "claude-görsel", (time.perf_counter() - t0) * 1000, REFINED))
 
         self.refine_pool.submit(run)
+
+    def lookup(self, text: str) -> str | None:
+        """Hazır paket ya da önbellekteki kaliteli çeviri (beklemeden); yoksa None."""
+        hit = self.packs.lookup(text)
+        if hit:
+            return hit[0]
+        cached = self.cache.get(text)
+        return cached[0] if cached and cached[1] >= REFINED else None
+
+    def translate_now(self, text: str, kind: str = "arayuz", context=None) -> str | None:  # noqa: ANN001
+        """Bekleyerek çevir (ekran yazıları için, arka plan iş parçacığında): paket → önbellek → kalite → hızlı."""
+        found = self.lookup(text)
+        if found:
+            return found
+        if self.refine:
+            try:
+                tr = self.refine.translate(text, kind, context or [])
+            except Exception as e:  # noqa: BLE001
+                log.warning("%s çeviri hatası: %s", self.refine.name, e)
+                tr = None
+            if tr:
+                tr = self._post(tr)
+                self.cache.put(text, tr, REFINED, self.refine.name)
+                return tr
+        cached = self.cache.get(text)
+        if cached:
+            return cached[0]
+        if self.fast:
+            try:
+                tr = self._post(self.fast.translate(slang.normalize(text) if self.cfg.argo_duzelt else text))
+            except Exception as e:  # noqa: BLE001
+                log.warning("Hızlı çeviri hatası: %s", e)
+                return None
+            self.cache.put(text, tr, FAST, self.fast.name)
+            return tr
+        return None
 
     def submit(self, text: str, kind: str, on_result: Callable[[Result], None], refine: bool = True) -> None:
         """Sonuçlar on_result ile (başka iş parçacığından) gelir: önce hızlı, sonra kaliteli."""
