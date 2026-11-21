@@ -737,7 +737,7 @@
   }
 
   // Bilgisayardaki "Yazı rengi" seçimi; bilinmeyen değer gelirse renk değişmez.
-  var TEXT_COLORS = { white: '#FFFFFF', yellow: '#FFE135' };
+  var TEXT_COLORS = { white: '#FFFFFF', yellow: '#FFE135', cyan: '#5CE1E6', green: '#7CF29A', orange: '#FFB347' };
 
   function applyStyle(style) {
     if (style.fontSize) {

@@ -1,29 +1,40 @@
-"""Ana pencere ve sayfalar."""
+"""Ana pencere ve sayfalar.
+
+Düzen GameTranslator, CouchSubs ve Nino Game Translator'dan esinlenir (solda gruplu menü, ortada büyük durum ve tek
+başlat düğmesi, PS5 / Bilgisayar / TV kartları, başlıklı ayar kartları, canlı önizlemeli altyazı görünümü); renkler ve
+kimlik bizim (Vice City gün batımı).
+"""
 
 from __future__ import annotations
 
+import json
 import sys
-
 import time
 import webbrowser
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QFont, QIcon
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QHeaderView,
-                               QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QPlainTextEdit, QSlider,
-                               QSpinBox, QStackedWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QHeaderView, QLineEdit,
+                               QListWidget, QListWidgetItem, QMainWindow, QPlainTextEdit, QSlider, QSpinBox,
+                               QStackedWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from .. import __version__
 from ..app import CHIAKI_DOWNLOAD, AppController, open_path
 from ..config import BolgeCfg
 from . import theme as T
+from .parcalar import (TEXT_COLORS, Backdrop, Chips, ColorDots, HelpFab, IconTile, Pill, RadioCard, RadioGroup,
+                       SectionCard, Segmented, SubtitlePreview, Toggle)
 from .region_editor import PRESETS, RegionCanvas
-from .widgets import (Card, FeedItem, Logo, NavButton, QrCode, Sparkline, StartButton, StatusCard, Toast, button,
-                      hbox, label, scroll_page, vbox)
+from .widgets import Card, Icon, Logo, NavButton, QrCode, Sparkline, Toast, button, hbox, label, scroll_page, vbox
+
+QCheckBox = Toggle          # bütün açma/kapama seçenekleri anahtar görünümünde
 
 
-def page_header(title: str, subtitle: str) -> QVBoxLayout:
-    return vbox(label(title, "h1"), label(subtitle, "muted", wrap=True), spacing=4)
+def page_header(title: str, subtitle: str, icon: str | None = None) -> QHBoxLayout:
+    col = vbox(label(title, "h1"), label(subtitle, "muted", wrap=True), spacing=4)
+    if not icon:
+        return hbox(col, spacing=0)
+    return hbox(IconTile(icon, 52), 4, col, spacing=14)
 
 
 def combo(items: list[tuple[str, str]], current: str) -> QComboBox:
@@ -49,20 +60,118 @@ def field(title: str, w: QWidget, hint: str = "") -> QVBoxLayout:
     return vbox(*items, spacing=6)
 
 
+def slider_row(title: str, s: QSlider, fmt) -> QVBoxLayout:  # noqa: ANN001
+    """Başlık solda, değer sağda (mavi yerine bizim turuncu), altında kaydırıcı (GameTranslator düzeni)."""
+    val = label("", "h3")
+    val.setStyleSheet(f"color:{T.A2};")
+    s.valueChanged.connect(lambda v: val.setText(fmt(v)))
+    val.setText(fmt(s.value()))
+    return vbox(hbox(label(title, "h3"), None, val), s, spacing=6)
+
+
+def page_shell(widget: QWidget, title: str, subtitle: str, icon: str | None = None, scroll: bool = True) -> QVBoxLayout:
+    """Sayfa iskeleti: ortalanmış, en çok 1180 px genişlikte içerik; uzun sayfalar kayar. İçerik düzenini döndürür."""
+    content = QWidget()
+    content.setObjectName("transparent")
+    outer = QHBoxLayout(content)
+    outer.setContentsMargins(36, 30, 36, 30)
+    col_w = QWidget()
+    col_w.setMaximumWidth(1180)
+    col = QVBoxLayout(col_w)
+    col.setContentsMargins(0, 0, 0, 0)
+    col.setSpacing(16)
+    col.addLayout(page_header(title, subtitle, icon))
+    col.addSpacing(4)
+    outer.addStretch(0)
+    outer.addWidget(col_w, 1)
+    outer.addStretch(0)
+    lay = QVBoxLayout(widget)
+    lay.setContentsMargins(0, 0, 0, 0)
+    lay.addWidget(scroll_page(content) if scroll else content)
+    return col
+
+
+def _transparent(w: QWidget) -> QWidget:
+    """Sayfa zemini boyanmasın (arkadaki ışıltı görünsün). Biçim alt öğelere geçmesin diye yalnız kendi adına yazılır."""
+    if not w.objectName():
+        w.setObjectName("clear")
+    w.setStyleSheet(f"#{w.objectName()} {{ background: transparent; }}")
+    return w
+
+
 # ============================================================================ Ana ekran
+class _DeviceCard(Card):
+    """PS5 / Bilgisayar / TV kartı: ikon ve durum etiketi üstte, büyük başlık, açıklama, altta eylem."""
+
+    def __init__(self, icon: str, title: str, action: str | None = None, slot=None):  # noqa: ANN001
+        super().__init__(margins=20, spacing=6)
+        self.icon = Icon(icon, 28, T.A2)
+        self.pill = Pill("", "off")
+        self.add(hbox(self.icon, None, self.pill))
+        self.add(6)
+        self.title = label(title, "h2")
+        self.title.setStyleSheet("font-size: 17pt;")
+        self.add(self.title)
+        self.status = label("", "muted", wrap=True)
+        self.status.setMinimumHeight(38)
+        self.status.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.add(self.status)
+        self.action = None
+        if action:
+            self.action = button(action, "link", slot)
+            self.add(hbox(self.action, None))
+        self.setMinimumWidth(220)
+
+    def add(self, w, stretch: int = 0):  # noqa: ANN001
+        if isinstance(w, int):
+            self.lay.addSpacing(w)
+            return w
+        return super().add(w, stretch)
+
+    def set(self, state: str, pill: str, text: str) -> None:
+        self.pill.set(state, pill)
+        self.status.setText(text)
+
+
+class _LiveRow(QFrame):
+    """Son çeviri kartındaki eski satır: Türkçe üstte, İngilizcesi altta (CouchSubs canlı altyazı)."""
+
+    def __init__(self, it):  # noqa: ANN001
+        super().__init__()
+        self.seq = it.seq
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 10, 0, 10)
+        lay.setSpacing(2)
+        self.tr = label("", "prevTr", wrap=True)
+        self.en = label("", "faint", wrap=True)
+        lay.addWidget(self.tr)
+        lay.addWidget(self.en)
+        self.setStyleSheet(f"QFrame {{ border-top: 1px solid {T.BORDER}; }} QLabel {{ border: 0; }}")
+        self.update_item(it)
+
+    def update_item(self, it) -> None:  # noqa: ANN001
+        self.tr.setText(it.text)
+        self.en.setText(it.english)
+
+
 class HomePage(QWidget):
     def __init__(self, ctl: AppController):
         super().__init__()
         self.ctl = ctl
-        root = QVBoxLayout(self)
-        root.setContentsMargins(32, 28, 32, 24)
+        _transparent(self)
+        outer = QHBoxLayout(self)
+        outer.setContentsMargins(36, 26, 36, 24)
+        col_w = QWidget()
+        col_w.setMaximumWidth(1120)
+        root = QVBoxLayout(col_w)
+        root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(18)
-        self.sub = label("Motorlar hazırlanıyor...", "muted")
-        root.addLayout(vbox(label("Ana ekran", "h1"), self.sub, spacing=4))
+        outer.addStretch(1)
+        outer.addWidget(col_w, 30)
+        outer.addStretch(1)
 
         # --- güncelleme kartı (yeni sürüm varsa görünür)
-        self.upd = Card(margins=14)
-        self.upd.setStyleSheet(f"#card {{ border: 2px solid {T.A1}; }}")
+        self.upd = SectionCard(accent=True, margins=14)
         self.upd_title = label("", "h3")
         self.upd_text = label("Tek tıkla indirilir ve kurulur; ayarların, anahtarların ve paketlerin korunur. "
                               "Program kapanıp yeni sürümle yeniden açılır.", "muted", wrap=True)
@@ -73,71 +182,109 @@ class HomePage(QWidget):
         ctl.updateAvailable.connect(self._on_update)
         ctl.updateProgress.connect(self._on_update_progress)
 
-        # --- kahraman kartı
-        hero = Card(margins=22)
-        self.start = StartButton()
-        self.start.clicked.connect(ctl.toggle)
-        self.state_title = label("Hazırlanıyor", "stateTitle")
-        self.state_hint = label("Çeviri modelleri ve OCR yükleniyor.", "muted", wrap=True)
+        # --- kahraman: büyük durum, tek düğme (GameTranslator)
+        self.sub = label("", "eyebrow")                     # eski testler/araçlar için: kısa durum
+        self.sub.setAlignment(Qt.AlignCenter)
+        self.state_title = label("Hazırlanıyor", "heroTitle")
+        self.state_title.setAlignment(Qt.AlignCenter)
+        self.state_hint = label("Çeviri modelleri ve yazı okuyucu yükleniyor.", "heroSub", wrap=True)
+        self.state_hint.setAlignment(Qt.AlignCenter)
+        self.start = button("▶  Çeviriyi Başlat", "primaryBig", ctl.toggle)
+        self.start.setMinimumWidth(230)
+        how = button("Nasıl çalışır ›", "linkBig", lambda: self.window().go("guide"))
+        self.stats = label("", "stat")
+        self.stats.setAlignment(Qt.AlignCenter)
         keys = ctl.cfg.kisayol
-        self.keys_hint = label(f"Kısayollar: {keys.tam_ekran.upper()} ekranı çevir · {keys.duraklat.upper()} duraklat",
+        self.keys_hint = label(f"Kısayol: {keys.tam_ekran.upper()} ekranı çevir · {keys.duraklat.upper()} duraklat",
                                "faint")
-        left = vbox(self.state_title, self.state_hint, 6, self.keys_hint, None, spacing=4)
-        self.lat = label("—", "big")
-        self.lat_sub = label("ortalama gecikme", "faint")
+        self.keys_hint.setAlignment(Qt.AlignCenter)
+        root.addSpacing(8)
+        root.addWidget(self.sub)
+        root.addWidget(self.state_title)
+        root.addWidget(self.state_hint)
+        root.addSpacing(6)
+        root.addLayout(hbox(None, self.start, 6, how, None, spacing=8))
+        root.addWidget(self.stats)
+        # gecikme ve Claude harcaması (kalite katmanı Claude ise)
+        self.lat = label("—", "h3")
         self.spark = Sparkline()
-        self.spark.setFixedWidth(210)
-        # Claude harcama sayacı (kalite katmanı Claude ise görünür)
-        self.spend = label("", "muted")
+        self.spark.setFixedSize(150, 30)
+        self.spend = label("", "faint")
         self.spend_sub = label("", "faint")
         tip = ("Claude'un her yanıtta bildirdiği token sayısı × Anthropic liste fiyatı. Önbellekten ve hazır paketten\n"
                "gelen çeviriler ücretsizdir. Kesin fatura: console.anthropic.com › Billing.")
         self.spend.setToolTip(tip)
         self.spend_sub.setToolTip(tip)
-        self.spend_box = vbox(8, self.spend, self.spend_sub, spacing=0)
-        right = vbox(hbox(self.lat, label("ms", "muted"), None, spacing=4), self.lat_sub, self.spark,
-                     self.spend_box, spacing=2)
-        hero.add(hbox(self.start, 18, left, None, right, spacing=10))
-        root.addWidget(hero)
+        root.addLayout(hbox(None, label("Ortalama gecikme", "faint"), self.lat, label("ms", "faint"), self.spark,
+                            12, vbox(self.spend, self.spend_sub, spacing=0), None, spacing=6))
+        root.addSpacing(4)
 
-        # --- durum kartları
+        # --- PS5 / Bilgisayar / TV kartları
         grid = QGridLayout()
-        grid.setSpacing(14)
-        self.c_ps = StatusCard("ps", "PS5", "chiaki-ng'yi aç", self._ps_action)
-        self.tv_play_btn = button("TV'de oynuyorum (chiaki'siz)", None, self._open_ps5,
+        grid.setSpacing(16)
+        self.c_ps = _DeviceCard("ps", "PS5", "PS5'i bağla ›", self._ps_action)
+        self.c_pc = _DeviceCard("monitor", "Bilgisayar", "Çeviri ayarları ›", lambda: self.window().go("translate"))
+        self.c_tv = _DeviceCard("tv", "TV", "TV'yi bağla ›", lambda: self.window().go("tv"))
+        self.c_eng = self.c_pc                                 # eski ad
+        self.tv_play_btn = button("TV'de oynuyorum (chiaki'siz) ›", "link", self._open_ps5,
                                   "Oyunu TV'de oynarsın; bilgisayar PS5'e arka planda ikinci hesapla bağlanır")
-        self.c_ps.add(self.tv_play_btn)
-        self.c_tv = StatusCard("tv", "Televizyon", "TV'yi bağla", lambda: self.window().go("tv"))
-        self.c_eng = StatusCard("bolt", "Çeviri motoru")
-        phone = Card(margins=16, spacing=6)
-        self.qr = QrCode(96)
-        self.qr.setData(ctl.server_url("kumanda"))
-        phone_text = vbox(hbox(label("Telefon kumandası", "h3"), None),
-                          label("Telefonla okut: ekranı çevir, duraklat ve son altyazılar.", "muted", wrap=True),
-                          label(ctl.server_url("kumanda").replace("http://", ""), "faint", wrap=True), None, spacing=4)
-        phone.add(hbox(phone_text, self.qr, spacing=12))
-        for i, w in enumerate((self.c_ps, self.c_tv, self.c_eng, phone)):
+        self.c_ps.add(hbox(self.tv_play_btn, None))
+        self.tv_play_btn.hide()
+        for i, w in enumerate((self.c_ps, self.c_pc, self.c_tv)):
             grid.addWidget(w, 0, i)
             grid.setColumnStretch(i, 1)
         root.addLayout(grid)
 
-        # --- canlı akış
-        feed = Card(margins=18, spacing=10)
+        # --- son çeviri (CouchSubs canlı altyazı) + telefon/ikinci ekran
+        bottom = QHBoxLayout()
+        bottom.setSpacing(16)
+        feed = Card(margins=20, spacing=6)
         self.fs_btn = button("Ekranı çevir", None, lambda: ctl.command("tam_ekran"),
                              "Telefon, menü, harita gibi ekrandaki tüm yazıları çevir")
         self.pause_btn = button("Duraklat", None, self._pause)
-        feed.add(hbox(label("Canlı çeviriler", "h2"), None, self.fs_btn, self.pause_btn, spacing=8))
-        self.empty = label("Çeviri başlayınca oyundaki yazılar burada İngilizce → Türkçe olarak akacak.", "muted",
-                           wrap=True)
+        feed.add(hbox(label("Son çeviri", "h3"), None, self.fs_btn, self.pause_btn, spacing=8))
+        self.empty = label("Oyunda altyazı çıkınca çevirisi burada ve TV'de görünür.", "liveEn", wrap=True)
+        self.empty.setStyleSheet("font-size: 15pt;")
+        self.live_tr = label("", "liveTr", wrap=True)
+        self.live_en = label("", "liveEn", wrap=True)
+        self.live_meta = label("", "faint")
+        for w in (self.live_tr, self.live_en, self.live_meta):
+            w.hide()
+        feed.add(self.empty)
+        feed.add(self.live_tr)
+        feed.add(self.live_en)
+        feed.add(self.live_meta)
         self.list_w = QWidget()
+        _transparent(self.list_w)
         self.list_l = QVBoxLayout(self.list_w)
-        self.list_l.setContentsMargins(0, 0, 4, 0)
-        self.list_l.setSpacing(8)
-        self.list_l.addWidget(self.empty)
+        self.list_l.setContentsMargins(0, 6, 4, 0)
+        self.list_l.setSpacing(0)
         self.list_l.addStretch(1)
         feed.add(scroll_page(self.list_w), 1)
-        root.addWidget(feed, 1)
-        self.items: dict[int, FeedItem] = {}
+        self.game_link = button("Oyun: Otomatik ›", "link", lambda: self.window().go("translate"))
+        self.zone_link = button("Okunan yer: Otomatik ›", "link", lambda: self.window().go("regions"))
+        look = button("TV'deki görünüm ›", "link", lambda: self.window().go("look"))
+        line = QFrame()
+        line.setFixedHeight(1)
+        line.setStyleSheet(f"background:{T.BORDER};")
+        feed.add(line)
+        feed.add(hbox(self.game_link, 18, self.zone_link, 18, look, None, spacing=0))
+        bottom.addWidget(feed, 2)
+
+        phone = Card(margins=20, spacing=8)
+        self.qr = QrCode(132)
+        self.qr.setData(ctl.server_url("kumanda"))
+        phone.add(label("Telefon kumandası", "h3"))
+        phone.add(label("Telefonun kamerasıyla okut: ekranı çevir, duraklat, son altyazılar. TV yoksa ikinci ekran "
+                        "olur.", "muted", wrap=True))
+        phone.add(hbox(None, self.qr, None))
+        phone.add(label(ctl.server_url("kumanda").replace("http://", ""), "mono", wrap=True))
+        phone.lay.addStretch(1)
+        phone.setMaximumWidth(330)
+        bottom.addWidget(phone, 1)
+        root.addLayout(bottom, 1)
+        self.items: dict[int, object] = {}
+        self._live_seq = None
 
         ctl.stateChanged.connect(self.on_state)
         ctl.historyChanged.connect(self.on_item)
@@ -149,54 +296,113 @@ class HomePage(QWidget):
         self._spend_timer = QTimer(self)               # saatlik ortalama zamanla değişir
         self._spend_timer.timeout.connect(self.on_spend)
         self._spend_timer.start(30000)
+        self._links = QTimer(self)
+        self._links.timeout.connect(self._refresh_links)
+        self._links.start(3000)
         self.on_spend()
         self.on_state(ctl.state)
         self.on_tv(*ctl.tv_state)
+        self._ps_initial()
         if ctl.engine_info:
             self.on_engines(ctl.engine_info)
+        self._refresh_links()
 
+    # --------------------------------------------------------------- durum
     def _pause(self) -> None:
         r = self.ctl.command("duraklat")
         self.pause_btn.setText("Devam et" if r.get("duraklatildi") and self.ctl.pipe else "Duraklat")
 
+    def _rp(self) -> bool:
+        k = self.ctl.cfg.kaynak
+        return k.tur == "remoteplay" or (k.tur == "pencere" and k.oyun_yeri == "tv")
+
     def on_state(self, s: str) -> None:
+        rp = self.ctl.cfg.kaynak.tur == "remoteplay"
         texts = {
-            "hazirlaniyor": ("Hazırlanıyor", "Çeviri modelleri ve OCR yükleniyor, birkaç saniye sürer.", "Motorlar hazırlanıyor..."),
-            "hazir": ("Çeviriyi başlat", "Başlat'a bas; PS5'e arka planda bağlanılır." if
-                      self.ctl.cfg.kaynak.tur == "remoteplay" else
-                      "chiaki-ng'de PS5'e bağlandıysan başlat düğmesine bas.", "Hazır"),
-            "calisiyor": ("Çeviri açık", "Oyundaki yazılar okunuyor ve çevriliyor. Durdurmak için tekrar bas.",
-                          "Çeviri çalışıyor"),
-            "hata": ("Bir sorun var", "Motorlar yüklenemedi. Çeviri sayfasından ayarları kontrol et.", "Hata"),
+            "hazirlaniyor": ("Hazırlanıyor…", "Çeviri modelleri ve yazı okuyucu yükleniyor, birkaç saniye sürer.",
+                             "MOTORLAR HAZIRLANIYOR"),
+            "hazir": ("Çeviri kapalı.", "Oyunda altyazıları aç, sonra başlat." + (" PS5'e arka planda bağlanılır."
+                                                                                   if rp else ""), "HAZIR"),
+            "calisiyor": ("Çeviri açık.", "Oyundaki yazılar okunuyor ve Türkçesi TV'ye gidiyor.", "ÇEVİRİ ÇALIŞIYOR"),
+            "hata": ("Bir sorun var", "Motorlar yüklenemedi. Çeviri ve Paketler sayfasından ayarları kontrol et.",
+                     "HATA"),
         }
         t, h, sub = texts.get(s, (s, "", s))
         self.state_title.setText(t)
         self.state_hint.setText(h)
         self.sub.setText(sub)
-        self.start.setRunning(s == "calisiyor")
-        self.start.setEnabledLook(s in ("hazir", "calisiyor"))
-        self.fs_btn.setEnabled(s == "calisiyor")
-        self.pause_btn.setEnabled(s == "calisiyor")
-        if s != "calisiyor":
+        running = s == "calisiyor"
+        self.start.setObjectName("stopBig" if running else "primaryBig")
+        self.start.setText("■  Çeviriyi Durdur" if running else "▶  Çeviriyi Başlat")
+        self.start.style().unpolish(self.start)
+        self.start.style().polish(self.start)
+        self.start.setEnabled(s in ("hazir", "calisiyor"))
+        self.fs_btn.setEnabled(running)
+        self.pause_btn.setEnabled(running)
+        if not running:
             self.pause_btn.setText("Duraklat")
+        pc = {"hazirlaniyor": ("warn", "Hazırlanıyor"), "hazir": ("info", "Hazır"), "calisiyor": ("ok", "Çeviriyor"),
+              "hata": ("bad", "Hata")}.get(s, ("off", s))
+        self.c_pc.pill.set(*pc)
+        self._pc_text()
+
+    def _pc_text(self) -> None:
+        info = self.ctl.engine_info or {}
+        parts = ["Altyazıları okuyup çevirir."]
+        if info:
+            eng = info.get("kalite") or info.get("hizli") or "—"
+            parts.append(f"Okuma: {info.get('ocr', '…')}\nÇeviri: {eng}")
+        self.c_pc.status.setText("\n".join(parts))
 
     def on_item(self, it, updated: bool) -> None:  # noqa: ANN001
         if self.empty.isVisible():
             self.empty.hide()
-        if updated and it.seq in self.items:
+            for w in (self.live_tr, self.live_en, self.live_meta):
+                w.show()
+        if updated and self._live_seq == it.seq:
+            self._show_live(it)
+        elif updated and it.seq in self.items:
             self.items[it.seq].update_item(it)
-        else:
-            w = FeedItem(it)
-            self.items[it.seq] = w
-            self.list_l.insertWidget(0, w)
-            while len(self.items) > 40:
-                old = min(self.items)
-                self.items.pop(old).deleteLater()
+        elif not updated:
+            prev = getattr(self, "_live_item", None)
+            if prev is not None:
+                w = _LiveRow(prev)
+                self.items[prev.seq] = w
+                self.list_l.insertWidget(0, w)
+                while len(self.items) > 40:
+                    old = min(self.items)
+                    self.items.pop(old).deleteLater()
+            self._show_live(it)
+        if not updated:
+            self.items.setdefault(it.seq, _NullRow())
         avg = self.ctl.avg_latency()
         if avg is not None:
             self.lat.setText(f"{avg:.0f}")
         if not updated:
             self.spark.push(it.latency_ms)
+
+    def _show_live(self, it) -> None:  # noqa: ANN001
+        self._live_seq = it.seq
+        self._live_item = it
+        self.live_tr.setText(it.text)
+        self.live_en.setText(it.english)
+        q = "✓ " if it.quality >= 2 else ""
+        self.live_meta.setText(f"{q}Okuma {it.ocr_ms:.0f} ms · Çeviri {it.mt_ms:.0f} ms · Gecikme {it.latency_ms:.0f} ms"
+                               f" · {it.source}")
+
+    def _refresh_links(self) -> None:
+        try:
+            g = self.ctl.game_choice.game
+            name = (g.name if g else None) or "Otomatik"
+        except Exception:  # noqa: BLE001
+            name = "Otomatik"
+        self.game_link.setText(f"Oyun: {name} ›")
+        learned = False
+        try:
+            learned = bool(self.ctl.layout.get(self.ctl.layout_key()))
+        except Exception:  # noqa: BLE001
+            learned = False
+        self.zone_link.setText(f"Okunan yer: {'Öğrenildi' if learned else 'Otomatik'} ›")
 
     def _on_update(self, rel: dict) -> None:
         size = rel.get("size", 0) / 1e9
@@ -217,8 +423,9 @@ class HomePage(QWidget):
         else:
             self.upd_btn.setText(f"İndiriliyor %{int(f * 100)}")
 
+    # --------------------------------------------------------------- PS5
     def _ps_action(self) -> None:
-        if self.ctl.cfg.kaynak.tur == "remoteplay":
+        if self._rp():
             self._open_ps5()
         else:
             self.ctl.launch_chiaki()
@@ -227,52 +434,81 @@ class HomePage(QWidget):
         from .ps5_dialog import Ps5Dialog
         Ps5Dialog(self.ctl, self).exec()
         self.ctl._check_source()
+        self._ps_initial()
+
+    def _ps_initial(self) -> None:
+        """Açılışta ve eşleme sonrası: TV'de oynayan için chiaki'den hiç söz etme."""
+        p = self.ctl.cfg.ps5
+        if self.ctl.cfg.kaynak.tur == "remoteplay" and p.anahtar:
+            state, msg = getattr(self.ctl, "rp_state", ("", ""))
+            if state:
+                self.on_ps5(state, msg)
+            else:
+                self.c_ps.set("ok", "Eşleşti", f"{p.ad or 'PS5'} · {p.ip}".strip(" ·"))
+                self.c_ps.action.setText("PS5 ayarları ›")
+        elif self._rp():
+            self.c_ps.set("off", "Eşli değil", "Bir kez bağla: ikinci PSN hesabıyla giriş ve PS5'teki 8 haneli kod.")
+            self.c_ps.action.setText("PS5'i bağla ›")
 
     def on_ps5(self, state: str, msg: str) -> None:
         if self.ctl.cfg.kaynak.tur != "remoteplay":
             return
         self.tv_play_btn.hide()
-        self.c_ps.action.show()
-        self.c_ps.action.setEnabled(True)
-        if state == "yok":
-            self.c_ps.set("off", "PS5 eşli değil. Bir kez bağla: ikinci PSN hesabıyla giriş ve PS5'teki 8 haneli kod.")
-            self.c_ps.action.setText("PS5'i bağla")
+        p = self.ctl.cfg.ps5
+        if state == "yok" or not p.anahtar:
+            self.c_ps.set("off", "Eşli değil", "Bir kez bağla: ikinci PSN hesabıyla giriş ve PS5'teki 8 haneli kod.")
+            self.c_ps.action.setText("PS5'i bağla ›")
             return
-        self.c_ps.set({"bagli": "ok", "baglaniyor": "warn", "kopuk": "bad"}.get(state, "off"), msg)
-        self.c_ps.action.setText("PS5 ayarları")
+        pill = {"bagli": ("ok", "Bağlı"), "baglaniyor": ("warn", "Bağlanıyor"), "kopuk": ("bad", "Koptu"),
+                "durdu": ("ok", "Eşleşti")}.get(state, ("ok", "Eşleşti"))
+        self.c_ps.set(pill[0], pill[1], msg or f"{p.ad or 'PS5'} · {p.ip}".strip(" ·"))
+        self.c_ps.action.setText("PS5 ayarları ›")
 
     def on_source(self, ok: bool, title: str) -> None:
-        if self.ctl.cfg.kaynak.tur == "remoteplay":
+        k = self.ctl.cfg.kaynak
+        if k.tur == "remoteplay":
             return
-        self.tv_play_btn.setVisible(self.ctl.cfg.kaynak.tur == "pencere" and not ok)
-        if self.ctl.cfg.kaynak.tur != "pencere":
-            self.c_ps.set("ok", f"Kaynak: {title}")
+        if k.tur != "pencere":
+            self.c_ps.set("ok", "Hazır", f"Kaynak: {title}")
             self.c_ps.action.hide()
             return
         self.c_ps.action.show()
+        if k.oyun_yeri == "tv":                        # TV'de oynayan: chiaki yok, PS5'e arka planda bağlan
+            self._ps_initial()
+            return
+        self.tv_play_btn.setVisible(not ok)
         if ok:
-            self.c_ps.set("ok", f"Pencere bulundu: {title}")
+            self.c_ps.set("ok", "Açık", f"Pencere bulundu: {title}")
             self.c_ps.action.setText("chiaki-ng açık")
             self.c_ps.action.setEnabled(False)
         else:
-            self.c_ps.set("off", "chiaki-ng penceresi açık değil. Aç ve PS5'e ikinci hesapla bağlan.")
-            self.c_ps.action.setText("chiaki-ng'yi aç")
+            self.c_ps.set("off", "Kapalı", "chiaki-ng penceresi açık değil. Aç ve PS5'e ikinci hesapla bağlan.")
+            self.c_ps.action.setText("chiaki-ng'yi aç ›")
             self.c_ps.action.setEnabled(True)
 
+    # --------------------------------------------------------------- TV, motorlar, harcama
     def on_tv(self, state: str, msg: str) -> None:
-        dot = {"bagli": "ok", "baglaniyor": "warn", "onay": "info", "hata": "bad"}.get(state, "off")
+        brand = {"android": "Android TV", "lg": "LG webOS", "samsung": "Samsung Tizen"}.get(self.ctl.cfg.tv.marka, "TV")
+        dot, pill = {"bagli": ("ok", "Bağlı"), "baglaniyor": ("warn", "Bağlanıyor"), "onay": ("info", "Onay bekliyor"),
+                     "hata": ("bad", "Hata")}.get(state, ("off", "Bağlı değil"))
         if state == "yok" or (state == "" and not msg):
-            msg = "Kurulmadı. TV'de de Türkçe görmek için bağla." if not self.ctl.cfg.tv.ip else \
-                f"{self.ctl.cfg.tv.ip} · çeviri başlayınca bağlanır"
-        self.c_tv.set(dot, msg)
-        self.c_tv.action.setText("TV ayarları" if state == "bagli" else "TV'yi bağla")
+            msg = "Kurulmadı. Türkçe TV'de oyunun üstünde çıksın diye bağla." if not self.ctl.cfg.tv.ip else \
+                f"{brand} · {self.ctl.cfg.tv.ip} · çeviri başlayınca bağlanır"
+        self.c_tv.set(dot, pill, msg)
+        self.c_tv.action.setText("TV ayarları ›" if state == "bagli" else "TV'yi bağla ›")
 
     def on_engines(self, info: dict) -> None:
-        parts = [f"OCR: {info.get('ocr')}"]
-        parts.append(f"Hızlı: {info['hizli']}" if info.get("hizli") else "Hızlı katman yok")
-        parts.append(f"Kalite: {info['kalite']}" if info.get("kalite") else "Kalite katmanı kapalı")
         ok = bool(info.get("hizli") or info.get("kalite"))
-        self.c_eng.set("ok" if ok else "bad", "\n".join(parts))
+        tip = [f"Yazı okuma: {info.get('ocr')}",
+               f"Hızlı çeviri: {info['hizli']}" if info.get("hizli") else "Hızlı katman yok",
+               f"Kalite: {info['kalite']}" if info.get("kalite") else "Kalite katmanı kapalı"]
+        self.c_pc.setToolTip("\n".join(tip))
+        if not ok:
+            self.c_pc.pill.set("bad", "Çeviri yok")
+        self._pc_text()
+        self.stats.setText(f"Okuma: {info.get('ocr', '…')}  ·  Çeviri: "
+                           f"{' + '.join(x for x in (info.get('hizli'), info.get('kalite')) if x) or 'yok'}  ·  "
+                           f"Hazır paket: {info.get('paket', 0):,} satır".replace(",", "."))
         self.on_spend()
 
     def on_spend(self) -> None:
@@ -288,36 +524,193 @@ class HomePage(QWidget):
         self.spend_sub.setText(f"Bu ay {money(tracker.month())} · toplam {money(tracker.total)}")
 
 
-# ============================================================================ Alanlar
+class _NullRow:
+    """Canlı satır (henüz listeye inmemiş) için yer tutucu; testler items'ta seq görmek ister."""
+
+    def update_item(self, _it) -> None:  # noqa: ANN001
+        pass
+
+    def deleteLater(self) -> None:  # noqa: N802
+        pass
+
+
+# ============================================================================ Altyazı görünümü
+class AppearancePage(QWidget):
+    """TV'deki ve bilgisayar ekranındaki altyazının görünümü: canlı önizleme, renk, boyut, zemin, yer (GameTranslator /
+    CouchSubs). Değişiklik anında kaydedilir ve TV'ye gider."""
+
+    PLACES = [("cover", "İngilizce altyazının üstünü örtsün"), ("above", "İngilizce altyazının üstünde"),
+              ("below", "İngilizce altyazının altında"), ("fixed", "Sabit yerde (alttan yükseklik)")]
+
+    def __init__(self, ctl: AppController):
+        super().__init__()
+        self.ctl = ctl
+        _transparent(self)
+        root = page_shell(self, "Altyazı görünümü", "TV'nin ve bilgisayar ekranının ayarları ayrıdır. Değiştirdiğin "
+                          "anda kaydedilir; TV bağlıysa hemen orada da görürsün.", "translate")
+        t = ctl.cfg.tv
+        main = self._main_zone()
+        self.target = Segmented([("tv", "TV"), ("pc", "Bilgisayar ekranı")], "tv")
+        self.target.setMaximumWidth(380)
+        self.target.changed.connect(self._target)
+        root.addLayout(hbox(self.target, None))
+
+        prev = SectionCard(margins=16)
+        self.preview = SubtitlePreview()
+        self.preview.setMinimumHeight(260)
+        self.preview.setMaximumHeight(360)
+        prev.add(hbox(label("CANLI ÖNİZLEME", "eyebrow"), None, label("1920 × 1080 (16:9)", "faint")))
+        prev.add(self.preview)
+        root.addWidget(prev)
+
+        # --- TV ayarları
+        self.tv_box = SectionCard("TV'de", "LG, Samsung ve Android TV uygulamasında.", "tv")
+        self.colors = ColorDots(TEXT_COLORS, t.yazi_rengi)
+        self.size = slider(28, 96, int(t.yazi_boyutu))
+        self.scale = slider(80, 200, int((main.yazi_olcek if main else 1.3) * 100))
+        self.bg = slider(0, 100, round((main.kutu_opaklik if main else 255) / 255 * 100))
+        self.bottom = slider(0, 40, int(t.alttan))
+        self.place = combo(self.PLACES, t.yerlesim)
+        self.shape = combo([("fit", "Yazı kadar"), ("band", "Tam genişlik bant")], t.zemin_sekli)
+        self.bold = QCheckBox("Kalın yazı", t.kalin)
+        self.stack = QCheckBox("Hızlı konuşmada önceki satırları üstte göster", t.onceki_satirlar)
+        self.tv_box.add(field("Yazı rengi", self.colors))
+        g = QGridLayout()
+        g.setHorizontalSpacing(28)
+        g.setVerticalSpacing(14)
+        self.size_row = slider_row("Yazı boyutu (sabit yerde)", self.size, lambda v: f"{v} px")
+        g.addLayout(slider_row("Yazı boyutu (İngilizceye göre)", self.scale, lambda v: f"{v / 100:.2f}×"), 0, 0)
+        g.addLayout(slider_row("Arka plan koyuluğu", self.bg, lambda v: f"%{v}"), 0, 1)
+        g.addLayout(self.size_row, 1, 0)
+        g.addLayout(slider_row("Ekran konumu (alttan yükseklik)", self.bottom, lambda v: f"%{v}"), 1, 1)
+        g.addLayout(field("Yeri", self.place), 2, 0)
+        g.addLayout(field("Arka plan alanı", self.shape, "Koyuluk %100'de oyundaki İngilizce yazı tamamen kapanır."), 2, 1)
+        self.tv_box.add(g)
+        self.tv_box.add(hbox(self.bold, 24, self.stack, None))
+        self.mode = Segmented([("otomatik", "Otomatik"), ("hdmi", "Uygulama içinde"), ("katman", "Katman")],
+                              ctl.cfg.tv.mod)
+        self.mode.setMaximumWidth(460)
+        self.tv_box.add(field("Android TV görüntü modu", self.mode,
+                              "Android TV uygulamasında görüntü siyah kalıyorsa ya da TV kendiliğinden PS5'in girişine "
+                              "geçiyorsa Katman'ı seç: TV, PS5'i kendi HDMI girişinde gösterir, altyazı üstünde çıkar. "
+                              "LG ve Samsung'da bu ayarın etkisi yok."))
+        self.test_btn = button("TV'ye deneme gönder", "primary", ctl.tv_test)
+        self.tv_box.add(hbox(self.test_btn, None))
+        root.addWidget(self.tv_box)
+
+        # --- bilgisayar ekranı ayarları
+        g = ctl.cfg.gosterim
+        self.pc_box = SectionCard("Bilgisayar ekranında", "Remote Play / chiaki penceresinin üstündeki katman ya da "
+                                  "capture kart penceresi.", "monitor")
+        self.pc_mode = combo([("overlay", "Oyun penceresinin üstüne katman (önerilen)"),
+                              ("pencere", "Görüntüyü kendi penceresinde göster (capture kart)")], g.mod)
+        self.font_name = QLineEdit(g.yazi_tipi)
+        self.latency = QCheckBox("Sağ üstte gecikmeyi göster", g.gecikme_goster)
+        self.pc_scale = slider(80, 200, self.scale.value())
+        self.pc_bg = slider(0, 100, self.bg.value())
+        self.pc_scale.valueChanged.connect(self.scale.setValue)
+        self.scale.valueChanged.connect(self.pc_scale.setValue)
+        self.pc_bg.valueChanged.connect(self.bg.setValue)
+        self.bg.valueChanged.connect(self.pc_bg.setValue)
+        pg = QGridLayout()
+        pg.setHorizontalSpacing(28)
+        pg.setVerticalSpacing(14)
+        pg.addLayout(field("Gösterim", self.pc_mode), 0, 0)
+        pg.addLayout(field("Yazı tipi", self.font_name), 0, 1)
+        pg.addLayout(slider_row("Yazı boyutu", self.pc_scale, lambda v: f"{v / 100:.2f}×"), 1, 0)
+        pg.addLayout(slider_row("Arka plan koyuluğu", self.pc_bg, lambda v: f"%{v}"), 1, 1)
+        self.pc_box.add(pg)
+        self.pc_box.add(self.latency)
+        root.addWidget(self.pc_box)
+        root.addStretch(1)
+
+        self._save_timer = QTimer(self, singleShot=True, interval=350, timeout=self.save)
+        for w in (self.size, self.scale, self.bg, self.bottom):
+            w.valueChanged.connect(self._changed)
+        for w in (self.place, self.shape, self.pc_mode):
+            w.currentIndexChanged.connect(self._changed)
+        for w in (self.bold, self.stack, self.latency):
+            w.toggled.connect(self._changed)
+        self.colors.changed.connect(self._changed)
+        self.mode.changed.connect(self._changed)
+        self.font_name.editingFinished.connect(self._changed)
+        self._target("tv")
+        self._preview()
+
+    def _main_zone(self):  # noqa: ANN202
+        return next((b for b in self.ctl.cfg.bolgeler if b.ad == "altyazi"), None)
+
+    def _target(self, v: str) -> None:
+        self.tv_box.setVisible(v == "tv")
+        self.pc_box.setVisible(v == "pc")
+
+    def _changed(self, *_a) -> None:  # noqa: ANN002
+        self._preview()
+        self._save_timer.start()
+
+    def _preview(self) -> None:
+        place = self.place.currentData()
+        self.size_row.itemAt(1).widget().setEnabled(place == "fixed")
+        self.bottom.setEnabled(place == "fixed")
+        self.preview.set_style(placement=place, fontSize=self.size.value(), background=self.bg.value(),
+                               bold=self.bold.isChecked(), textColor=self.colors.current,
+                               bottomPercent=self.bottom.value(), backgroundShape=self.shape.currentData(),
+                               lineScale=self.scale.value() / 100)
+
+    def save(self) -> None:
+        cfg = self.ctl.edit_config()
+        t = cfg.tv
+        t.yazi_rengi = self.colors.current
+        t.yazi_boyutu = self.size.value()
+        t.alttan = self.bottom.value()
+        t.yerlesim = self.place.currentData()
+        t.zemin_sekli = self.shape.currentData()
+        t.kalin = self.bold.isChecked()
+        t.onceki_satirlar = self.stack.isChecked()
+        t.mod = self.mode.value() or t.mod
+        main = next((b for b in cfg.bolgeler if b.ad == "altyazi"), None)
+        if main is not None:
+            main.yazi_olcek = self.scale.value() / 100
+            main.kutu_opaklik = round(self.bg.value() / 100 * 255)
+        cfg.gosterim.mod = self.pc_mode.currentData()
+        cfg.gosterim.yazi_tipi = self.font_name.text().strip() or "Segoe UI Semibold"
+        cfg.gosterim.gecikme_goster = self.latency.isChecked()
+        self.ctl.apply_config(cfg)
+
+
+# ============================================================================ Okuma alanı
 class RegionsPage(QWidget):
     def __init__(self, ctl: AppController):
         super().__init__()
         self.ctl = ctl
         self.zones: list[BolgeCfg] = []
-        root = QVBoxLayout(self)
-        root.setContentsMargins(32, 28, 32, 24)
-        root.setSpacing(16)
-        root.addLayout(page_header("Okuma alanları", "Uygulama sadece bu kutuların içindeki yazıları okur. Kutuları "
-                                   "fareyle taşı ve köşelerinden boyutlandır. Kırmızı noktalar, uygulamanın "
-                                   "\"yazı\" saydığı pikselleri gösterir."))
+        _transparent(self)
+        root = page_shell(self, "Okuma alanı", "Çoğu oyunda Otomatik yeterli: program altyazının yerini kendisi bulur "
+                          "ve öğrenir. Bulamazsa hazır bir yer seç ya da kutuyu fareyle köşelerinden boyutlandır, "
+                          "ortasından tutup taşı.", "regions", scroll=False)
+        self.chips = Chips([(k, k.split(" (")[0]) for k in PRESETS])
+        self.chips.picked.connect(self._apply_preset_name)
+        root.addWidget(self.chips)
         body = QHBoxLayout()
         body.setSpacing(16)
         left = Card(margins=14)
         self.canvas = RegionCanvas()
         self.canvas.selected.connect(self.select)
         self.canvas.changed.connect(self._dirty)
-        self.mask_cb = QCheckBox("Algılanan yazıyı kırmızı göster")
-        self.mask_cb.setChecked(True)
+        self.mask_cb = QCheckBox("Algılanan yazıyı kırmızı göster", True)
         self.mask_cb.toggled.connect(self._mask)
+        left.add(hbox(Pill("Canlı görüntü", "ok"), None,
+                      button("Görüntü al", "primary", ctl.grab_frame, "PS5'ten (ya da kaynaktan) bir kare al"),
+                      button("Resim aç", None, self._open_image), spacing=10))
         left.add(self.canvas, 1)
-        left.add(hbox(button("Görüntü al", "primary", ctl.grab_frame, "chiaki penceresinden (ya da kaynaktan) bir kare al"),
-                      button("Resim aç", None, self._open_image), self.mask_cb, None, spacing=10))
+        left.add(hbox(self.mask_cb, None, label("Mavi kutuyu köşelerinden ya da kenarlarından çekerek boyutlandır.",
+                                                 "faint")))
         body.addWidget(left, 3)
 
         right = Card(margins=16, spacing=12)
         right.setFixedWidth(330)
         self.list = QListWidget()
-        self.list.setFixedHeight(120)
+        self.list.setFixedHeight(130)
         self.list.currentRowChanged.connect(self.select)
         right.add(label("Bölgeler", "h2"))
         right.add(self.list)
@@ -335,7 +728,8 @@ class RegionsPage(QWidget):
         self.scale = slider(80, 200, 130)
         self.scale_l = label("", "faint")
         self.opacity = slider(0, 255, 255)
-        self.color = QCheckBox("Renkli kelimeleri de oku (sarı, mavi vurgular)")
+        self.color = QCheckBox("Renkli kelimeleri de oku")
+        self.color.setToolTip("Sarı, mavi vurgulu sözcükler")
         for w in (self.kind, self.align):
             w.currentIndexChanged.connect(self._edit)
         for w in (self.scale, self.opacity):
@@ -393,6 +787,8 @@ class RegionsPage(QWidget):
         for w in (self.name, self.kind, self.align, self.scale, self.opacity, self.color):
             w.blockSignals(False)
         self.scale_l.setText(f"{z.yazi_olcek:.2f}×")
+        self.chips.setValue(next((k for k, v in PRESETS.items()
+                                  if [round(a, 2) for a in v[0]] == [round(float(a), 2) for a in z.alan]), None))
 
     def _edit(self, *_a) -> None:  # noqa: ANN002
         z = self.current()
@@ -411,17 +807,22 @@ class RegionsPage(QWidget):
         self.canvas.refresh_mask()
         self._dirty()
 
-    def _apply_preset(self, idx: int) -> None:
-        if idx <= 0 or not self.current():
+    def _apply_preset_name(self, name: str) -> None:
+        if not self.current():
             return
-        alan, tur, hiz, capa = PRESETS[self.preset.itemText(idx)]
+        alan, tur, hiz, capa = PRESETS[name]
         z = self.current()
         z.alan, z.tur, z.hizalama, z.capa = list(alan), tur, hiz, capa
-        self.preset.setCurrentIndex(0)
         self.select(self.canvas.sel)
         self.canvas.refresh_mask()
         self._fill_list()
         self._dirty()
+
+    def _apply_preset(self, idx: int) -> None:
+        if idx <= 0 or not self.current():
+            return
+        self._apply_preset_name(self.preset.itemText(idx))
+        self.preset.setCurrentIndex(0)
 
     def _add(self) -> None:
         self.zones.append(BolgeCfg(ad=f"bolge{len(self.zones) + 1}", alan=[0.3, 0.4, 0.7, 0.55], tur="arayuz"))
@@ -467,7 +868,27 @@ class RegionsPage(QWidget):
         QTimer.singleShot(1500, lambda: self.save_btn.setText("Kaydet"))
 
 
-# ============================================================================ TV
+# ============================================================================ Bağlantı (PS5, TV, kaynak, ikinci ekran)
+class _ConnRow(QFrame):
+    """Bağlantılar listesinin satırı: [ikon] Ad / ● durum   [Ayarla] (GameTranslator)."""
+
+    def __init__(self, icon: str, title: str, slot):  # noqa: ANN001
+        super().__init__()
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(4, 8, 4, 8)
+        lay.setSpacing(14)
+        lay.addWidget(IconTile(icon, 40, glow=False))
+        self.title = label(title, "h3")
+        self.pill = Pill("", "off")
+        self.pill.setStyleSheet("background: transparent; border: 0; padding: 0;")
+        lay.addLayout(vbox(self.title, self.pill, spacing=2), 1)
+        self.btn = button("Ayarla", None, slot)
+        lay.addWidget(self.btn)
+
+    def set(self, state: str, text: str) -> None:
+        self.pill.set(state, text)
+
+
 class TvPage(QWidget):
     _fwText = Signal(str)                      # arka plan iş parçacığından güvenlik duvarı durumu
     _fwDone = Signal()
@@ -475,46 +896,97 @@ class TvPage(QWidget):
     def __init__(self, ctl: AppController):
         super().__init__()
         self.ctl = ctl
-        content = QWidget()
-        content.setObjectName("page")
-        root = QVBoxLayout(content)
-        root.setContentsMargins(32, 28, 32, 24)
-        root.setSpacing(16)
-        root.addLayout(page_header("Televizyon", "Türkçe altyazı TV'de oyunun üstünde görünür. Sen HDMI'dan "
-                                   "gecikmesiz oynarsın, bilgisayar arka planda okur ve TV'ye gönderir."))
-        steps = Card()
+        _transparent(self)
+        root = page_shell(self, "Bağlantı", "PS5, TV ve görüntü kaynağı. Oyun TV'de HDMI'dan gecikmesiz oynanır; "
+                          "bilgisayar PS5'e arka planda bağlanıp altyazıyı okur ve Türkçesini TV'ye gönderir.", "swap")
+        cfg = ctl.cfg
+
+        # --- bağlantılar özeti
+        conns = SectionCard("Bağlantılar", margins=16, spacing=4)
+        self.r_ps5 = _ConnRow("ps", "PS5", self._open_ps5)
+        self.r_tv = _ConnRow("tv", "TV", lambda: self.ip.setFocus())
+        conns.add(self.r_ps5)
+        sep = QFrame()
+        sep.setFixedHeight(1)
+        sep.setStyleSheet(f"background:{T.BORDER};")
+        conns.add(sep)
+        conns.add(self.r_tv)
+        root.addWidget(conns)
+
+        # --- görüntü kaynağı
+        src = SectionCard("Görüntü kaynağı", "Oyun görüntüsünün nereden okunacağı. TV'de oynuyorsan PS5 (ikinci hesap) "
+                          "seç: chiaki-ng ya da başka program gerekmez.", "ps")
+        self.src_group = RadioGroup(on_change=lambda _v: self._src_vis())
+        self.src_cards = {}
+        for value, title, desc in (
+                ("remoteplay", "PS5 (ikinci hesap)", "Bilgisayar PS5'e arka planda bağlanır. Kumandan TV'den kopmaz."),
+                ("pencere", "chiaki-ng / Remote Play penceresi", "Oyunu bilgisayar ekranında oynarken."),
+                ("capture", "Yakalama kartı", "Elgato ya da USB capture kart."),
+                ("video", "Video dosyası", "Deneme için kayıtlı bir oyun videosu.")):
+            card = self.src_group.add(value, RadioCard(title, desc))
+            self.src_cards[value] = card
+        grid = QGridLayout()
+        grid.setSpacing(12)
+        for i, card in enumerate(self.src_cards.values()):
+            grid.addWidget(card, i // 2, i % 2)
+        src.add(grid)
+        self.where = combo([("tv", "TV'de oynuyorum (Türkçe yalnız TV'de)"),
+                            ("ikisi", "TV'de ve bilgisayarda"), ("monitor", "Bilgisayar ekranında")],
+                           cfg.kaynak.oyun_yeri)
+        self.ps5_auto = QCheckBox("PS5 açılınca çeviri kendiliğinden başlasın", cfg.ps5.acilinca_baslat)
+        src.add(hbox(field("Oyunu nerede oynuyorsun", self.where), 16,
+                     vbox(None, self.ps5_auto, spacing=0), None, spacing=0))
+        self.win_name = QLineEdit(cfg.kaynak.pencere_adi)
+        self.chiaki = QLineEdit(cfg.kaynak.chiaki_yolu)
+        self.chiaki.setPlaceholderText(ctl.chiaki_path() or "chiaki-ng bulunamadı")
+        self.win_box = QWidget()
+        self.win_box.setLayout(hbox(field("Pencere başlığında geçen", self.win_name,
+                                          "chiaki-ng için \"chiaki\", resmi uygulama için \"PS Remote Play\"."),
+                                    field("chiaki-ng programı", hbox(self.chiaki, button("Gözat", None, self._browse),
+                                                                     button("İndir", "ghost",
+                                                                            lambda: webbrowser.open(CHIAKI_DOWNLOAD)))),
+                                    spacing=16))
+        src.add(self.win_box)
+        self.cap_idx = QSpinBox()
+        self.cap_idx.setRange(0, 9)
+        self.cap_idx.setValue(cfg.kaynak.capture_cihaz)
+        self.video = QLineEdit(cfg.kaynak.dosya)
+        self.cap_box = QWidget()
+        self.cap_box.setLayout(hbox(field("Capture kart numarası", self.cap_idx), 16,
+                                    field("Video dosyası", self.video), spacing=0))
+        src.add(self.cap_box)
+        src.add(hbox(None, button("Kaydet", "primary", self._save_source)))
+        root.addWidget(src)
+
+        # --- TV kurulumu
+        steps = SectionCard("TV", "Türkçe altyazı TV'de oyunun üstünde görünür. Önce TV'de bir kerelik hazırlık, sonra "
+                            "Bağlan.", "tv")
         from .. import rehber
-        self.brand = combo(rehber.TV_BRANDS, ctl.cfg.tv.marka)
+        self.brand = combo(rehber.TV_BRANDS, cfg.tv.marka)
         self.brand.currentIndexChanged.connect(self._brand_changed)
-        steps.add(hbox(label("TV markası", "h2"), self.brand, None, spacing=14))
-        steps.add(hbox(label("1 · TV'de bir kerelik hazırlık", "h2"), None,
-                       button("Resimli anlat", None, self._open_guide), spacing=10))
+        steps.add(hbox(label("TV markası", "h3"), self.brand, None, button("Resimli anlat", None, self._open_guide),
+                       spacing=14))
         self.howto = label("", "muted", wrap=True)
         self.howto.setTextFormat(Qt.RichText)
         steps.add(self.howto)
-        root.addWidget(steps)
-
-        conn = Card()
-        conn.add(label("2 · Bağlan ve kur", "h2"))
-        self.ip = QLineEdit(ctl.cfg.tv.ip)
+        self.ip = QLineEdit(cfg.tv.ip)
         self.ip.setPlaceholderText("TV'nin IP adresi, ör. 192.168.1.40")
         self.scan_btn = button("Ağda ara", None, self._scan)
         self.found = QComboBox()
         self.found.hide()
         self.found.currentIndexChanged.connect(lambda i: self.ip.setText(self.found.itemData(i) or self.ip.text()))
-        conn.add(hbox(self.ip, self.scan_btn, self.found, spacing=10))
+        steps.add(hbox(self.ip, self.scan_btn, self.found, spacing=10))
         self.mode = combo([("otomatik", "Otomatik (önerilen)"), ("katman", "Oyunun üstüne katman"),
-                           ("hdmi", "Yedek mod: HDMI uygulama içinde")], ctl.cfg.tv.mod)
-        self.auto = QCheckBox("Çeviri başlayınca TV'yi kendiliğinden bağla")
-        self.auto.setChecked(ctl.cfg.tv.otomatik)
+                           ("hdmi", "Yedek mod: HDMI uygulama içinde")], cfg.tv.mod)
+        self.auto = QCheckBox("Çeviri başlayınca TV'yi kendiliğinden bağla", cfg.tv.otomatik)
         self.mode_box = field("Mod", self.mode)
-        self.lg_pass = QLineEdit(ctl.cfg.tv.lg_parola)
+        self.lg_pass = QLineEdit(cfg.tv.lg_parola)
         self.lg_pass.setPlaceholderText("Developer Mode ekranındaki parola (ör. A1B2C3)")
         self.lg_box = QWidget()
         self.lg_box.setLayout(field("LG parola (passphrase)", self.lg_pass,
                                     "Developer Mode uygulamasında Key Server açıkken ekranda görünür."))
-        self.ss_profile = QLineEdit(ctl.cfg.tv.samsung_profil)
-        self.ss_tizen = QLineEdit(ctl.cfg.tv.tizen_yolu)
+        self.ss_profile = QLineEdit(cfg.tv.samsung_profil)
+        self.ss_tizen = QLineEdit(cfg.tv.tizen_yolu)
         self.ss_tizen.setPlaceholderText("Boş bırak: Tizen Studio gerekmez")
         self.ss_box = QWidget()
         self.ss_box.setLayout(hbox(field("Tizen Studio klasörü (gelişmiş, isteğe bağlı)", self.ss_tizen),
@@ -523,12 +995,12 @@ class TvPage(QWidget):
         mode_w = QWidget()
         mode_w.setLayout(self.mode_box)
         self.mode_w = mode_w
-        conn.add(hbox(mode_w, self.lg_box, self.ss_box, None, self.auto, spacing=16))
+        steps.add(hbox(mode_w, self.lg_box, self.ss_box, None, vbox(None, self.auto, spacing=0), spacing=16))
         self.connect_btn = button("Bağlan, kur ve başlat", "primary", self._connect)
         self.test_btn = button("Deneme altyazısı gönder", None, ctl.tv_test)
-        conn.add(hbox(self.connect_btn, self.test_btn, None))
+        steps.add(hbox(self.connect_btn, self.test_btn, None))
         self.status = label("", "muted", wrap=True)
-        conn.add(self.status)
+        steps.add(self.status)
         pair = Card(inner=True, margins=14)
         pair.add(label("Gelişmiş: yalnız TV'de USB hata ayıklama yoksa (kablosuz eşleştirme)", "h3"))
         pair.add(label("TV'de Kablosuz hata ayıklama › Eşleştirme koduyla cihaz eşleştir. Açılan küçük penceredeki "
@@ -540,30 +1012,44 @@ class TvPage(QWidget):
         self.pair_code.setPlaceholderText("123456")
         self.pair_code.setFixedWidth(110)
         pair.add(hbox(self.pair_addr, self.pair_code, button("Eşleştir", None, self._pair), spacing=10))
-        conn.add(pair)
+        steps.add(pair)
         self.pair_card = pair
-        root.addWidget(conn)
+        root.addWidget(steps)
 
-        fw = Card()
-        fw.add(label("3 · Bağlantı izni (Windows güvenlik duvarı)", "h2"))
-        fw.add(label("TV bu bilgisayara bağlanamıyorsa çoğu zaman sebep Windows güvenlik duvarıdır. Aşağıdaki düğme "
-                     "yalnız ev ağından (Özel ağ) gelen bağlantılara izin verir; ağ 'Ortak' görünüyorsa onu da 'Özel' "
-                     "yapar. Windows bir kez yönetici izni ister. "
-                     "TV yazının yerini kendisi ayarlar; altyazı yeri yanlışsa TV'de kumandanın Yeşil tuşu panelini açar.",
-                     "muted", wrap=True))
+        # --- ikinci ekran
+        url = ctl.server_url("ekran")
+        second = SectionCard("TV'm desteklenmiyor: ikinci ekran", "Çeviriyi bir telefonda ya da tablette büyük yazıyla "
+                             "göster: cihaz bu bilgisayarla aynı Wi-Fi'deyken kameradan QR kodu okut, cihazı TV'nin önüne "
+                             "koy. Kurulum gerekmez, internete çıkılmaz.", "phone")
+        qr = QrCode(150)
+        qr.setData(url)
+        url_l = label(url, "mono", wrap=True)
+        second.add(hbox(vbox(url_l, hbox(button("Kopyala", None, lambda: self._copy(url)),
+                                         button("Burada aç", None, lambda: webbrowser.open(url)), None, spacing=8),
+                             label("Sayfa beyaz mı kalıyor? Adresi QR okuyucu uygulamasının içinde değil, Chrome ya da "
+                                   "Safari'de aç; cihaz misafir Wi-Fi'ye bağlı olmasın.", "faint", wrap=True),
+                             None, spacing=10), 16, qr, spacing=0))
+        root.addWidget(second)
+
+        # --- güvenlik duvarı
+        fw = SectionCard("Bağlantı izni (güvenlik duvarı)", "TV ya da telefon bu bilgisayara bağlanamıyorsa çoğu zaman "
+                         "sebep Windows güvenlik duvarıdır. Düğme yalnız ev ağından (Özel ağ) gelen bağlantılara izin "
+                         "verir; ağ 'Ortak' görünüyorsa onu da 'Özel' yapar. Windows bir kez yönetici izni ister.",
+                         "check")
         self.fw_state = label("", "faint", wrap=True)
         self.fw_btn = button("İzin ver", "primary", self._firewall)
-        fw.add(hbox(self.fw_btn, button("Durumu yenile", "ghost", self._fw_refresh),
-                    None, spacing=10))
+        fw.add(hbox(self.fw_btn, button("Durumu yenile", "ghost", self._fw_refresh), None, spacing=10))
         fw.add(self.fw_state)
         root.addWidget(fw)
         root.addStretch(1)
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.addWidget(scroll_page(content))
+
+        self.src_group.set(cfg.kaynak.tur)
+        self._src_vis()
         ctl.tvStatus.connect(self.on_status)
         ctl.tvFound.connect(self.on_found)
+        ctl.ps5Status.connect(lambda *_a: self._ps5_row())
         self.on_status(*ctl.tv_state)
+        self._ps5_row()
         self._brand_changed()
         self._fwText.connect(self.fw_state.setText)
         self._fwDone.connect(self._fw_finished)
@@ -577,6 +1063,67 @@ class TvPage(QWidget):
     }
     GUIDE_KEYS = {"android": "google-tv", "lg": "lg", "samsung": "samsung"}
 
+    # --------------------------------------------------------------- kaynak, PS5
+    def _src_vis(self) -> None:
+        v = self.src_group.value()
+        self.win_box.setVisible(v == "pencere")
+        self.cap_box.setVisible(v in ("capture", "video"))
+        self.ps5_auto.setVisible(v == "remoteplay")
+
+    def _ps5_row(self) -> None:
+        p = self.ctl.cfg.ps5
+        if p.anahtar:
+            state, msg = getattr(self.ctl, "rp_state", ("", ""))
+            dot = {"bagli": "ok", "baglaniyor": "warn", "kopuk": "bad"}.get(state, "ok")
+            self.r_ps5.set(dot, msg or f"Eşleşti ({p.ad or 'PS5'} · {p.ip})")
+        else:
+            self.r_ps5.set("off", "Eşli değil: ikinci PSN hesabıyla giriş ve 8 haneli kod")
+
+    def _open_ps5(self) -> None:
+        from .ps5_dialog import Ps5Dialog
+        Ps5Dialog(self.ctl, self).exec()
+        self.sync_source()
+        self.ctl._check_source()
+        self._ps5_row()
+
+    def sync_source(self) -> None:
+        """Ayarlar başka yerden değiştiyse (PS5 eşlendi) seçimleri güncelle; eski seçim Kaydet'le geri yazılmasın."""
+        self.src_group.set(self.ctl.cfg.kaynak.tur)
+        i = self.where.findData(self.ctl.cfg.kaynak.oyun_yeri)
+        if i >= 0:
+            self.where.setCurrentIndex(i)
+        self._src_vis()
+
+    def showEvent(self, e) -> None:  # noqa: ANN001, N802
+        self.sync_source()
+        super().showEvent(e)
+
+    def _browse(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "chiaki-ng programını seç",
+                                              "/Applications" if sys.platform == "darwin" else "",
+                                              "Program (*.app *.exe);;Tümü (*)")
+        if path:
+            self.chiaki.setText(path)
+
+    def _save_source(self) -> None:
+        cfg = self.ctl.edit_config()
+        cfg.kaynak.tur = self.src_group.value() or cfg.kaynak.tur
+        cfg.kaynak.oyun_yeri = self.where.currentData()
+        cfg.ps5.acilinca_baslat = self.ps5_auto.isChecked()
+        cfg.kaynak.pencere_adi = self.win_name.text().strip() or "chiaki"
+        cfg.kaynak.chiaki_yolu = self.chiaki.text().strip()
+        cfg.kaynak.capture_cihaz = self.cap_idx.value()
+        cfg.kaynak.dosya = self.video.text().strip()
+        self.ctl.apply_config(cfg)
+        self.ctl._check_source()
+        self.window().toast.show_text("Görüntü kaynağı kaydedildi")
+
+    def _copy(self, text: str) -> None:
+        from PySide6.QtWidgets import QApplication
+        QApplication.clipboard().setText(text)
+        self.window().toast.show_text("Adres kopyalandı")
+
+    # --------------------------------------------------------------- TV
     def _open_guide(self) -> None:
         win = self.window()
         win.go("guide")
@@ -674,148 +1221,203 @@ class TvPage(QWidget):
         if msg:
             self.status.setText(f"<span style='color:{color}'>●</span> {msg}")
         self.connect_btn.setEnabled(state not in ("baglaniyor", "onay"))
+        brand = {"android": "Android TV", "lg": "LG webOS", "samsung": "Samsung Tizen"}.get(self.ctl.cfg.tv.marka, "TV")
+        dot, text = {"bagli": ("ok", "Bağlı"), "baglaniyor": ("warn", "Bağlanıyor"), "onay": ("info", "Onay bekliyor"),
+                     "hata": ("bad", "Hata")}.get(state, ("warn" if self.ctl.cfg.tv.ip else "off", "Bağlantı bekleniyor"
+                                                          if self.ctl.cfg.tv.ip else "Kurulmadı"))
+        self.r_tv.set(dot, f"{brand} ({text})")
 
 
-# ============================================================================ Çeviri
+# ============================================================================ Çeviri ve paketler
+_ABBR_SKIP = {"of", "the", "and", "+", "-", "–"}
+
+
+def _abbr(title: str) -> str:
+    words = [w for w in title.replace(":", " ").split() if w.lower() not in _ABBR_SKIP]
+    if not words:
+        return "?"
+    out = "".join(w[0] for w in words if w[0].isalnum())[:3].upper()
+    return out or title[:3].upper()
+
+
+class _PackTile(QFrame):
+    """Oyun paketi kartı: kısaltma rozeti, ad, satır sayısı (CouchSubs)."""
+
+    def __init__(self, title: str, count: int, extra: str = ""):
+        super().__init__()
+        self.setObjectName("radioCard")
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(14, 12, 14, 12)
+        lay.setSpacing(12)
+        badge = label(_abbr(title), "h3")
+        badge.setFixedSize(46, 46)
+        badge.setAlignment(Qt.AlignCenter)
+        badge.setStyleSheet(f"background:{T.SURFACE3}; border-radius: 12px; color:{T.A2}; font-size: 9.5pt;")
+        lay.addWidget(badge)
+        lay.addLayout(vbox(label(title, "h3"), label(f"{count:,} satır".replace(",", ".") + extra, "faint"), spacing=2),
+                      1)
+
+
 class TranslationPage(QWidget):
+    ENGINES = [
+        ("yok", "Ücretsiz (bu bilgisayarda)", "Kurulacak bir şey yok. İnternetsiz, kotasız; çeviri bu bilgisayarda yapılır."),
+        ("gemini", "Google Gemini", "Daha doğal çeviri; argo ve espriyi iyi anlar. Ücretsiz bir Google anahtarı yeter."),
+        ("claude", "Claude", "En iyi kalite; hikâye bağlamını ve karakterlerin üslubunu en iyi tutturan. Ücretli, kendi "
+                             "anahtarın."),
+        ("deepl", "DeepL", "Ünlü çeviri motoru; ücretsiz planda ayda 500 bin karakter."),
+        ("yerelai", "Yerel yapay zekâ (Ollama / LM Studio)", "Kendi bilgisayarında çalışan model; ücretsiz ve internetsiz."),
+    ]
+
     def __init__(self, ctl: AppController):
         super().__init__()
         self.ctl = ctl
         c = ctl.cfg.ceviri
-        content = QWidget()
-        content.setObjectName("page")
-        root = QVBoxLayout(content)
-        root.setContentsMargins(32, 28, 32, 24)
-        root.setSpacing(16)
-        root.addLayout(page_header("Çeviri", "İki katman: yerel model ekran kartında anında çevirir, yapay zeka "
-                                   "birkaç yüz milisaniye sonra daha doğal haliyle günceller. Her çeviri "
-                                   "önbelleğe yazılır; aynı yazı tekrar çıkınca anında gelir."))
-        row = QHBoxLayout()
-        row.setSpacing(16)
-        fast = Card()
-        fast.add(label("Hızlı katman", "h2"))
-        self.fast = combo([("yerel", "Yerel model (GPU, internetsiz)"), ("google", "Google Çeviri (anahtarsız)"),
-                           ("yok", "Kapalı")], c.hizli)
-        fast.add(self.fast)
-        fast.add(label("Yerel model ekranda ~20-50 ms'de bir çeviri gösterir.", "faint", wrap=True))
-        self.slang = QCheckBox("Argo düzeltme: \"gonna, ain't, homie\" gibi ifadeleri yerel modele düzgün İngilizce ver")
-        self.slang.setChecked(c.argo_duzelt)
-        fast.add(self.slang)
-        self.scene_cb = QCheckBox("Oyundaki telefonu, harita görev kartını ve gelen mesajları kendiliğinden çevir "
-                                  "(Türkçesi TV'de yanlarında çıkar)")
-        self.scene_cb.setChecked(c.ekran_yazilari)
-        fast.add(self.scene_cb)
-        self.wait = QSpinBox()
-        self.wait.setRange(0, 1500)
-        self.wait.setSingleStep(50)
-        self.wait.setSuffix(" ms")
-        self.wait.setValue(c.kalite_bekleme_ms)
-        fast.add(field("Kalite öncelikli bekleme", self.wait,
-                       "Yapay zekanın çevirisi bu süre içinde gelirse yerel çeviri hiç gösterilmez; gelmezse önce yerel "
-                       "çeviri çıkar, sonra güncellenir. 0 = her zaman önce yerel."))
-        fast.lay.addStretch(1)
-        row.addWidget(fast, 1)
-        q = Card()
-        q.add(label("Kalite katmanı (yapay zeka)", "h2"))
-        self.qual = combo([("claude", "Claude · en iyi kalite (ücretli, kendi anahtarın)"),
-                           ("gemini", "Google Gemini · ücretsiz anahtar"),
-                           ("deepl", "DeepL · ücretsiz plan (ayda 500 bin karakter)"),
-                           ("yerelai", "Yerel yapay zekâ · Ollama / LM Studio (ücretsiz, internetsiz)"),
-                           ("yok", "Kapalı (yalnız yerel model)")], c.kalite)
-        q.add(self.qual)
-        q.add(label("Herkes kendi anahtarını kullanır; kimse başkasının çevirisini ödemez. Anahtar yalnız bu "
-                    "bilgisayarda saklanır.", "faint", wrap=True))
+        _transparent(self)
+        root = page_shell(self, "Çeviri ve paketler", "Hazır oyun paketinde olan satır anında gelir. Olmayan satırları "
+                          "seçtiğin çeviri motoru çevirir; her çeviri önbelleğe yazılır, aynı yazı tekrar çıkınca anında "
+                          "gelir.", "translate")
+
+        # --- oyun paketleri
+        packs = SectionCard("Oyun paketleri", "Bazı oyunlar için hazır Türkçe çeviriler. Pakette bulunan satır, çeviri "
+                            "motoruna gitmeden hemen görünür (0 ms).", "check", accent=True)
+        self.packs_pill = Pill("", "ok")
+        packs.add_right(self.packs_pill)
+        self.cache_l = label("", "faint")
+        self.pack_grid_w = QWidget()
+        _transparent(self.pack_grid_w)
+        self.pack_grid = QGridLayout(self.pack_grid_w)
+        self.pack_grid.setContentsMargins(0, 0, 0, 0)
+        self.pack_grid.setSpacing(10)
+        packs.add(self.pack_grid_w)
+        self.packs_l = label("", "muted", wrap=True)
+        packs.add(self.packs_l)
+        from ..packs import CATALOG
+        self.pack_combo = QComboBox()
+        for pid, title in CATALOG:
+            self.pack_combo.addItem(title, pid)
+        self.pack_dl = button("Hazır paketi indir", "primary", self._download_pack)
+        packs.add(hbox(self.pack_combo, self.pack_dl, button("Listeyi yenile", "ghost", ctl.load_pack_catalog), None,
+                       button("Paket yükle (.json, .gz)", None, self._add_pack), spacing=10))
+        packs.add(hbox(self.cache_l, None, button("Önbelleği paket olarak kaydet", "ghost", self._export_pack),
+                       button("Klasörü aç", "ghost", self._open_data), spacing=8))
+        packs.add(label("Paketler bu projenin GitHub sayfasından iner; her 6 saatte bir CouchSubs (GTA 6 dahil) ve "
+                        "GameTranslator'dan güncellenir. GTA 6 paketi kurulumla birlikte de gelir.", "faint", wrap=True))
+        ctl.packCatalog.connect(self._on_catalog)
+        ctl.load_pack_catalog()
+        root.addWidget(packs)
+
+        # --- motor seçimi
+        root.addLayout(vbox(label("Çeviri motoru", "h1"),
+                            label("Pakette olmayan satırlar için. Herkes kendi anahtarını kullanır; anahtar yalnız bu "
+                                  "bilgisayarda saklanır.", "muted", wrap=True), spacing=2))
+        self.qual_group = RadioGroup(on_change=lambda _v: self._vis())
+        self.cards: dict[str, RadioCard] = {}
+        for value, title, desc in self.ENGINES:
+            card = self.qual_group.add(value, RadioCard(title, desc))
+            self.cards[value] = card
+            root.addWidget(card)
+        import webbrowser as _wb
+        # Gemini
+        self.gem = QLineEdit(c.gemini_anahtar)
+        self.gem.setEchoMode(QLineEdit.Password)
+        self.gem.setPlaceholderText("Gemini API anahtarı")
+        self.cards["gemini"].add(hbox(self.gem, button("Kaydet ve Dene", "primary", self._save_try), spacing=8))
+        self.cards["gemini"].add(hbox(button("Ücretsiz Gemini anahtarı al ›", "link",
+                                             lambda: _wb.open(self._key_url("gemini"))), None))
+        # Claude
         self.key = QLineEdit(c.claude_anahtar)
         self.key.setEchoMode(QLineEdit.Password)
         self.key.setPlaceholderText("sk-ant-...  (console.anthropic.com)")
         self.model = combo([("claude-opus-5-5", "Claude Opus 5.5 (en iyi kalite)"),
                             ("claude-haiku-5-5", "Claude Haiku 5.5 (daha hızlı ve ucuz)")], c.claude_model)
-        self.fastmode = QCheckBox("Hızlı mod (Opus 5.5: ~2.5 kat hızlı, 2 kat fiyat)")
-        self.fastmode.setChecked(c.claude_hizli_mod)
-        self.gem = QLineEdit(c.gemini_anahtar)
-        self.gem.setEchoMode(QLineEdit.Password)
-        self.gem.setPlaceholderText("Gemini anahtarı (aistudio.google.com)")
+        self.fastmode = QCheckBox("Hızlı mod (Opus 5.5: ~2.5 kat hızlı, 2 kat fiyat)", c.claude_hizli_mod)
+        self.cards["claude"].add(hbox(self.key, button("Kaydet ve Dene", "primary", self._save_try), spacing=8))
+        self.cards["claude"].add(hbox(self.model, 12, self.fastmode, None, spacing=0))
+        self.cards["claude"].add(hbox(button("Claude anahtarı al ›", "link", lambda: _wb.open(self._key_url("claude"))),
+                                      None))
+        # DeepL
         self.deepl = QLineEdit(c.deepl_anahtar)
         self.deepl.setEchoMode(QLineEdit.Password)
         self.deepl.setPlaceholderText("DeepL anahtarı (ücretsiz planda sonu :fx)")
+        self.cards["deepl"].add(hbox(self.deepl, button("Kaydet ve Dene", "primary", self._save_try), spacing=8))
+        self.cards["deepl"].add(hbox(button("Ücretsiz DeepL anahtarı al ›", "link",
+                                            lambda: _wb.open(self._key_url("deepl"))), None))
+        # Yerel yapay zekâ
         self.lai_url = QLineEdit(c.yerelai_adres)
         self.lai_url.setPlaceholderText("http://localhost:11434/v1")
         self.lai_model = QLineEdit(c.yerelai_model)
         self.lai_model.setPlaceholderText("qwen2.5:7b")
-        self.claude_box = vbox(field("Claude API anahtarı", self.key), self.model, self.fastmode, spacing=8)
-        q.add(self.claude_box)
-        import webbrowser as _wb
-        self.key_btn = button("Anahtar al", None, lambda: _wb.open(self._key_url()))
-        q.add(hbox(self.gem, self.deepl, self.key_btn, spacing=8))
-        self.lai_box = QWidget()
-        self.lai_box.setLayout(vbox(hbox(field("Sunucu adresi", self.lai_url), field("Model", self.lai_model),
-                                         spacing=10),
-                                    hbox(button("Ollama", None, lambda: self._lai_preset("ollama")),
-                                         button("LM Studio", None, lambda: self._lai_preset("lmstudio")),
-                                         button("Ollama'yı indir", "ghost", lambda: _wb.open("https://ollama.com/download")),
-                                         None, spacing=8),
-                                    label("Ollama'yı kurup komut satırında <b>ollama pull qwen2.5:7b</b> yaz. Ekran kartı "
-                                          "olan bilgisayarda bir satır genelde 1-2 saniyede gelir.", "faint", wrap=True),
-                                    spacing=8))
-        q.add(self.lai_box)
-        self.qual.currentIndexChanged.connect(self._vis)
-        row.addWidget(q, 1)
-        root.addLayout(row)
+        self.cards["yerelai"].add(hbox(field("Sunucu adresi", self.lai_url), field("Model", self.lai_model), spacing=10))
+        self.cards["yerelai"].add(hbox(button("Ollama", None, lambda: self._lai_preset("ollama")),
+                                       button("LM Studio", None, lambda: self._lai_preset("lmstudio")),
+                                       button("Ollama'yı indir", "ghost", lambda: _wb.open("https://ollama.com/download")),
+                                       None, button("Kaydet ve Dene", "primary", self._save_try), spacing=8))
+        self.cards["yerelai"].add(label("Ollama'yı kurup komut satırında <b>ollama pull qwen2.5:7b</b> yaz. Ekran kartı "
+                                        "olan bilgisayarda bir satır genelde 1-2 saniyede gelir.", "faint", wrap=True))
+        self.qual_group.set(c.kalite if c.kalite in self.cards else "yok")
+        self.key_btn = button("Anahtar al", None, lambda: _wb.open(self._key_url()))   # eski ad (kullanılmıyor)
+        self.key_btn.hide()
 
-        test = Card()
-        test.add(label("Dene", "h2"))
+        # --- dene
+        test = SectionCard("Dene", "Bir cümle yaz, seçili motorla nasıl çevrildiğini gör.", "play")
         self.test_in = QLineEdit("You think you can just walk in here and take what's mine, man?")
         test.add(hbox(self.test_in, button("Çevir", "primary", self._test)))
         self.test_out = label("", "muted", wrap=True)
         test.add(self.test_out)
         root.addWidget(test)
 
-        gl = Card()
-        gl.add(label("Sözlük", "h2"))
-        gl.add(label("Her satıra bir terim: <b>İngilizce = Türkçe</b>. Yapay zeka bunlara uyar. İsimleri olduğu gibi "
-                     "bırakmak için iki tarafa aynısını yaz (ör. Vice City = Vice City).", "muted", wrap=True))
+        # --- gelişmiş
+        adv = SectionCard("Gelişmiş", "", "settings")
+        self.fast = combo([("yerel", "Yerel model (internetsiz)"), ("google", "Google Çeviri (anahtarsız)"),
+                           ("yok", "Kapalı")], c.hizli)
+        self.wait = QSpinBox()
+        self.wait.setRange(0, 1500)
+        self.wait.setSingleStep(50)
+        self.wait.setSuffix(" ms")
+        self.wait.setValue(c.kalite_bekleme_ms)
+        adv.add(hbox(field("İlk (hızlı) çeviri", self.fast, "Yerel model ekranda ~20-50 ms'de bir çeviri gösterir; "
+                                                           "yapay zekâ gelince güncellenir."),
+                     field("Kalite öncelikli bekleme", self.wait, "Yapay zekânın çevirisi bu süre içinde gelirse yerel "
+                                                                  "çeviri hiç gösterilmez. 0 = her zaman önce yerel."),
+                     spacing=20))
+        self.slang = QCheckBox("Argo düzeltme: \"gonna, ain't, homie\" gibi ifadeleri yerel modele düzgün İngilizce ver",
+                               c.argo_duzelt)
+        self.scene_cb = QCheckBox("Oyundaki telefonu, harita görev kartını ve gelen mesajları kendiliğinden çevir",
+                                  c.ekran_yazilari)
+        adv.add(self.slang)
+        adv.add(self.scene_cb)
+        adv.add(label("Sözlük", "h3"))
+        adv.add(label("Her satıra bir terim: <b>İngilizce = Türkçe</b>. İsimleri olduğu gibi bırakmak için iki tarafa "
+                      "aynısını yaz (ör. Vice City = Vice City).", "faint", wrap=True))
         self.gloss = QPlainTextEdit("\n".join(f"{k} = {v}" for k, v in c.sozluk.items()))
         self.gloss.setFixedHeight(110)
-        gl.add(self.gloss)
-        root.addWidget(gl)
-
-        cache = Card()
-        self.cache_l = label("", "muted")
-        cache.add(hbox(vbox(label("Önbellek ve çeviri paketleri", "h2"), self.cache_l), None,
-                       button("Klasörü aç", None, self._open_data)))
-        cache.add(label("Hazır çeviri paketi varsa pakette olan satırlar anında ve ücretsiz gelir, yapay zekaya sorulmaz. "
-                        "GameTranslator/topluluk paket biçimi (.json ya da .json.gz) desteklenir; paket dosyasını kendin "
-                        "edinip buradan ekle. Kendi önbelleğini de paket olarak arkadaşlarına verebilirsin.",
-                        "faint", wrap=True))
-        self.packs_l = label("", "muted", wrap=True)
-        cache.add(self.packs_l)
-        from ..packs import CATALOG
-        self.pack_combo = QComboBox()
-        for pid, title in CATALOG:
-            self.pack_combo.addItem(title, pid)
-        self.pack_dl = button("Hazır paketi indir", "primary", self._download_pack)
-        cache.add(hbox(self.pack_combo, self.pack_dl, button("Listeyi yenile", "ghost", ctl.load_pack_catalog), None,
-                       spacing=10))
-        cache.add(label("Paketler bu projenin GitHub sayfasından iner; her 6 saatte bir CouchSubs (GTA 6 dahil) ve "
-                        "GameTranslator'dan güncellenir. GTA 6 paketi kurulumla birlikte de gelir.", "faint", wrap=True))
-        ctl.packCatalog.connect(self._on_catalog)
-        ctl.load_pack_catalog()
-        cache.add(hbox(button("Paket ekle", None, self._add_pack),
-                       button("Önbelleği paket olarak kaydet", None, self._export_pack), None, spacing=10))
-        root.addWidget(cache)
+        adv.add(self.gloss)
+        root.addWidget(adv)
         root.addLayout(hbox(None, button("Kaydet", "primary", self.save)))
         root.addStretch(1)
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.addWidget(scroll_page(content))
         self._results: list[str] = []
         ctl.testResult.connect(self.on_test)
         ctl.packProgress.connect(self._pack_progress)
-        ctl.enginesReady.connect(lambda i: (self.cache_l.setText(f"{i.get('onbellek', 0)} çeviri kayıtlı"),
-                                            self._refresh_packs()))
+        ctl.enginesReady.connect(lambda i: (self.cache_l.setText(f"{i.get('onbellek', 0)} çeviri önbellekte"),
+                                            self._refresh_packs(), self._engine_badge(i)))
         if ctl.engine_info:
-            self.cache_l.setText(f"{ctl.engine_info.get('onbellek', 0)} çeviri kayıtlı")
+            self.cache_l.setText(f"{ctl.engine_info.get('onbellek', 0)} çeviri önbellekte")
+            self._engine_badge(ctl.engine_info)
+        self._refresh_packs()
         self._vis()
+
+    # eski arayüzle uyum: qual.currentData()
+    @property
+    def qual(self):  # noqa: ANN201
+        page = self
+
+        class _Q:
+            def currentData(self):  # noqa: ANN202, N802
+                return page.qual_group.value()
+
+            def findData(self, v):  # noqa: ANN001, ANN202, N802
+                return list(page.cards).index(v) if v in page.cards else -1
+        return _Q()
 
     def showEvent(self, e) -> None:  # noqa: ANN001, N802
         """Sayfa her açıldığında anahtar alanlarını güncel ayardan doldur (sihirbazda girilen anahtar burada boş
@@ -824,30 +1426,32 @@ class TranslationPage(QWidget):
         for w, val in ((self.key, c.claude_anahtar), (self.gem, c.gemini_anahtar), (self.deepl, c.deepl_anahtar)):
             if w.text().strip() != val and not w.hasFocus():
                 w.setText(val)
-        i = self.qual.findData(c.kalite)
-        if i >= 0 and self.qual.currentIndex() != i:
-            self.qual.setCurrentIndex(i)
+        if c.kalite in self.cards and self.qual_group.value() != c.kalite:
+            self.qual_group.set(c.kalite)
         super().showEvent(e)
 
-    def _vis(self) -> None:
-        k = self.qual.currentData()
-        for w in (self.key, self.model, self.fastmode):
-            w.setVisible(k == "claude")
-        self.claude_box.itemAt(0).layout().itemAt(0).widget().setVisible(k == "claude")
-        self.gem.setVisible(k == "gemini")
-        self.deepl.setVisible(k == "deepl")
-        self.key_btn.setVisible(k in ("claude", "gemini", "deepl"))
-        self.lai_box.setVisible(k == "yerelai")
+    def _engine_badge(self, info: dict) -> None:
+        k = info.get("kalite")
+        for v, card in self.cards.items():
+            card.title_l.setText(dict((a, b) for a, b, _ in self.ENGINES)[v] + ("   ● Aktif" if v == (k or "yok")
+                                                                                 else ""))
 
-    def _key_url(self) -> str:
+    def _vis(self) -> None:
+        pass                                        # kartlar seçilince kendi alanlarını açar
+
+    def _key_url(self, kind: str | None = None) -> str:
         from .. import rehber
         return {"claude": rehber.CLAUDE_KEYS, "gemini": rehber.GEMINI_KEYS,
-                "deepl": rehber.DEEPL_SIGNUP}.get(self.qual.currentData(), rehber.CLAUDE_KEYS)
+                "deepl": rehber.DEEPL_SIGNUP}.get(kind or self.qual_group.value(), rehber.GEMINI_KEYS)
 
     def _lai_preset(self, kind: str) -> None:
         self.lai_url.setText("http://localhost:11434/v1" if kind == "ollama" else "http://localhost:1234/v1")
         if kind == "ollama" and not self.lai_model.text().strip():
             self.lai_model.setText("qwen2.5:7b")
+
+    def _save_try(self) -> None:
+        self.save()
+        QTimer.singleShot(1500, self._test)
 
     def _test(self) -> None:
         self._results = []
@@ -857,6 +1461,10 @@ class TranslationPage(QWidget):
     def on_test(self, r) -> None:  # noqa: ANN001
         self._results.append(f"<b>{r.text}</b> <span style='color:{T.FAINT}'>· {r.source} · {r.ms:.0f} ms</span>")
         self.test_out.setText("<br>".join(self._results))
+        try:
+            self.window().toast.show_text(f"Çeviri: {r.text}"[:90])
+        except Exception:  # noqa: BLE001
+            pass
 
     def _open_data(self) -> None:
         from .. import paths
@@ -864,8 +1472,17 @@ class TranslationPage(QWidget):
 
     def _refresh_packs(self) -> None:
         ps = self.ctl.pack_list()
-        self.packs_l.setText("Yüklü paketler: " + ", ".join(f"<b>{p.title}</b> ({p.count:,} satır)".replace(",", ".")
-                                                             for p in ps) if ps else "Yüklü paket yok.")
+        while self.pack_grid.count():
+            it = self.pack_grid.takeAt(0)
+            if it.widget():
+                it.widget().deleteLater()
+        for i, p in enumerate(sorted(ps, key=lambda p: p.title)):
+            self.pack_grid.addWidget(_PackTile(p.title, p.count), i // 2, i % 2)
+        total = sum(p.count for p in ps)
+        self.packs_pill.set("ok" if ps else "off", f"{len(ps)} oyun · {total:,} satır".replace(",", ".") if ps
+                            else "Paket yok")
+        self.packs_l.setText("" if ps else "Yüklü paket yok. Aşağıdan hazır paketi indir ya da kendi paketini yükle.")
+        self.packs_l.setVisible(not ps)
 
     def _on_catalog(self, cat: list) -> None:
         # Önceki CouchSubs girdilerini kaldır, yenilerini en üste koy (GTA 6 en başta)
@@ -923,7 +1540,7 @@ class TranslationPage(QWidget):
         c.argo_duzelt = self.slang.isChecked()
         c.ekran_yazilari = self.scene_cb.isChecked()
         c.kalite_bekleme_ms = self.wait.value()
-        c.kalite = self.qual.currentData()
+        c.kalite = self.qual_group.value() or "yok"
         c.claude_anahtar = self.key.text().strip()
         c.claude_model = self.model.currentData()
         c.claude_hizli_mod = self.fastmode.isChecked() and c.claude_model == "claude-opus-5-5"
@@ -949,15 +1566,20 @@ class HistoryPage(QWidget):
     def __init__(self, ctl: AppController):
         super().__init__()
         self.ctl = ctl
-        root = QVBoxLayout(self)
-        root.setContentsMargins(32, 28, 32, 24)
-        root.setSpacing(16)
-        root.addLayout(page_header("Geçmiş", "Bu oturumda çevrilen tüm yazılar. Kaliteli çeviri gelince satır "
-                                   "kendiliğinden güncellenir."))
+        _transparent(self)
+        root = page_shell(self, "Altyazı geçmişi", "Bu oturumda çevrilen bütün yazılar. Kaliteli çeviri gelince satır "
+                          "kendiliğinden güncellenir.", "history", scroll=False)
+        last = SectionCard(margins=16, spacing=6)
+        self.last_state = Pill("Beklemede", "off")
+        last.add(hbox(label("Son altyazı", "h3"), None, self.last_state))
+        self.last = label("Oynarken son altyazı burada görünür.", "muted", wrap=True)
+        last.add(self.last)
+        root.addWidget(last)
         self.search = QLineEdit()
         self.search.setPlaceholderText("Ara...")
         self.search.textChanged.connect(self._filter)
-        root.addLayout(hbox(self.search, button("Metin olarak kaydet", None, self._export)))
+        root.addLayout(hbox(self.search, button("Temizle", None, self._clear), button("TXT", None, self._export),
+                            button("JSON", None, self._export_json), spacing=8))
         card = Card(margins=0)
         self.table = QTableWidget(0, len(self.COLS))
         self.table.setHorizontalHeaderLabels(self.COLS)
@@ -974,14 +1596,17 @@ class HistoryPage(QWidget):
         root.addWidget(card, 1)
         self.rows: dict[int, int] = {}
         ctl.historyChanged.connect(self.on_item)
+        ctl.stateChanged.connect(lambda s: self.last_state.set("ok", "Çeviriyor") if s == "calisiyor"
+                                 else self.last_state.set("off", "Beklemede"))
 
     def on_item(self, it, updated: bool) -> None:  # noqa: ANN001
+        self.last.setText(f"<b>{it.text}</b><br><span style='color:{T.FAINT}'>{it.english}</span>")
         vals = [time.strftime("%H:%M:%S"), "ekran" if it.zone.startswith("tam") else it.zone, it.english, it.text,
                 it.source, f"{it.latency_ms:.0f}"]
         if updated and it.seq in self.rows:
-            row = self.table.rowCount() - 1 - self.rows[it.seq]
+            row_i = self.table.rowCount() - 1 - self.rows[it.seq]
             for c in (3, 4, 5):
-                self.table.setItem(row, c, QTableWidgetItem(vals[c]))
+                self.table.setItem(row_i, c, QTableWidgetItem(vals[c]))
             return
         self.table.insertRow(0)
         for c, v in enumerate(vals):
@@ -997,175 +1622,114 @@ class HistoryPage(QWidget):
                                for c in (2, 3))
             self.table.setRowHidden(r, not hit)
 
+    def _clear(self) -> None:
+        self.table.setRowCount(0)
+        self.rows.clear()
+
+    def _rows(self) -> list[dict]:
+        out = []
+        for r in range(self.table.rowCount() - 1, -1, -1):
+            cells = [self.table.item(r, c).text() if self.table.item(r, c) else "" for c in range(len(self.COLS))]
+            out.append(dict(zip(("saat", "bolge", "ingilizce", "turkce", "motor", "ms"), cells)))
+        return out
+
     def _export(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Kaydet", "gta6-ceviriler.txt", "Metin (*.txt)")
         if path:
-            lines = []
-            for r in range(self.table.rowCount() - 1, -1, -1):
-                lines.append(f"[{self.table.item(r, 0).text()}] {self.table.item(r, 2).text()}\n"
-                             f"    → {self.table.item(r, 3).text()}")
+            lines = [f"[{r['saat']}] {r['ingilizce']}\n    → {r['turkce']}" for r in self._rows()]
             with open(path, "w", encoding="utf-8") as f:
                 f.write("\n".join(lines))
 
+    def _export_json(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Kaydet", "gta6-ceviriler.json", "JSON (*.json)")
+        if path:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(self._rows(), f, ensure_ascii=False, indent=1)
 
-# ============================================================================ Ayarlar
+
+# ============================================================================ Ses, kısayollar ve diğer
 class SettingsPage(QWidget):
     def __init__(self, ctl: AppController):
         super().__init__()
         self.ctl = ctl
         cfg = ctl.cfg
-        content = QWidget()
-        content.setObjectName("page")
-        root = QVBoxLayout(content)
-        root.setContentsMargins(32, 28, 32, 24)
-        root.setSpacing(16)
-        root.addLayout(page_header("Ayarlar", "Görüntü kaynağı, ekran, kısayollar ve diğerleri."))
+        _transparent(self)
+        root = page_shell(self, "Ses ve kısayollar", "Türkçe dublaj, kısayol tuşları, kendiliğinden çalışma ve "
+                          "güncellemeler.", "settings")
 
-        src = Card()
-        src.add(label("Görüntü kaynağı", "h2"))
-        self.src = combo([("remoteplay", "PS5'e arka planda bağlan (TV'de oynarken; chiaki gerekmez)"),
-                          ("pencere", "chiaki-ng / Remote Play penceresi"), ("capture", "Capture kart"),
-                          ("video", "Video dosyası (test)")], cfg.kaynak.tur)
-        self.where = combo([("tv", "TV'de oynuyorum (Türkçe yalnız TV'de)"),
-                            ("ikisi", "TV'de ve bilgisayarda"), ("monitor", "Bilgisayar ekranında")],
-                           cfg.kaynak.oyun_yeri)
-        self.ps5_auto = QCheckBox("PS5 açılınca çeviri kendiliğinden başlasın (PS5'e arka planda bağlanırken)")
-        self.ps5_auto.setChecked(cfg.ps5.acilinca_baslat)
-        self.win_name = QLineEdit(cfg.kaynak.pencere_adi)
-        self.chiaki = QLineEdit(cfg.kaynak.chiaki_yolu)
-        self.chiaki.setPlaceholderText(ctl.chiaki_path() or "chiaki-ng bulunamadı")
-        self.cap_idx = QSpinBox()
-        self.cap_idx.setRange(0, 9)
-        self.cap_idx.setValue(cfg.kaynak.capture_cihaz)
-        self.video = QLineEdit(cfg.kaynak.dosya)
-        src.add(field("Kaynak", self.src))
-        src.add(field("Oyunu nerede oynuyorsun", hbox(self.where, button("PS5'i bağla", None, self._open_ps5),
-                                                      spacing=10),
-                      "TV'de oynarken bilgisayar PS5'e ikinci PSN hesabıyla arka planda bağlanıp yalnız altyazıyı okur."))
-        src.add(self.ps5_auto)
-        src.add(field("Pencere başlığında geçen", self.win_name, "chiaki-ng için \"chiaki\", resmi uygulama için "
-                                                                  "\"PS Remote Play\", Veyra için \"Veyra\"."))
-        src.add(field("chiaki-ng programı", hbox(self.chiaki, button("Gözat", None, self._browse),
-                                                 button("İndir", "ghost", lambda: webbrowser.open(CHIAKI_DOWNLOAD)))))
-        src.add(hbox(field("Capture kart numarası", self.cap_idx), field("Video dosyası", self.video), spacing=16))
-        root.addWidget(src)
-
-        disp = Card()
-        disp.add(label("Ekran", "h2"))
-        self.mode = combo([("overlay", "chiaki penceresinin üstüne katman (önerilen)"),
-                           ("pencere", "Görüntüyü kendi penceresinde göster (capture kart)")], cfg.gosterim.mod)
-        self.latency = QCheckBox("Sağ üstte gecikmeyi göster")
-        self.latency.setChecked(cfg.gosterim.gecikme_goster)
-        self.speak = QCheckBox("Türkçe seslendir (dublaj): altyazıyı sesli oku. Oyunun ayarlarından konuşma sesini kıs.")
-        self.speak.setChecked(cfg.gosterim.seslendir)
-        self.speak_rate = QSpinBox()
+        voice = SectionCard("Türkçe dublaj", "Çeviriyi doğal Türkçe sesle okur (Ahmet / Emel); konuşanın adına göre kadın "
+                            "ya da erkek ses. Oyunun ses ayarlarından konuşma (diyalog) sesini kıs; müzik ve efektler "
+                            "kalsın.", "phone")
+        self.speak = QCheckBox("Çeviriyi Türkçe seslendir", cfg.gosterim.seslendir)
+        self.speak_rate = QSlider(Qt.Horizontal)
         self.speak_rate.setRange(-50, 50)
-        self.speak_rate.setSuffix(" %")
         self.speak_rate.setValue(cfg.gosterim.ses_hizi)
-        self.font_name = QLineEdit(cfg.gosterim.yazi_tipi)
-        disp.add(field("Gösterim", self.mode))
-        disp.add(hbox(field("Yazı tipi", self.font_name), self.latency, spacing=16))
-        disp.add(hbox(self.speak, field("Konuşma hızı", self.speak_rate), spacing=16))
-        root.addWidget(disp)
+        voice.add(self.speak)
+        voice.add(slider_row("Konuşma hızı", self.speak_rate, lambda v: f"{v:+d} %"))
+        root.addWidget(voice)
 
-        keys = Card()
-        keys.add(label("Kısayollar", "h2"))
+        keys = SectionCard("Kısayollar", "Örnek: ctrl+shift+9, alt+f10, num9. TV'den oynarken aynı düğmeler telefon "
+                           "kumandasında da var.", "bolt")
         self.k_fs = QLineEdit(cfg.kisayol.tam_ekran)
         self.k_pause = QLineEdit(cfg.kisayol.duraklat)
+        for w in (self.k_fs, self.k_pause):
+            w.setObjectName("kbd")
+            w.setAlignment(Qt.AlignCenter)
+            w.setFixedWidth(200)
         self.fs_time = QSpinBox()
         self.fs_time.setRange(5, 120)
         self.fs_time.setValue(cfg.kisayol.tam_ekran_sure)
         self.fs_time.setSuffix(" sn")
-        keys.add(hbox(field("Ekranı çevir", self.k_fs), field("Duraklat", self.k_pause),
-                      field("Ekran çevirisi kalma süresi", self.fs_time), spacing=16))
-        keys.add(label("Örnek: ctrl+shift+9, alt+f10, num9. TV'den oynarken aynı düğmeler telefon kumandasında da var.",
-                       "faint", wrap=True))
+        self.fs_time.setFixedWidth(200)
+        for title, w in (("Ekranı çevir", self.k_fs), ("Altyazıyı duraklat / sürdür", self.k_pause),
+                         ("Ekran çevirisi ekranda kalma süresi", self.fs_time)):
+            keys.add(hbox(label(title, "h3"), None, w))
         self.fs_vision = QCheckBox("Ekranı çevirirken Claude görsel okuma kullan (menü, telefon ve süslü yazılarda daha "
-                                   "doğru; 2-4 sn sürer, Claude anahtarı gerekir)")
-        self.fs_vision.setChecked(cfg.kisayol.tam_ekran_gorsel)
+                                   "doğru; 2-4 sn sürer, Claude anahtarı gerekir)", cfg.kisayol.tam_ekran_gorsel)
         keys.add(self.fs_vision)
         root.addWidget(keys)
 
-        auto = Card()
+        auto = SectionCard("TV günleri: kendiliğinden çalışma", "Kasa başka odadayken her şey kendiliğinden olsun: sen "
+                           "TV'de PS5'i açarsın, çeviri başlar ve TV'ye altyazı gider. PS5'i kapatınca hepsi durur.",
+                           "swap")
         o = cfg.otomatik
-        auto.add(label("TV günleri: kendiliğinden çalışma", "h2"))
-        auto.add(label("Kasa başka odadayken her şey kendiliğinden olsun: sen TV'de PS5'i açarsın, kasa chiaki'yi "
-                       "bağlar, çeviri başlar ve TV'ye altyazı gider. PS5'i kapatınca hepsi durur.", "muted", wrap=True))
-        self.a_boot = QCheckBox("Bilgisayar açılınca GTA6 Altyazı da açılsın (simge durumunda)")
-        self.a_boot.setChecked(o.windows_ile_baslat)
-        self.a_src = QCheckBox("chiaki bağlanınca çeviri kendiliğinden başlasın, kapanınca dursun")
-        self.a_src.setChecked(o.chiaki_gorunce_baslat)
-        self.a_ps5 = QCheckBox("PS5 açılınca chiaki kendiliğinden bağlansın")
-        self.a_ps5.setChecked(o.ps5_acilinca_baglan)
-        self.a_fs = QCheckBox("Otomatik bağlanınca chiaki tam ekran açılsın")
-        self.a_fs.setChecked(o.chiaki_tam_ekran)
-        for w in (self.a_boot, self.a_src, self.a_ps5, self.a_fs):
-            auto.add(w)
+        self.a_boot = QCheckBox("Bilgisayar açılınca GTA6 Altyazı da açılsın (simge durumunda)", o.windows_ile_baslat)
+        self.a_src = QCheckBox("chiaki bağlanınca çeviri kendiliğinden başlasın, kapanınca dursun", o.chiaki_gorunce_baslat)
+        self.a_ps5 = QCheckBox("PS5 açılınca chiaki kendiliğinden bağlansın", o.ps5_acilinca_baglan)
+        self.a_fs = QCheckBox("Otomatik bağlanınca chiaki tam ekran açılsın", o.chiaki_tam_ekran)
+        auto.add(self.a_boot)
+        self.chiaki_auto = QWidget()
+        self.chiaki_auto.setLayout(vbox(self.a_src, self.a_ps5, self.a_fs, spacing=8))
+        auto.add(self.chiaki_auto)
         self.ps5_name = QLineEdit(o.ps5_adi)
         self.ps5_name.setPlaceholderText("PS5 adı (ör. PS5-123)")
         self.ps5_ip = QLineEdit(o.ps5_ip)
         self.ps5_ip.setPlaceholderText("PS5 IP adresi")
         self.ps5_btn = button("PS5'i bul", None, self._find_ps5)
-        auto.add(hbox(self.ps5_name, self.ps5_ip, self.ps5_btn, spacing=10))
-        auto.add(label("PS5'in adı chiaki'de kayıtlı adla aynı olmalı. \"PS5'i bul\" PS5 açıkken ya da dinlenme "
-                       "modundayken ağdan bulur. Telefon kumandasında da Başlat/Durdur ve PS5'e bağlan düğmeleri var.",
-                       "faint", wrap=True))
+        self.ps5_find = QWidget()
+        self.ps5_find.setLayout(vbox(hbox(self.ps5_name, self.ps5_ip, self.ps5_btn, spacing=10),
+                                     label("PS5'in adı chiaki'de kayıtlı adla aynı olmalı. \"PS5'i bul\" PS5 açıkken ya "
+                                           "da dinlenme modundayken ağdan bulur.", "faint", wrap=True), spacing=6))
+        auto.add(self.ps5_find)
         root.addWidget(auto)
-        upd = Card()
-        upd.add(label("Güncellemeler", "h2"))
-        self.u_pack = QCheckBox("Hazır paketlerin (GTA 6 dahil) yenisini açılışta kendiliğinden indir")
-        self.u_pack.setChecked(o.paket_guncelle)
-        self.u_app = QCheckBox("Yeni sürüm çıkınca ana ekranda haber ver (tek tıkla güncellenir)")
-        self.u_app.setChecked(o.surum_denetle)
+
+        upd = SectionCard("Güncellemeler", "Kurulumu yeniden yapmana gerek yok: paketler sessizce güncellenir, uygulama "
+                          "Güncelle düğmesiyle kendini yeniler. Ayarların, anahtarların ve paketlerin korunur.", "check")
+        self.u_pack = QCheckBox("Hazır paketlerin (GTA 6 dahil) yenisini açılışta kendiliğinden indir", o.paket_guncelle)
+        self.u_app = QCheckBox("Yeni sürüm çıkınca ana ekranda haber ver (tek tıkla güncellenir)", o.surum_denetle)
         upd.add(self.u_pack)
         upd.add(self.u_app)
-        upd.add(label("Kurulumu yeniden yapmana gerek yok: paketler sessizce güncellenir, uygulama Güncelle düğmesiyle "
-                      "kendini yeniler. Ayarların, anahtarların ve paketlerin korunur.", "faint", wrap=True))
         root.addWidget(upd)
         ctl.ps5Found.connect(self._on_ps5)
-
-        other = Card()
-        other.add(label("Diğer", "h2"))
-        other.add(hbox(button("Kurulum sihirbazını aç", None, lambda: self.window().open_wizard()),
-                       button("Kayıt ve ayar klasörü", None, self._open_data),
-                       button("OBS katmanını kopyala", None, self._copy_obs), None, spacing=10))
-        other.add(label(f"GTA6 Altyazı {__version__} · OBS tarayıcı kaynağı: http://localhost:{cfg.sunucu.port}/obs "
-                        "(1920×1080)", "faint", wrap=True))
-        credit = label("GNU AGPL-3.0 ile lisanslıdır. Sinan Yorulmaz'ın <a href='https://github.com/yorulmazsinan/couchsubs'>"
-                       "CouchSubs</a> projesinden ve <a href='https://gitlab.com/sefflex/GameTranslator'>GameTranslator</a>"
-                       "'dan alınan kodları içerir. Kaynak kodu: <a href='https://github.com/CH4P4R/gta6-altyazi'>"
-                       "github.com/CH4P4R/gta6-altyazi</a>", "faint", wrap=True)
-        credit.setOpenExternalLinks(True)
-        other.add(credit)
-        root.addWidget(other)
-        root.addLayout(hbox(None, button("Kaydet", "primary", self.save)))
+        root.addLayout(hbox(button("Kurulumu baştan yap", None, lambda: self.window().open_wizard()), None,
+                            button("Kaydet", "primary", self.save), spacing=10))
         root.addStretch(1)
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.addWidget(scroll_page(content))
-
-    def _open_ps5(self) -> None:
-        from .ps5_dialog import Ps5Dialog
-        Ps5Dialog(self.ctl, self).exec()
-        self._sync_source()
-        self.ctl._check_source()
-
-    def _sync_source(self) -> None:
-        """Ayarlar başka yerden değiştiyse (PS5 eşlendi) seçimleri güncelle; eski seçim Kaydet'le geri yazılmasın."""
-        for w, value in ((self.src, self.ctl.cfg.kaynak.tur), (self.where, self.ctl.cfg.kaynak.oyun_yeri)):
-            i = w.findData(value)
-            if i >= 0:
-                w.setCurrentIndex(i)
 
     def showEvent(self, e) -> None:  # noqa: ANN001, N802
-        self._sync_source()
+        rp = self.ctl.cfg.kaynak.tur == "remoteplay"         # TV'de oynayana chiaki seçeneklerini gösterme
+        self.chiaki_auto.setVisible(not rp)
+        self.ps5_find.setVisible(not rp)
         super().showEvent(e)
-
-    def _browse(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "chiaki-ng programını seç", "/Applications" if sys.platform == "darwin" else "",
-                                                  "Program (*.app *.exe);;Tümü (*)")
-        if path:
-            self.chiaki.setText(path)
 
     def _find_ps5(self) -> None:
         self.ps5_btn.setEnabled(False)
@@ -1183,29 +1747,10 @@ class SettingsPage(QWidget):
         self.ps5_ip.setText(c.ip)
         self.window().toast.show_text(f"PS5 bulundu: {c.name} ({c.ip}) · {'açık' if c.awake else 'dinlenme modunda'}")
 
-    def _open_data(self) -> None:
-        from .. import paths
-        open_path(str(paths.data_dir()))
-
-    def _copy_obs(self) -> None:
-        from PySide6.QtWidgets import QApplication
-        QApplication.clipboard().setText(f"http://localhost:{self.ctl.cfg.sunucu.port}/obs")
-        self.window().toast.show_text("OBS adresi kopyalandı")
-
     def save(self) -> None:
         cfg = self.ctl.edit_config()
-        cfg.kaynak.tur = self.src.currentData()
-        cfg.kaynak.oyun_yeri = self.where.currentData()
-        cfg.ps5.acilinca_baslat = self.ps5_auto.isChecked()
-        cfg.kaynak.pencere_adi = self.win_name.text().strip() or "chiaki"
-        cfg.kaynak.chiaki_yolu = self.chiaki.text().strip()
-        cfg.kaynak.capture_cihaz = self.cap_idx.value()
-        cfg.kaynak.dosya = self.video.text().strip()
-        cfg.gosterim.mod = self.mode.currentData()
-        cfg.gosterim.gecikme_goster = self.latency.isChecked()
         cfg.gosterim.seslendir = self.speak.isChecked()
         cfg.gosterim.ses_hizi = self.speak_rate.value()
-        cfg.gosterim.yazi_tipi = self.font_name.text().strip() or "Segoe UI Semibold"
         cfg.kisayol.tam_ekran = self.k_fs.text().strip()
         cfg.kisayol.duraklat = self.k_pause.text().strip()
         cfg.kisayol.tam_ekran_sure = self.fs_time.value()
@@ -1223,7 +1768,6 @@ class SettingsPage(QWidget):
         self.window().toast.show_text("Ayarlar kaydedildi")
 
 
-# ============================================================================ Pencere
 # ============================================================================ Rehber
 class GuidePage(QWidget):
     """Bütün süreçlerin resimli, adım adım anlatımı (içerik: altyazi/rehber.py; README'deki rehberle aynı)."""
@@ -1236,13 +1780,9 @@ class GuidePage(QWidget):
         from .guide import Guide
 
         self.ctl = ctl
-        content = QWidget()
-        content.setObjectName("page")
-        root = QVBoxLayout(content)
-        root.setContentsMargins(32, 28, 32, 24)
-        root.setSpacing(16)
-        root.addLayout(page_header("Rehber", "Kurulumdan yayına, her şeyin resimli anlatımı. Soldan konuyu seç, "
-                                   "adımları sırayla izle."))
+        _transparent(self)
+        root = page_shell(self, "Rehber", "Kurulumdan oynamaya, her şeyin resimli anlatımı. Soldan konuyu seç, adımları "
+                          "sırayla izle.", "guide", scroll=False)
         body = QHBoxLayout()
         body.setSpacing(16)
         side = QVBoxLayout()
@@ -1262,14 +1802,15 @@ class GuidePage(QWidget):
             b.setLayout(inner)
             b.setMinimumHeight(76)
             b.setStyleSheet(
-                f"QPushButton {{ text-align: left; border-radius: 12px; background: {T.SURFACE};"
-                f" border: 1px solid {T.BORDER}; }} QPushButton:hover {{ border-color: {T.BORDER_HI}; }}"
-                f"QPushButton:checked {{ background: {T.SURFACE2}; border: 2px solid {T.A1}; }}")
+                f"QPushButton {{ text-align: left; border-radius: 14px; background: rgba(23, 19, 31, 0.82);"
+                f" border: 1px solid rgba(255,255,255,0.07); }} QPushButton:hover {{ border-color: {T.BORDER_HI}; }}"
+                f"QPushButton:checked {{ background: {T.SURFACE2}; border: 1.5px solid {T.A1}; }}")
             b.clicked.connect(lambda _=False, k=i: self.show_guide(k))
             self.group.addButton(b, i)
             side.addWidget(b)
         side.addStretch(1)
         side_w = QWidget()
+        _transparent(side_w)
         side_w.setLayout(side)
         side_w.setFixedWidth(330)
         side_scroll = scroll_page(side_w)
@@ -1279,13 +1820,10 @@ class GuidePage(QWidget):
         self.heading = label("", "h2")
         card.add(self.heading)
         self.guide = Guide(nav=True)
-        self.guide.setMinimumHeight(560)
+        self.guide.setMinimumHeight(540)
         card.add(self.guide)
         body.addWidget(card, 1)
         root.addLayout(body, 1)
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.addWidget(content)
         self.show_guide(0)
 
     def show_guide(self, i: int) -> None:
@@ -1302,38 +1840,105 @@ class GuidePage(QWidget):
                 return
 
 
+# ============================================================================ Hakkında
+class AboutPage(QWidget):
+    def __init__(self, ctl: AppController):
+        super().__init__()
+        self.ctl = ctl
+        _transparent(self)
+        root = page_shell(self, "Hakkında", f"GTA6 Altyazı {__version__}", None)
+        card = SectionCard(margins=28, spacing=10)
+        logo = Logo(1.4)
+        card.add(hbox(None, logo, None))
+        for text, obj in ((f"Sürüm {__version__}", "muted"), ("GNU AGPL-3.0 lisansıyla ücretsiz ve açık kaynak.", "h3")):
+            lb = label(text, obj)
+            lb.setAlignment(Qt.AlignCenter)
+            card.add(lb)
+        credit = label("Sinan Yorulmaz'ın <a href='https://github.com/yorulmazsinan/couchsubs'>CouchSubs</a> projesinden, "
+                       "<a href='https://gitlab.com/sefflex/GameTranslator'>GameTranslator</a>'dan ve Nino Game "
+                       "Translator'dan alınan kodları içerir. Uzaktan Oynatma bağlantısı "
+                       "<a href='https://github.com/streetpea/chiaki-ng'>chiaki-ng</a> (AGPL-3.0) ile; çeviri modeli "
+                       "OPUS-MT, Helsinki Üniversitesi (CC BY 4.0). Geliştiricilerine teşekkürler.", "muted", wrap=True)
+        credit.setOpenExternalLinks(True)
+        credit.setAlignment(Qt.AlignCenter)
+        card.add(credit)
+        src = label("<a href='https://github.com/CH4P4R/gta6-altyazi'>Kaynak kodu: github.com/CH4P4R/gta6-altyazi</a>",
+                    "muted")
+        src.setOpenExternalLinks(True)
+        src.setAlignment(Qt.AlignCenter)
+        card.add(src)
+        note = label("GTA6 Altyazı, Rockstar Games ya da Sony Interactive Entertainment ile bağlantılı değildir. "
+                     "PlayStation ve PS5, Sony Interactive Entertainment Inc.'in ticari markalarıdır.", "faint", wrap=True)
+        note.setAlignment(Qt.AlignCenter)
+        card.add(note)
+        card.add(8)
+        card.add(hbox(None, button("Kurulumu baştan yap", None, lambda: self.window().open_wizard()),
+                      button("Kayıt ve ayar klasörü", None, self._open_data),
+                      button("OBS katmanını kopyala", "ghost", self._copy_obs), None, spacing=10))
+        card.setMaximumWidth(760)
+        root.addLayout(hbox(None, card, None))
+        root.addStretch(1)
+
+    def _open_data(self) -> None:
+        from .. import paths
+        open_path(str(paths.data_dir()))
+
+    def _copy_obs(self) -> None:
+        from PySide6.QtWidgets import QApplication
+        QApplication.clipboard().setText(f"http://localhost:{self.ctl.cfg.sunucu.port}/obs")
+        self.window().toast.show_text("OBS adresi kopyalandı")
+
+
+def _card_add_int(self, w, stretch: int = 0):  # noqa: ANN001, ANN202
+    if isinstance(w, int):
+        self.lay.addSpacing(w)
+        return w
+    return SectionCard._orig_add(self, w, stretch)
+
+
+SectionCard._orig_add = SectionCard.add
+SectionCard.add = _card_add_int
+
+
+# ============================================================================ Pencere
 class MainWindow(QMainWindow):
-    PAGES = [("home", "Ana ekran", "home"), ("regions", "Okuma alanları", "regions"), ("tv", "Televizyon", "tv"),
-             ("translate", "Çeviri", "translate"), ("history", "Geçmiş", "history"),
-             ("guide", "Rehber", "guide"), ("settings", "Ayarlar", "settings")]
+    # (anahtar, ad, ikon, grup başlığı)
+    PAGES = [("home", "Ana ekran", "home", None),
+             ("look", "Altyazı görünümü", "translate", "AYARLAR"), ("regions", "Okuma alanı", "regions", None),
+             ("translate", "Çeviri ve paketler", "bolt", None), ("tv", "Bağlantı", "tv", None),
+             ("settings", "Ses ve kısayollar", "settings", None), ("history", "Altyazı geçmişi", "history", None),
+             ("guide", "Rehber", "guide", "YARDIM"), ("about", "Hakkında", "check", None)]
 
     def __init__(self, ctl: AppController):
         super().__init__()
         self.ctl = ctl
         self.setWindowTitle("GTA6 Altyazı")
         self.setWindowIcon(app_icon())
-        self.resize(1280, 820)
+        self.resize(1320, 860)
         self.setMinimumSize(1100, 720)
-        central = QWidget()
-        central.setObjectName("page")
+        central = Backdrop()
         lay = QHBoxLayout(central)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
 
         side = QFrame()
         side.setObjectName("sidebar")
-        side.setFixedWidth(232)
+        side.setFixedWidth(244)
         sl = QVBoxLayout(side)
         sl.setContentsMargins(16, 20, 16, 18)
-        sl.setSpacing(4)
+        sl.setSpacing(3)
         sl.addWidget(Logo())
-        sl.addSpacing(22)
+        sl.addSpacing(16)
         self.nav: dict[str, NavButton] = {}
         self.stack = QStackedWidget()
-        factories = {"home": HomePage, "regions": RegionsPage, "tv": TvPage, "translate": TranslationPage,
-                     "history": HistoryPage, "guide": GuidePage, "settings": SettingsPage}
+        _transparent(self.stack)
+        factories = {"home": HomePage, "look": AppearancePage, "regions": RegionsPage, "tv": TvPage,
+                     "translate": TranslationPage, "history": HistoryPage, "guide": GuidePage,
+                     "settings": SettingsPage, "about": AboutPage}
         self.pages: dict[str, QWidget] = {}
-        for key, text, icon in self.PAGES:
+        for key, text, icon, group in self.PAGES:
+            if group:
+                sl.addWidget(label(group, "sideHeader"))
             b = NavButton(text, icon)
             b.clicked.connect(lambda _=False, k=key: self.go(k))
             sl.addWidget(b)
@@ -1342,20 +1947,29 @@ class MainWindow(QMainWindow):
             self.pages[key] = page
             self.stack.addWidget(page)
         sl.addStretch(1)
-        ask = button("💬  Sor (yardım)", "primary", self._ask, "Takıldığın yeri yaz; rehberi bilen yapay zekâ anlatsın")
-        sl.addWidget(ask)
-        sl.addSpacing(8)
         self.foot = label("", "faint", wrap=True)
         sl.addWidget(self.foot)
         lay.addWidget(side)
         lay.addWidget(self.stack, 1)
         self.setCentralWidget(central)
         self.toast = Toast(central)
+        self.fab = HelpFab(central)
+        self.fab.clicked.connect(self._ask)
         self.go("home")
         ctl.notice.connect(lambda m: self.toast.show_text(m))
         ctl.stateChanged.connect(self._foot)
         ctl.enginesReady.connect(lambda _i: self._foot(ctl.state))
+        ctl.tvStatus.connect(lambda *_a: self._foot(ctl.state))
+        ctl.ps5Status.connect(lambda *_a: self._foot(ctl.state))
         self._foot(ctl.state)
+
+    def resizeEvent(self, e) -> None:  # noqa: ANN001, N802
+        super().resizeEvent(e)
+        self.fab.place()
+
+    def showEvent(self, e) -> None:  # noqa: ANN001, N802
+        super().showEvent(e)
+        self.fab.place()
 
     def _ask(self) -> None:
         from .yardim import AskDialog
@@ -1370,11 +1984,20 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(self.pages[key])
 
     def _foot(self, state: str) -> None:
-        info = self.ctl.engine_info
+        """Nino'nun alt durum çubuğu gibi: PS5 · TV · çeviri · sürüm."""
         dot = {"calisiyor": T.OK, "hazir": T.INFO, "hazirlaniyor": T.WARN, "hata": T.BAD}.get(state, T.MUTED)
-        name = {"calisiyor": "Çeviri açık", "hazir": "Hazır", "hazirlaniyor": "Hazırlanıyor", "hata": "Hata"}.get(state, state)
-        ocr = info.get("ocr", "...") if info else "..."
-        self.foot.setText(f"<span style='color:{dot}'>●</span> {name}<br>OCR: {ocr}<br>v{__version__}")
+        name = {"calisiyor": "Çeviri açık", "hazir": "Hazır", "hazirlaniyor": "Hazırlanıyor", "hata": "Hata"}.get(state,
+                                                                                                                  state)
+        tv = self.ctl.tv_state[0]
+        tvc = T.OK if tv == "bagli" else (T.WARN if tv in ("baglaniyor", "onay") else T.FAINT)
+        ps = getattr(self.ctl, "rp_state", ("", ""))[0]
+        psc = T.OK if ps == "bagli" else (T.WARN if ps == "baglaniyor" else
+                                          (T.INFO if self.ctl.cfg.ps5.anahtar else T.FAINT))
+        info = self.ctl.engine_info or {}
+        eng = info.get("kalite") or info.get("hizli") or "…"
+        self.foot.setText(f"<span style='color:{dot}'>●</span> {name}<br>"
+                          f"<span style='color:{psc}'>●</span> PS5 &nbsp; <span style='color:{tvc}'>●</span> TV"
+                          f" &nbsp;·&nbsp; Çeviri: {eng}<br>v{__version__}")
 
     def open_wizard(self) -> None:
         from .wizard import Wizard

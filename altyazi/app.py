@@ -570,8 +570,12 @@ class AppController(QObject):
         main = next((b for b in self.cfg.bolgeler if b.ad == "altyazi"), None)
         scale = main.yazi_olcek if main else 1.3
         opacity = round((main.kutu_opaklik if main else 255) / 255 * 100)
+        t = self.cfg.tv
         self.server.set_tv_style(lineScale=float(scale), background=opacity,
-                                 displayMode="overlay" if self.cfg.tv.mod == "katman" else "inApp")
+                                 displayMode="overlay" if t.mod == "katman" else "inApp",
+                                 placement=t.yerlesim, fontSize=int(t.yazi_boyutu), textColor=t.yazi_rengi,
+                                 bold=bool(t.kalin), stackPrevious=bool(t.onceki_satirlar), bottomPercent=int(t.alttan),
+                                 backgroundShape=t.zemin_sekli)
 
     def apply_config(self, cfg: config_mod.Config, explicit_keys: bool = False) -> None:
         old = self.cfg

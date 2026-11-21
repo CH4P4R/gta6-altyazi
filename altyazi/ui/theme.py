@@ -53,7 +53,36 @@ QToolTip {{ background: {SURFACE3}; color: {TEXT}; border: 1px solid {BORDER_HI}
 #navButton:hover {{ background: {SURFACE}; color: {TEXT}; }}
 #navButton:checked {{ background: {SURFACE2}; color: {TEXT}; }}
 
-#card {{ background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 16px; }}
+#card {{ background: rgba(23, 19, 31, 0.82); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 18px; }}
+#cardAccent {{ background: rgba(23, 19, 31, 0.86); border: 1.5px solid rgba(255, 79, 163, 0.55); border-radius: 18px; }}
+#radioCard {{ background: rgba(30, 25, 40, 0.75); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 16px; }}
+#radioCard:hover {{ border-color: {BORDER_HI}; }}
+#radioCard[checked="true"] {{ border: 1.5px solid {A1}; background: rgba(255, 79, 163, 0.06); }}
+#segmented {{ background: rgba(13, 11, 19, 0.7); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 13px; }}
+QPushButton#seg, QPushButton#segBig {{ background: transparent; border: 0; border-radius: 10px; color: {MUTED};
+    padding: 8px 14px; font-weight: 600; }}
+QPushButton#segBig {{ padding: 11px 18px; font-size: 11pt; }}
+QPushButton#seg:hover, QPushButton#segBig:hover {{ color: {TEXT}; }}
+QPushButton#seg:checked, QPushButton#segBig:checked {{ background: {SURFACE3}; color: {TEXT};
+    border: 1px solid rgba(255, 79, 163, 0.6); }}
+QPushButton#chip {{ background: {SURFACE2}; border: 1px solid {BORDER_HI}; border-radius: 15px; padding: 7px 14px;
+    color: {TEXT}; font-weight: 600; }}
+QPushButton#chip:hover {{ border-color: #4a3f5c; }}
+QPushButton#chip:checked {{ border: 1px solid {A1}; background: rgba(255, 79, 163, 0.14); }}
+#pill {{ background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px;
+    padding: 4px 10px; color: {TEXT}; font-size: 9pt; font-weight: 600; }}
+#pinBox {{ font-size: 22pt; font-weight: 700; border-radius: 12px; background: {SURFACE2}; border: 1.5px solid {BORDER_HI}; }}
+#pinBox:focus {{ border-color: {A1}; }}
+#sideHeader {{ color: {FAINT}; font-size: 8pt; font-weight: 700; letter-spacing: 1.5px; padding: 14px 14px 4px 14px; }}
+#eyebrow {{ color: {A2}; font-size: 8.5pt; font-weight: 700; letter-spacing: 1.5px; }}
+#heroTitle {{ font-size: 34pt; font-weight: 800; }}
+#heroSub {{ font-size: 13pt; color: {MUTED}; }}
+#stat {{ font-size: 9pt; color: {MUTED}; }}
+#liveTr {{ font-size: 20pt; font-weight: 700; color: {A2}; }}
+#liveEn {{ font-size: 10.5pt; color: {MUTED}; }}
+#prevTr {{ font-size: 12.5pt; font-weight: 600; color: {TEXT}; }}
+#mono {{ font-family: "JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace; color: {INFO}; font-size: 9.5pt; }}
+#kbd {{ background: {SURFACE2}; border: 1px solid {BORDER_HI}; border-radius: 8px; padding: 6px 12px; font-weight: 700; }}
 #cardInner {{ background: {SURFACE2}; border: 1px solid {BORDER}; border-radius: 12px; }}
 #h1 {{ font-size: 20pt; font-weight: 700; }}
 #h2 {{ font-size: 13pt; font-weight: 700; }}
@@ -71,6 +100,14 @@ QPushButton {{ background: {SURFACE2}; border: 1px solid {BORDER_HI}; border-rad
 QPushButton:hover {{ background: {SURFACE3}; border-color: #4a3f5c; }}
 QPushButton:pressed {{ background: {SURFACE}; }}
 QPushButton:disabled {{ color: {FAINT}; border-color: {BORDER}; }}
+QPushButton#primaryBig {{ border: 0; color: white; font-size: 12pt; padding: 13px 30px; border-radius: 14px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {A1}, stop:1 {A2}); }}
+QPushButton#primaryBig:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #ff66b0, stop:1 #ffb066); }}
+QPushButton#primaryBig:disabled {{ background: {SURFACE3}; color: {FAINT}; }}
+QPushButton#stopBig {{ border: 1.5px solid {A1}; color: {TEXT}; font-size: 12pt; padding: 12px 30px; border-radius: 14px;
+    background: rgba(255, 79, 163, 0.10); }}
+QPushButton#linkBig {{ background: transparent; border: 0; color: {A2}; font-size: 11pt; font-weight: 600; padding: 6px; }}
+QPushButton#linkBig:hover {{ color: {A1}; }}
 QPushButton#primary {{ border: 0; color: white;
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {A1}, stop:1 {A2}); }}
 QPushButton#primary:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #ff66b0, stop:1 #ffb066); }}

@@ -161,6 +161,14 @@ class TvCfg:
     mod: str = "otomatik"         # otomatik | katman | hdmi
     # TV ekranı oyun görüntüsünü kırpıyor/kaydırıyorsa (overscan): [x, y, genişlik, yükseklik] oran
     kalibrasyon: list[float] = field(default_factory=lambda: [0.0, 0.0, 1.0, 1.0])
+    # TV'deki altyazının görünümü (Ayarlar › Altyazı görünümü; TV uygulamasına 'style' olarak gider)
+    yerlesim: str = "cover"       # cover (İngilizcenin üstünü örter) | above | below | fixed (sabit, alttan yüzde)
+    yazi_boyutu: int = 58         # sabit yerleşimde yazı boyu (px, 1080p'ye göre)
+    yazi_rengi: str = "white"     # white | yellow | cyan | green | orange
+    kalin: bool = True
+    onceki_satirlar: bool = True  # hızlı konuşmada önceki satırlar üstte kalsın
+    alttan: int = 7               # sabit yerleşimde alttan uzaklık (yüzde)
+    zemin_sekli: str = "fit"      # fit (yazı kadar) | band (tam genişlik bant)
 
 
 @dataclass
@@ -265,6 +273,11 @@ def _migrate(cfg: Config) -> None:
         if not any(b.ad == "telefon" for b in cfg.bolgeler) and any(b.ad == "bildirim" for b in cfg.bolgeler):
             cfg.bolgeler.append(BolgeCfg(ad="telefon", alan=[0.66, 0.33, 1.0, 0.78], tur="altyazi", hizalama="sag",
                                          capa="ust", silme_ms=400))
+    if "tv-remoteplay" not in cfg.gocler:
+        # TV'de oynayan ve PS5'i eşlemiş biri chiaki penceresi beklemesin: görüntü arka planda PS5'ten gelsin
+        cfg.gocler.append("tv-remoteplay")
+        if cfg.kaynak.oyun_yeri == "tv" and cfg.kaynak.tur == "pencere" and cfg.ps5.anahtar:
+            cfg.kaynak.tur = "remoteplay"
     if "yardim-asagi" not in cfg.gocler:
         # GTA 6'nın yardım kutusu köşede değil biraz aşağıda; eski alan (y ≤ 0.32) son satırı kesiyordu
         cfg.gocler.append("yardim-asagi")
