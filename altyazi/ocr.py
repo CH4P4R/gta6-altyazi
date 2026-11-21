@@ -139,40 +139,47 @@ def timed(fn, *a, **kw):
 
 
 def make_recognizer(cfg) -> object:  # noqa: ANN001
-    """Ayara göre tanıyıcı: Mac'te Apple Vision (kendini sınar), olmazsa PP-OCR (Recognizer)."""
+    """Ayara göre tanıyıcı. otomatik: Mac'te Apple Vision doğru kip örnek satırı tam okuyor ve yeterince hızlıysa o,
+    değilse PP-OCR (hızlı kip "I" gibi tek harfli sözcükleri ve noktalamayı kaçırıyor; altyazıda anlamı bozar)."""
     motor = getattr(cfg, "motor", "otomatik")
     if motor in ("otomatik", "vision"):
         from . import ocr_vision
 
         if ocr_vision.available():
             try:
-                return _checked_vision(ocr_vision)
+                return _checked_vision(ocr_vision, allow_fast=motor == "vision")
             except Exception as e:  # noqa: BLE001
-                log.warning("Apple Vision kullanılamadı, PP-OCR'a geçiliyor: %s", e)
+                log.warning("Apple Vision altyazı için seçilmedi, PP-OCR kullanılıyor: %s", e)
     return Recognizer(cfg.model or None, cfg.anahtar_dosyasi or None, use_gpu=cfg.gpu)
 
 
-def _checked_vision(ocr_vision) -> object:  # noqa: ANN001
-    """Vision örnek bir satırı doğru okuyor mu, ne kadar sürüyor? Yavaşsa hızlı kipe geçer."""
+SAMPLE = "I said, where were you last night, Jason?"
+VISION_MAX_MS = 250
+
+
+def _same(a: str, b: str) -> bool:
+    norm = lambda t: " ".join(t.lower().replace(".", ",").split())  # noqa: E731
+    return norm(a) == norm(b)
+
+
+def _checked_vision(ocr_vision, allow_fast: bool = False) -> object:  # noqa: ANN001
+    """Vision örnek satırı harfi harfine okuyor mu, ne kadar sürüyor? Doğru kip yavaşsa ya da yanlışsa hata verir
+    (PP-OCR'a geçilir); allow_fast ise (ayar: vision) hızlı kip de denenir."""
     import cv2
 
-    img = np.full((60, 900, 3), 255, np.uint8)
-    cv2.putText(img, "Where were you last night, Jason?", (8, 44), cv2.FONT_HERSHEY_DUPLEX, 1.2, (0, 0, 0), 2)
-    best = None
-    for fast in (False, True):
+    img = np.full((60, 1000, 3), 255, np.uint8)
+    cv2.putText(img, SAMPLE, (8, 44), cv2.FONT_HERSHEY_DUPLEX, 1.2, (0, 0, 0), 2)
+    seen = []
+    for fast in ((False, True) if allow_fast else (False,)):
         rec = ocr_vision.VisionRecognizer(fast=fast)
         rec.recognize([img])                                   # ısınma
         t = time.perf_counter()
         line = rec.recognize([img])[0]
         ms = (time.perf_counter() - t) * 1000
-        ok = "jason" in line.text.lower() and "night" in line.text.lower()
-        log.info("Apple Vision (%s): %.0f ms, okunan %r", "hızlı" if fast else "doğru", ms, line.text)
-        if ok and (best is None or ms < 0.5 * best[1]):
-            best = (rec, ms)
-        if ok and not fast and ms <= 120:
-            break                                              # doğru kip yeterince hızlı
-    if best is None:
-        raise RuntimeError("örnek satırı okuyamadı")
-    rec = best[0]
-    rec.device = f"Apple Neural Engine (Vision, {'hızlı' if rec.fast else 'doğru'} kip, ~{best[1]:.0f} ms)"
-    return rec
+        kind = "hızlı" if fast else "doğru"
+        log.info("Apple Vision (%s): %.0f ms, okunan %r", kind, ms, line.text)
+        seen.append(f"{kind} {ms:.0f} ms {line.text!r}")
+        if _same(line.text, SAMPLE) and (ms <= VISION_MAX_MS or allow_fast):
+            rec.device = f"Apple Neural Engine (Vision, {kind} kip, ~{ms:.0f} ms)"
+            return rec
+    raise RuntimeError("; ".join(seen))

@@ -54,7 +54,7 @@ def test_make_recognizer_falls_back_to_ppocr(monkeypatch):
     rec = ocr.make_recognizer(OcrCfg())
     assert isinstance(rec, FakeRec) and made                 # Vision bozuksa PP-OCR
     made.clear()
-    monkeypatch.setattr(ocr, "_checked_vision", lambda m: "vision")
+    monkeypatch.setattr(ocr, "_checked_vision", lambda m, allow_fast=False: "vision")
     assert ocr.make_recognizer(OcrCfg()) == "vision"
     assert isinstance(ocr.make_recognizer(OcrCfg(motor="ppocr")), FakeRec)
 
@@ -89,3 +89,31 @@ def test_fullscreen_reader_uses_vision_and_falls_back(monkeypatch):
     monkeypatch.setattr(rapidocr_onnxruntime, "RapidOCR", FakeRapid)
     assert r.read_lines(np.zeros((100, 200, 3), np.uint8)) == [("Meet me", (10.0, 20.0, 100.0, 40.0))]
     assert not r.vision
+
+
+def test_checked_vision_needs_exact_reading_and_speed(monkeypatch):
+    import pytest
+
+    class FakeVision:
+        texts = {False: ocr.SAMPLE, True: ocr.SAMPLE}
+        delay = {False: 0.0, True: 0.0}
+
+        class VisionRecognizer:
+            def __init__(self, fast=False):
+                self.fast = fast
+
+            def recognize(self, imgs):
+                import time
+                time.sleep(FakeVision.delay[self.fast])
+                return [ocr.OcrLine(FakeVision.texts[self.fast], 1.0)]
+
+    rec = ocr._checked_vision(FakeVision)
+    assert not rec.fast and "doğru" in rec.device
+    FakeVision.texts[False] = "said, where were you last night. Jason?"      # "I" kaçtı
+    with pytest.raises(RuntimeError):
+        ocr._checked_vision(FakeVision)                                       # otomatik: PP-OCR'a geç
+    assert ocr._checked_vision(FakeVision, allow_fast=True).fast             # ayar vision: hızlı kip
+    FakeVision.texts[False] = ocr.SAMPLE
+    monkeypatch.setattr(ocr, "VISION_MAX_MS", -1)                             # doğru kip yavaş
+    with pytest.raises(RuntimeError):
+        ocr._checked_vision(FakeVision)

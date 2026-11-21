@@ -103,9 +103,10 @@ jobs:
           from altyazi.ocr import make_recognizer
           from altyazi.fullscreen import FullScreenReader
           assert ocr_vision.available(), "Vision yüklenemedi"
-          rec = make_recognizer(OcrCfg())
+          print("otomatik seçim:", make_recognizer(OcrCfg()).device)   # CI sanal Mac'inde Neural Engine yok, yavaş olabilir
+          rec = make_recognizer(OcrCfg(motor="vision"))
           print("tanıyıcı:", rec.device)
-          assert "Vision" in rec.device, rec.device
+          assert "Vision" in rec.device and "doğru" in rec.device, rec.device
           def line(text):
               img = np.full((56, 1100, 3), 255, np.uint8)
               cv2.putText(img, text, (10, 40), cv2.FONT_HERSHEY_DUPLEX, 1.25, (0, 0, 0), 2)
@@ -113,7 +114,7 @@ jobs:
           a, b = "You said this would be easy, Lucia.", "I never said that. Get in the car!"
           t = time.perf_counter(); out = rec.recognize([line(a), line(b)]); ms = (time.perf_counter() - t) * 1000
           print(f"iki satır: {ms:.0f} ms ->", [(o.text, o.score) for o in out])
-          assert "lucia" in out[0].text.lower() and "car" in out[1].text.lower(), out
+          assert "lucia" in out[0].text.lower() and out[1].text.lower().startswith("i never") and "car" in out[1].text.lower(), out
           frame = np.full((1080, 1920, 3), 40, np.uint8)
           cv2.putText(frame, "BUY FLOWERS FOR LUCIA", (1300, 300), cv2.FONT_HERSHEY_DUPLEX, 1.4, (255, 255, 255), 2)
           cv2.putText(frame, "Meet me at the docks tonight", (200, 900), cv2.FONT_HERSHEY_DUPLEX, 1.4, (255, 255, 255), 2)
