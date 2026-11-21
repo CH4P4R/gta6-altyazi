@@ -47,5 +47,6 @@ def test_single_long_word_is_untouched():
 
 def test_balance_prefers_the_shortest_longest_line():
     assert satir.balance(["aa", "bb", "cc", "dd"], 2) == "aa bb\ncc dd"
-    assert satir.balance(["aaaa", "b", "c", "d"], 3) == "aaaa\nb c\nd"
+    # Eşit dengede ilk bulunan bölme kalır (Swift'teki gibi kesin "küçüktür" karşılaştırması).
+    assert satir.balance(["aaaa", "b", "c", "d"], 3) == "aaaa\nb\nc d"
     assert satir.tokens("ARTHUR: We go now.") == ["ARTHUR: We", "go", "now."]

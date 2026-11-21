@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import sqlite3
+import sys
 import threading
 import time
 from collections import deque
@@ -180,13 +181,47 @@ class LocalMT:
         if device == "auto":
             device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
         compute = "int8_float16" if device == "cuda" else "int8"
-        self.tr = ctranslate2.Translator(str(p), device=device, compute_type=compute,
-                                         inter_threads=2, intra_threads=0 if device == "cuda" else 4)
+        threads = 0 if device == "cuda" else max(2, min(8, (os.cpu_count() or 4) - 2))
+        self._make = lambda ct: ctranslate2.Translator(str(p), device=device, compute_type=ct, inter_threads=2,
+                                                       intra_threads=threads)
+        self.tr = self._make(compute)
         self.sp_src = spm.SentencePieceProcessor(model_file=str(p / "source.spm"))
         self.sp_tgt = spm.SentencePieceProcessor(model_file=str(p / "target.spm"))
         self.beam = beam
         self.device = device
-        log.info("Yerel çeviri modeli: %s (%s, %s)", p.name, device, compute)
+        self.compute = compute
+        if device == "cpu":
+            self._tune()
+        log.info("Yerel çeviri modeli: %s (%s, %s, ışın %d)", p.name, device, self.compute, self.beam)
+
+    SAMPLE = "Get in the car, we have to go before the cops show up."
+
+    def _timed(self) -> float:
+        t0 = time.perf_counter()
+        self.translate(self.SAMPLE)
+        return (time.perf_counter() - t0) * 1000
+
+    def _tune(self) -> None:
+        """İşlemcide en hızlı ayarı ölçerek seç: Apple Silicon'da float32 (Accelerate) çoğu zaman int8'den hızlı;
+        yavaş işlemcide ışın 1 (yapay zekâ katmanı zaten cilalar). Hedef: bir satır ~150 ms altı."""
+        try:
+            self._timed()                                  # ısınma (model belleğe yüklenir)
+            best = self._timed()
+            if sys.platform == "darwin" and best > 120:
+                old = self.tr
+                self.tr = self._make("float32")
+                self._timed()
+                f32 = self._timed()
+                if f32 < best * 0.85:
+                    best, self.compute = f32, "float32"
+                else:
+                    self.tr = old
+            if best > 300 and self.beam > 1:
+                self.beam = 1
+                best = self._timed()
+            log.info("Yerel çeviri hızı: ~%.0f ms/satır", best)
+        except Exception:  # noqa: BLE001
+            log.exception("Yerel çeviri ayarı ölçülemedi")
 
     def translate(self, text: str, kind: str = "", context=None) -> str:
         sents = [s for s in _SENT.split(text) if s.strip()] or [text]
