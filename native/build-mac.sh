@@ -106,8 +106,11 @@ bad=$(otool -L "$DYLIB" | tail -n +2 | awk '{print $1}' | grep -v 'couchsubs_nat
 [[ -z "$bad" ]] || { echo "HATA: sistem dışı bağımlılık: $bad" >&2; exit 1; }
 minos=$(otool -l "$DYLIB" | awk '/minos/ {print $2}' | sort -uV | tail -1)
 [[ "$(printf '%s\n%s\n' "$minos" "$MIN" | sort -V | tail -1)" == "$MIN" ]] || { echo "HATA: macOS $minos hedefleniyor" >&2; exit 1; }
+# (grep -q borunun öbür ucunu erken kapatır; pipefail ile nm "Broken pipe" hatası sayılıyordu: önce değişkene al)
+EXPORTS="$(nm -gU "$DYLIB")"
+UNDEF="$(nm -u "$DYLIB")"
 for fn in cs_init cs_discover_ex cs_wake cs_register cs_session_start_ex cs_session_stop; do
-  nm -gU "$DYLIB" | grep -q " _$fn$" || { echo "HATA: dışa aktarılmamış: $fn" >&2; exit 1; }
+  grep -q " _$fn$" <<<"$EXPORTS" || { echo "HATA: dışa aktarılmamış: $fn" >&2; exit 1; }
 done
-if nm -u "$DYLIB" | grep -qx "_pipe2"; then echo "HATA: pipe2 kullanılıyor" >&2; exit 1; fi
+if grep -qx "_pipe2" <<<"$UNDEF"; then echo "HATA: pipe2 kullanılıyor" >&2; exit 1; fi
 ls -l "$DYLIB"
