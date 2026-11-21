@@ -340,6 +340,15 @@ def match_keys(zone: str, prev: dict[str, tuple[int, int]], spans: list[tuple[in
     return keys
 
 
+def _reread(newer: str, older: str) -> bool:
+    """Nino Rereads: yeni okuma eskinin yarım ya da bozuk tekrarı mı (çevirmene ikinci kez gitmesin)."""
+    try:
+        from .oyun.yeniden_okuma import is_reread_of
+        return is_reread_of(newer, older)
+    except Exception:  # noqa: BLE001
+        return False
+
+
 class Pipeline:
     def __init__(self, cfg: Config, sink: Sink, recognizer, engine: TranslationEngine, source=None,
                  frame_sink=None):
@@ -368,6 +377,7 @@ class Pipeline:
         self._fs_zones: list[str] = []
         self._fs_until = 0.0
         self._fs_busy = False
+        self.layout_top = None                 # öğrenilen altyazı şeridinin üstü (oyun/altyazi_yeri.py): () -> float | None
         self.scene = None                      # ekran yazıları: telefon, harita kartı, mesaj kartı (sahne/izleyici.py)
         if getattr(cfg.ceviri, "ekran_yazilari", False) and hasattr(engine, "translate_now"):
             try:
@@ -600,8 +610,11 @@ class Pipeline:
         if self.scene is not None:
             self.scene.offer(frame)
         h, w = frame.shape[:2]
+        learned = self.layout_top() if self.layout_top else None
         for zcfg, det in self.zones:
             x0, y0, x1, y1 = zone_rect(zcfg, w, h)
+            if learned and zcfg.tur == "altyazi" and y0 / h < learned < y1 / h - 0.06:
+                y0 = int(learned * h)             # altyazının yeri öğrenildi: yalnız o şerit okunur (hızlı, HUD karışmaz)
             ev = det.process(frame[y0:y1, x0:x1], t)
             if ev is None:
                 continue
@@ -639,8 +652,8 @@ class Pipeline:
                     continue                      # telefondaki yazı altyazı değil: telefonun yanında çevriliyor
                 with self._lock:
                     cur = self._current.get(key)
-                    if cur and (cur[1] == text or worse_reread(cur[1], text)):
-                        continue                  # aynı metin ya da aynı satırın daha kötü okunuşu
+                    if cur and (cur[1] == text or worse_reread(cur[1], text) or _reread(text, cur[1])):
+                        continue                  # aynı metin ya da aynı satırın daha kötü / yarım okunuşu
                     self._seq += 1
                     seq = self._seq
                     self._current[key] = (seq, text, 0)

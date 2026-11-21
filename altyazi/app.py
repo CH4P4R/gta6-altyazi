@@ -95,6 +95,14 @@ class AppController(QObject):
         self._uiCommand.connect(self._run_ui_command, Qt.QueuedConnection)
         from . import harcama, paths
         harcama.tracker.load(paths.data("harcama.json"))
+        # Oynanan oyun ve altyazının yeri (Nino: GameSense, SubtitleLayout)
+        from .oyun.altyazi_yeri import SubtitleLayoutStore
+        from .oyun.oyun_algi import GameChoice
+        self.game_choice = GameChoice(paths.data("oyun.json"))
+        self.game_choice.on_change = self._game_changed
+        self.layout = SubtitleLayoutStore(paths.data("altyazi-yeri.json"))
+        self._game_lock = threading.Lock()
+        self._game_poll = 0.0
         harcama.tracker.listener = self.spendChanged.emit
         self._start_server()
         self._start_hotkeys()
@@ -247,6 +255,8 @@ class AppController(QObject):
         self.pipe = Pipeline(self.cfg, MultiSink(self, self.server), self.rec, self.engine, source,
                              frame_sink=frame_sink)
         self.pipe.notice = self._notice
+        self.pipe.layout_top = lambda: self.layout.current.read_top(self.layout_key())
+        self.game_choice.start(self.cfg.ps5.ad or None, lambda: False)
         self.pipe.start()
         winutil.keep_awake(True)
         self._set_state("calisiyor")
@@ -479,6 +489,8 @@ class AppController(QObject):
     # Sink arayüzü (Pipeline buraya yazar; başka iş parçacığından gelir, sinyaller kuyruğa alınır)
     def show(self, item: DisplayItem) -> None:
         self._maybe_speak(item)
+        if item.seq not in self._hist_index:
+            self._note_game(item)
         self.bridge.shown.emit(item)
         self.itemShown.emit(item)
         updated = item.seq in self._hist_index
@@ -498,6 +510,35 @@ class AppController(QObject):
     def clear(self, zone: str) -> None:
         self.bridge.cleared.emit(zone)
         self.itemCleared.emit(zone)
+
+    # ------------------------------------------------------------------ oynanan oyun
+    def layout_key(self) -> str:
+        return self.game_choice.sense.pack_id or (self.engine.game_pack if self.engine else None) or "genel"
+
+    def _game_changed(self, game) -> None:  # noqa: ANN001
+        from .oyun.oyun_algi import pack_for_game
+        if self.engine is None:
+            return
+        pid = self.game_choice.sense.pack_id or (pack_for_game(game, self.engine.packs.packs) if game else None)
+        if pid != self.engine.game_pack:
+            self.engine.game_pack = pid
+            name = getattr(game, "name", None) or pid
+            log.info("Oynanan oyun: %s (paket: %s)", name, pid)
+            if name:
+                self._notice(f"Oyun tanındı: {name}")
+
+    def _note_game(self, item: DisplayItem) -> None:
+        """Gösterilen altyazı: oyun oylaması (yalnız tek pakette bulunan satır) ve altyazı yerinin öğrenilmesi."""
+        if item.zone != "altyazi" or not item.text or self.engine is None:
+            return
+        try:
+            from .oyun.oyun_algi import distinctive_pack
+            with self._game_lock:
+                pid = distinctive_pack(self.engine.packs, item.english) if item.source.startswith("paket/") else None
+                self.game_choice.note_line(pid)
+            self.layout.record(item.rect, self.layout_key())
+        except Exception:  # noqa: BLE001
+            log.debug("Oyun/altyazı yeri kaydı", exc_info=True)
 
     def _maybe_speak(self, item: DisplayItem) -> None:
         """Dublaj: altyazının son (en kaliteli) çevirisi okunur; hızlı ön çeviri kalite katmanı varsa okunmaz."""
@@ -627,7 +668,23 @@ class AppController(QObject):
         threading.Thread(target=run, daemon=True, name="ps5").start()
 
     def _auto_rp_tick(self) -> None:
-        """TV günleri: PS5 açılınca çeviri kendiliğinden başlasın (kasada kimse yok). Elle durdurulduysa başlatma."""
+        """TV günleri: PS5 açılınca çeviri kendiliğinden başlasın (kasada kimse yok). Elle durdurulduysa başlatma.
+        Çeviri sürerken: PS5'te çalışan oyun sorulur (oyun tanıma, yarım dakikada bir)."""
+        if self.state == "calisiyor" and self.ps5_paired() and not self._ps5_busy \
+                and time.time() - self._game_poll > 30:
+            self._game_poll = time.time()
+
+            def poll() -> None:
+                from . import remoteplay as rp
+                from .oyun.oyun_algi import running_game_from_console
+                try:
+                    found = rp.discover(self.cfg.ps5.ip, 1.5)
+                    with self._game_lock:
+                        self.game_choice.console_reported(running_game_from_console(found[0]) if found else None)
+                except Exception:  # noqa: BLE001
+                    log.debug("PS5'te çalışan oyun sorulamadı", exc_info=True)
+            threading.Thread(target=poll, daemon=True, name="ps5-oyun").start()
+            return
         if self._ps5_busy or self.state == "calisiyor" or not self.ps5_paired():
             return
 

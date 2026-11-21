@@ -549,6 +549,11 @@ class TranslationEngine:
         self.refine_pool = ThreadPoolExecutor(4, thread_name_prefix="kalite")
         self.context: deque[tuple[str, str]] = deque(maxlen=max(0, cfg.baglam_satir))
         self.ctx_lock = threading.Lock()
+        # Oynanan oyunun paketi (oyun/oyun_algi.py tanır); bulanık arama yalnız onda yapılır (Nino gibi).
+        # Oyun bilinmiyorsa GTA 6 paketi (bu programın asıl oyunu).
+        self.game_pack: str | None = None
+        self._fuzzy: dict[str, object] = {}
+        self._fuzzy_loading: set[str] = set()
 
     @staticmethod
     def _make_fast(cfg: CeviriCfg):
@@ -629,9 +634,52 @@ class TranslationEngine:
 
         self.refine_pool.submit(run)
 
+    def _fuzzy_pack(self):  # noqa: ANN202
+        """Oyunun paketinin bulanık araması (Nino PackFuzzy): ilk istekte arka planda yüklenir, hazır olana kadar None."""
+        pid = self.game_pack
+        if pid is None:
+            from .oyun.oyun_algi import pack_for_game
+            pid = pack_for_game("Grand Theft Auto VI", self.packs.packs)
+        if not pid:
+            return None
+        fz = self._fuzzy.get(pid)
+        if fz is not None or pid in self._fuzzy_loading:
+            return fz
+        pack = next((pk for pk in self.packs.packs if pk.id == pid), None)
+        if pack is None:
+            return None
+        self._fuzzy_loading.add(pid)
+
+        def load() -> None:
+            try:
+                from .oyun.paket_bulanik import FuzzyPack
+                t0 = time.perf_counter()
+                self._fuzzy[pid] = FuzzyPack.load(pack.path)
+                log.info("Bulanık paket araması hazır: %s (%.1f sn)", pid, time.perf_counter() - t0)
+            except Exception as e:  # noqa: BLE001
+                log.warning("Bulanık paket yüklenemedi (%s): %s", pid, e)
+        threading.Thread(target=load, daemon=True, name="bulanik-paket").start()
+        return None
+
+    def pack_lookup(self, text: str) -> tuple[str, str] | None:
+        """Hazır paket: önce tam anahtar, sonra oyunun paketinde bulanık arama (OCR'ın bir iki harf hatası)."""
+        hit = self.packs.lookup(text)
+        if hit:
+            return hit
+        fz = self._fuzzy_pack()
+        if fz is not None:
+            try:
+                tr = fz.match(text)
+            except Exception:  # noqa: BLE001
+                log.exception("Bulanık paket araması")
+                tr = None
+            if tr:
+                return tr, f"{fz.id}~"
+        return None
+
     def lookup(self, text: str) -> str | None:
         """Hazır paket ya da önbellekteki kaliteli çeviri (beklemeden); yoksa None."""
-        hit = self.packs.lookup(text)
+        hit = self.pack_lookup(text)
         if hit:
             return hit[0]
         cached = self.cache.get(text)
@@ -668,7 +716,7 @@ class TranslationEngine:
     def submit(self, text: str, kind: str, on_result: Callable[[Result], None], refine: bool = True) -> None:
         """Sonuçlar on_result ile (başka iş parçacığından) gelir: önce hızlı, sonra kaliteli."""
         t0 = time.perf_counter()
-        pack_hit = self.packs.lookup(text)
+        pack_hit = self.pack_lookup(text)
         if pack_hit:                         # hazır paket: anında, ücretsiz, yapay zekaya sorulmaz
             tr, pack_id = pack_hit
             on_result(Result(tr, f"paket/{pack_id}", (time.perf_counter() - t0) * 1000, REFINED))
