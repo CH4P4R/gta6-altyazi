@@ -3,6 +3,21 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.9.1 · Görsellerdeki kalan her şey
+- **Açık / koyu görünüm** (Hakkında › Görünüm; programı yeniden açınca geçer).
+- **Okuma alanı:** "Otomatik (önerilen)" (öğrenilen yeri unutup yeniden öğrenir), seçili bölge için Üst / Alt / Sol / Sağ
+  kaydırıcıları ve "Ortada tut", "Son okunan ve çevrilen" (oyunda İngilizce / TV'de Türkçe), ek alanlarda kutu zemini.
+- **Çeviri ve paketler:** oyun paketlerini aç / kapat, "Oynadığın oyun" seçimi (Otomatik ya da paketteki oyunlar), Gemini
+  modeli (hızlı / en iyi), yazı tanıma seçimi (Otomatik / Apple / PP-OCR), yazıyı okurken ekran kartı, ücretsiz çeviri
+  aygıtı (ekran kartı / işlemci) ve çekirdek sayısı, "Değişmeyen altyazı alanını daha sık oku", bozuk ve yarım okunan
+  satır için bekleme (varsayılan kapalı: beklemeden gösterip yerinde düzeltir).
+- **Altyazı görünümü:** "Boyutu oyunun altyazısına uydur" (kapalıysa sabit boyut).
+- **Ana ekran:** TV kartında "TV'de test et" ve "TV uygulamasını yeniden kur"; "Görüntü" ve "Çeviri" kısayolları.
+- **PS5 bağlama (Nino):** numaralı adım satırları, üç adım kartı, "Giriş yapıldı · PSN hesap kimliği (gizli) · Çıkış yap",
+  "PS5 bulundu".
+- **Kurulum:** alt çubukta "Deneme modu (konsol olmadan dene)"; hoş geldin sayfasında "Monitörde Remote Play ile
+  oynuyorum" ve "Capture Card'ım var".
+
 ## 0.9.0 · Deneme modu, GTA 6 tek tık, iki kısayol, Nino kurulum ekranları
 - **Deneme modu (konsol olmadan dene):** ana ekranda ve Bağlantı'da. Örnek görüntüde İngilizce altyazılar sırayla çıkar;
   program gerçek oyundaki gibi okur, çevirir, kendi penceresinde ve TV bağlıysa TV'de gösterir.
