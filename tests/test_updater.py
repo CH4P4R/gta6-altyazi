@@ -77,9 +77,9 @@ def test_mac_update_script_replaces_bundle(tmp_path):
     import shutil
     import subprocess
     import sys
-    if not shutil.which("bash"):
+    if not shutil.which("bash") or sys.platform == "win32":
         import pytest
-        pytest.skip("bash yok")
+        pytest.skip("macOS betiği: bash yok ya da Windows (Git bash yolları farklı)")
     from altyazi import updater
     app = tmp_path / "Applications" / "GTA6 Altyazı.app"
     (app / "Contents" / "MacOS").mkdir(parents=True)
