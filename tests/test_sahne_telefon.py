@@ -239,8 +239,10 @@ def synthetic_phone(dark_screen=False, size=(1920, 1080), bgra=False):
         # Koyu temalı uygulama: koyu ekran, açık gövde, beyaz yazı satırları.
         img[y0 - 30:y1 + 30, x0 - 30:x1 + 30] = (200, 200, 200)
         img[y0:y1, x0:x1] = (40, 30, 30)
+        # Beyaz yazı: kısa sözcükler (küçültülmüş karede 2 noktalık parlak lekeler, araları koyu).
         for y in range(y0 + 20, y1 - 20, 28):
-            img[y:y + 8, x0 + 20:x0 + (x1 - x0) // 2] = (240, 240, 240)
+            for x in range(x0 + 20, x0 + (x1 - x0) * 2 // 3, 40):
+                img[y:y + 10, x:x + 16] = (240, 240, 240)
     else:
         img[y0 - 12:y1 + 12, x0 - 12:x1 + 12] = (10, 10, 10)
         img[y0:y1, x0:x1] = (250, 250, 250)
