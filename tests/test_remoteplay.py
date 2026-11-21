@@ -195,7 +195,7 @@ def test_native_session_reports_unreachable_and_retries():
     c = rp.RegisteredConsole("127.0.0.1", "", b"0123abcd" + b"\0" * 8, bytes(16))
     s = rp.StreamSession(c, b"\x01" * 8, on_state=on_state)
     s.start()
-    assert ev.wait(20), states
+    assert ev.wait(60), states        # macOS'ta libchiaki bağlantıyı birkaç kez dener (20 sn yetmedi)
     s.stop()
     assert states[0][0] == "baglaniyor"
     assert any(st == "kopuk" and "ulaşılamıyor" in m for st, m in states)
