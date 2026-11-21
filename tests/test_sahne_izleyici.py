@@ -51,6 +51,7 @@ def test_phone_thread_becomes_side_bubbles_with_context():
     fake.panel = telefon.find(frame)
     assert fake.panel is not None
     w = make(fake)
+    w.phone_mode = "yan"
     w._watch_phone(frame)              # ilk okuma: bekletilir (kaydırma bitsin)
     assert not w.phone_items
     w._watch_phone(frame)              # aynı okuma ikinci kez: çevrilir
@@ -100,3 +101,25 @@ def test_message_card_needs_two_readings_and_goes_above():
     assert w.message_items and w.message_items[0].plain
     it = w.message_items[0]
     assert it.translation.splitlines()[0] == "Donnie" and it.box.bottom <= 0.78
+
+
+def test_phone_translation_sits_on_the_bubbles_by_default():
+    """Varsayılan: Türkçe her mesaj balonunun tam üstünde, balonun renginde (telefon Türkçe görünür), panel yok."""
+    frame = synthetic_phone()
+    fake = Fake()
+    fake.panel = telefon.find(frame)
+    w = make(fake)
+    assert w.phone_mode == "ust"
+    w._watch_phone(frame)
+    w._watch_phone(frame)
+    items = w.phone_items
+    assert items and not any(it.backdrop for it in items)
+    b = fake.panel.box
+    by_src = {it.source: it for it in items}
+    it = by_src["TO MY TRAILER! Comprendo?"]
+    assert it.translation == "KARAVANIMA! Anladın mı?" and it.fill
+    # balonun yerinde: mesaj kutusunun ortası Türkçe kutunun içinde
+    text, l, t, r, bt = THREAD[2]
+    cx, cy = (l + r) / 2, (t + bt) / 2
+    assert it.box.left <= cx <= it.box.right and it.box.top <= cy <= it.box.bottom
+    assert b.left <= it.box.left and it.box.right <= b.right + 0.02

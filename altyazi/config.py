@@ -96,6 +96,9 @@ class CeviriCfg:
     benzerlik: int = 92           # OCR küçük hata yapsa da önbellekten bulmak için (0-100)
     sozluk: dict[str, str] = field(default_factory=dict)  # zorunlu terimler: "Vice City": "Vice City"
     ekran_yazilari: bool = True     # telefon, harita görev kartı ve telefona gelen mesajlar kendiliğinden çevrilsin (Nino)
+    # Telefondaki mesajların Türkçesi: ust (her balonun tam üstünde, balonun renginde; telefon Türkçe görünür) | yan
+    # (telefonun yanında ayrı panelde)
+    telefon_yeri: str = "ust"
 
 
 @dataclass

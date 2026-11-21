@@ -103,6 +103,7 @@ class SceneWatcher:
         self.tr_pool = ThreadPoolExecutor(2, thread_name_prefix="sahne-ceviri")
         self.lock = threading.Lock()
         self.enabled = True
+        self.phone_mode = "ust"                       # ust: Türkçe balonların üstünde | yan: telefonun yanında panel
         self.tracker = telefon.Tracker()
         # telefon
         self.phone_items: list[ScreenItem] = []
@@ -298,8 +299,13 @@ class SceneWatcher:
             def lines(text: str, width: float, line: float) -> tuple[int, int]:
                 w = wrap(text, width, line)
                 return len(w), max(len(x) for x in w)
-            items = telefon.side_bubbles(msgs, texts, panel, chat=True, title=telefon.title_text(reading, panel),
-                                         color=color, lines=lines)
+            if self.phone_mode == "ust":
+                # Telefonun kendi ekranında: her mesajın Türkçesi balonun tam üstünde, balonun renginde (eğik
+                # telefonda eğik); TV'de telefon sanki Türkçeymiş gibi görünür
+                items = telefon.covers(msgs, texts, panel.angle, color=color)
+            else:
+                items = telefon.side_bubbles(msgs, texts, panel, chat=True, title=telefon.title_text(reading, panel),
+                                             color=color, lines=lines)
         else:
             items = telefon.app_bubbles(msgs, texts, panel, color=color)
         anchor = panel.box
