@@ -14,8 +14,8 @@ android {
         minSdk 24
         targetSdk 35
         // Kasadaki uygulama beklenen TV sürümünü buradan alır (release/gta6-altyazi-tv.version).
-        versionCode 5
-        versionName '0.4.17'
+        versionCode 6
+        versionName '0.4.18'
     }
     buildFeatures { buildConfig true }
     signingConfigs {
@@ -60,7 +60,7 @@ dependencies {
 // Arayüz LG ve Samsung'la ortaktır (tv-web/src).
 tasks.register('copyTvAssets', Copy) {
     into layout.buildDirectory.dir('generated/tv-assets/tv')
-    from('../../tv-web/src') { include 'app.js', 'i18n.js', 'config.js', 'index.html', 'style.css' }
+    from('../../tv-web/src') { include 'app.js', 'i18n.js', 'config.js', 'index.html', 'style.css', 'fonts/**' }
     from('..') { include 'platform.js' }
     from('src/main/res/mipmap-nodpi') { include 'icon.png'; rename { 'icon.png' } }
     from('src/main/res/mipmap-nodpi') { include 'icon.png'; rename { 'largeIcon.png' } }
