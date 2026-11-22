@@ -20,7 +20,7 @@ from PySide6.QtCore import QObject, Qt, QTimer, Signal
 
 from . import config as config_mod
 from . import winutil
-from .overlay import Bridge, OverlayWindow, Painter, VideoWindow
+from .overlay import Bridge, OverlayWindow, Painter, StreamWindow, VideoWindow
 from .pipeline import DisplayItem, MultiSink, Pipeline
 
 log = logging.getLogger(__name__)
@@ -244,6 +244,18 @@ class AppController(QObject):
             self._set_state("hata")
 
     # ------------------------------------------------------------------ çalıştırma
+    def open_stream_window(self, color: str = "#00ff00") -> None:
+        """Yayın penceresi (OBS sayfası): çeviri sürerken altyazılar, TV'de gösterilseler bile bu pencerede görünür."""
+        old = getattr(self, "stream_window", None)
+        if old is not None:
+            old.close()
+        self.stream_window = StreamWindow(Painter(self.cfg.gosterim.yazi_tipi, False), self.bridge, color)
+        self.stream_window.show()
+
+    def tv_app_version(self) -> str | None:
+        """TV uygulamasının bildirdiği sürüm (bağlıyken; TV /events?v=... ile bağlanır)."""
+        return getattr(self.server, "tv_version", None) if self.server else None
+
     def start_demo(self) -> bool:
         """Deneme modu (CouchSubs): konsol, hesap ya da TV olmadan örnek görüntüyle her şey denenir. Görüntü ve
         Türkçesi bilgisayarda kendi penceresinde görünür; TV bağlıysa TV'ye de gider."""

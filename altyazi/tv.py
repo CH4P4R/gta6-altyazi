@@ -42,6 +42,10 @@ class LaunchError(TvError):
 
 
 # ----------------------------------------------------------------------------- ağ
+
+# TV uygulamasının (tv-web) bu sürümle gelen sürümü; tv-web/src/app.js APP_VERSION ile aynı tutulur (test denetler)
+TV_APP_VERSION = "0.5.0"
+
 def local_ip(towards: str = "8.8.8.8") -> str:
     """Bu bilgisayarın ev ağındaki adresi (TV'nin bize bağlanacağı adres)."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

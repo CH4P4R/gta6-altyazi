@@ -237,3 +237,57 @@ def test_hold_waits_for_better_reading():
     assert p._hold("j", bad, 20.9, 800, 0) == bad                      # süre doldu: eldeki en iyi okuma
     assert p._hold("m", "and then we went to the", 0.0, 0, 300) is None  # yarım satır
     assert p._hold("m", "and then we went to the", 0.4, 0, 300) is not None
+
+
+def test_plug_scene_obs_and_tv_app_version(tmp_path, monkeypatch):
+    import re
+    from pathlib import Path
+    from altyazi.tv import TV_APP_VERSION
+    js = Path(__file__).resolve().parents[1] / "tv-web" / "src" / "app.js"
+    assert re.search(r"APP_VERSION = '([\d.]+)'", js.read_text("utf-8")).group(1) == TV_APP_VERSION
+    assert saglik.check_tv_app("0.4.0", "0.5.0", True)["state"] == "warn"
+    assert saglik.check_tv_app("0.5.0", "0.5.0", True)["state"] == "ok"
+    assert saglik.check_tv_app(None, "0.5.0", False)["state"] == "off"
+    app, ctl = _app(tmp_path, monkeypatch)
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+    from altyazi.ui.main_window import MainWindow
+    win = MainWindow(ctl)
+    win.resize(1400, 900)
+    win.show()
+    app.processEvents()
+    home = win.pages["home"]
+    got = []
+    home.scene.plugged.disconnect()
+    home.scene.plugged.connect(got.append)
+    sc = home.scene
+    g = sc._geo()
+    def ev(kind, pt):
+        return QMouseEvent(kind, pt, pt, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+    from PySide6.QtCore import QEvent
+    sc.mousePressEvent(ev(QEvent.MouseButtonPress, g["rest"]))
+    sc.mouseMoveEvent(ev(QEvent.MouseMove, g["socket"].center()))
+    sc.mouseReleaseEvent(ev(QEvent.MouseButtonRelease, g["socket"].center()))
+    assert got == [True]                                             # fiş prize: başlat
+    sc.setRunning(True)
+    sc.mousePressEvent(ev(QEvent.MouseButtonPress, g["socket"].center()))
+    sc.mouseMoveEvent(ev(QEvent.MouseMove, QPointF(50, 50)))
+    sc.mouseReleaseEvent(ev(QEvent.MouseButtonRelease, QPointF(50, 50)))
+    assert got == [True, False]                                      # çekildi: durdur
+    win.go("obs")
+    app.processEvents()
+    ctl.open_stream_window("#000000")
+    assert ctl.stream_window.isVisible()
+    ctl.stream_window.close()
+    if ctl.server is not None:
+        import json
+        import urllib.request
+        ctl.server.tv_version = None
+        try:
+            r = urllib.request.urlopen(f"http://127.0.0.1:{ctl.cfg.sunucu.port}/events?v=0.5.0", timeout=2)
+            r.readline()
+            r.close()
+        except Exception:  # noqa: BLE001
+            pass
+        assert ctl.tv_app_version() in ("0.5.0", None)
+    ctl.shutdown()

@@ -769,3 +769,176 @@ class HealthRow(QFrame):
         self.advice.setVisible(bool(row["advice"]))
         c = Pill.COLORS.get(row["state"], T.FAINT)
         self.state.setText(f"<span style='color:{c}'>●&nbsp; {STATE_TEXT.get(row['state'], '')}</span>")
+
+
+class PlugScene(QWidget):
+    """Nino'nun ana ekranı gibi: TV, sehpa, PS5 ve duvarda priz. Fişi prize sürükleyince çeviri başlar, çekince durur.
+    plugged(bool) sinyali verir; setRunning() ile çevirinin gerçek durumu yansıtılır. TV'de son Türkçe altyazı görünür."""
+    plugged = Signal(bool)
+
+    def __init__(self):
+        super().__init__()
+        self.setMinimumHeight(300)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.running = False
+        self.text = ""
+        self.counter = ""
+        self._drag: QPointF | None = None
+        self._plug_pos: QPointF | None = None          # sürüklenirken fişin yeri
+        self.setCursor(Qt.OpenHandCursor)
+
+    # ----------------------------------------------------------- geometri
+    def _geo(self) -> dict:
+        w, h = self.width(), self.height()
+        tv_w = min(w * 0.62, h * 1.25)
+        tv_h = tv_w * 9 / 16
+        tv = QRectF(w * 0.42 - tv_w / 2, h * 0.06, tv_w, tv_h)
+        shelf = QRectF(w * 0.08, tv.bottom() + h * 0.06, w * 0.80, h * 0.13)
+        ps5 = QRectF(shelf.right() - w * 0.12, shelf.top() - h * 0.33, w * 0.075, h * 0.33)
+        socket = QRectF(w * 0.90, h * 0.36, w * 0.06, w * 0.06)
+        rest = QPointF(w * 0.93, shelf.top() + h * 0.02)                        # fişin prizde değilken yeri
+        return {"tv": tv, "shelf": shelf, "ps5": ps5, "socket": socket, "rest": rest}
+
+    def _plug_at(self) -> QPointF:
+        g = self._geo()
+        if self._plug_pos is not None:
+            return self._plug_pos
+        return g["socket"].center() if self.running else g["rest"]
+
+    def setRunning(self, on: bool) -> None:  # noqa: N802
+        self.running = on
+        self._plug_pos = None
+        self.update()
+
+    def setText(self, text: str) -> None:  # noqa: N802
+        self.text = text
+        self.update()
+
+    # ----------------------------------------------------------- fare
+    def mousePressEvent(self, e) -> None:  # noqa: ANN001, N802
+        p = e.position()
+        plug = self._plug_at()
+        if (p - plug).manhattanLength() < 60:
+            self._drag = p - plug
+            self.setCursor(Qt.ClosedHandCursor)
+
+    def mouseMoveEvent(self, e) -> None:  # noqa: ANN001, N802
+        if self._drag is not None:
+            self._plug_pos = e.position() - self._drag
+            self.update()
+
+    def mouseReleaseEvent(self, e) -> None:  # noqa: ANN001, N802
+        if self._drag is None:
+            return
+        self._drag = None
+        self.setCursor(Qt.OpenHandCursor)
+        g = self._geo()
+        near = (self._plug_pos is not None and
+                (self._plug_pos - g["socket"].center()).manhattanLength() < g["socket"].width() * 1.6)
+        self._plug_pos = None
+        if near != self.running:
+            self.plugged.emit(near)
+        self.update()
+
+    # ----------------------------------------------------------- çizim
+    def paintEvent(self, _e) -> None:  # noqa: ANN001, N802
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        g = self._geo()
+        tv, shelf, ps5, socket = g["tv"], g["shelf"], g["ps5"], g["socket"]
+        # TV
+        p.setPen(QPen(QColor(40, 40, 46), 6))
+        p.setBrush(QColor(0, 0, 0))
+        p.drawRoundedRect(tv, 6, 6)
+        screen = tv.adjusted(8, 8, -8, -8)
+        if self.running:
+            sky = QLinearGradient(screen.topLeft(), screen.bottomLeft())
+            sky.setColorAt(0, QColor("#2b1055"))
+            sky.setColorAt(0.6, QColor("#a1336e"))
+            sky.setColorAt(1, QColor("#ff8a4c"))
+            p.fillRect(screen, QBrush(sky))
+            text = self.text or "Çeviri açık: oyundaki altyazının Türkçesi burada ve TV'de görünür."
+            f = T.font(10, QFont.DemiBold)
+            f.setPixelSize(max(11, int(screen.height() * 0.07)))
+            p.setFont(f)
+            fm = QFontMetricsF(f)
+            tw = min(fm.horizontalAdvance(text) + 24, screen.width() * 0.9)
+            box = QRectF(screen.center().x() - tw / 2, screen.bottom() - fm.height() * 2.2, tw, fm.height() + 12)
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(0, 0, 0, 200))
+            p.drawRoundedRect(box, 8, 8)
+            p.setPen(QColor("white"))
+            p.drawText(box, Qt.AlignCenter, fm.elidedText(text, Qt.ElideRight, tw - 20))
+        else:
+            f = T.font(10, QFont.Bold)
+            f.setPixelSize(max(11, int(screen.height() * 0.06)))
+            f.setLetterSpacing(QFont.AbsoluteSpacing, 3)
+            p.setFont(f)
+            p.setPen(QColor(150, 150, 160))
+            p.drawText(screen, Qt.AlignCenter, "ÇALIŞTIRMAK İÇİN FİŞİ PRİZE SÜRÜKLE")
+        if self.counter:
+            f = T.font(10, QFont.Black)
+            f.setPixelSize(max(12, int(screen.height() * 0.11)))
+            p.setFont(f)
+            p.setPen(QColor(T.OK))
+            p.drawText(screen.adjusted(0, 10, -18, 0), Qt.AlignRight | Qt.AlignTop, self.counter)
+        # sehpa
+        top = QLinearGradient(shelf.topLeft(), shelf.bottomLeft())
+        top.setColorAt(0, QColor(205, 205, 210))
+        top.setColorAt(0.3, QColor(140, 140, 148))
+        top.setColorAt(1, QColor(90, 90, 98))
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(top))
+        p.drawRoundedRect(shelf, 8, 8)
+        p.setPen(QPen(QColor(70, 70, 76), 2))
+        p.drawLine(QPointF(shelf.center().x(), shelf.top() + 8), QPointF(shelf.center().x(), shelf.bottom() - 4))
+        # PS5 (beyaz kapaklar, siyah orta)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(235, 237, 242))
+        body = QPainterPath()
+        body.moveTo(ps5.left(), ps5.bottom())
+        body.cubicTo(ps5.left() - ps5.width() * 0.15, ps5.top() + ps5.height() * 0.5, ps5.left() + ps5.width() * 0.1,
+                     ps5.top() + ps5.height() * 0.1, ps5.left() + ps5.width() * 0.55, ps5.top())
+        body.lineTo(ps5.right(), ps5.top() + ps5.height() * 0.04)
+        body.lineTo(ps5.right() - ps5.width() * 0.05, ps5.bottom())
+        body.closeSubpath()
+        p.drawPath(body)
+        p.setBrush(QColor(20, 20, 26))
+        p.drawRect(QRectF(ps5.center().x() - ps5.width() * 0.08, ps5.top() + ps5.height() * 0.06, ps5.width() * 0.16,
+                          ps5.height() * 0.9))
+        p.setBrush(QColor(60, 90, 220))
+        p.drawRect(QRectF(ps5.center().x() + ps5.width() * 0.08, ps5.top() + ps5.height() * 0.1, 2,
+                          ps5.height() * 0.8))
+        # priz
+        glow = QRadialGradient(socket.center(), socket.width() * 1.4)
+        c = QColor(T.OK if self.running else T.INFO)
+        c.setAlpha(110)
+        glow.setColorAt(0, c)
+        c2 = QColor(c)
+        c2.setAlpha(0)
+        glow.setColorAt(1, c2)
+        p.setBrush(QBrush(glow))
+        p.drawEllipse(socket.center(), socket.width() * 1.4, socket.width() * 1.4)
+        p.setBrush(QColor(215, 215, 220))
+        p.drawRoundedRect(socket, 8, 8)
+        p.setBrush(QColor(170, 170, 176))
+        p.drawEllipse(socket.center(), socket.width() * 0.34, socket.width() * 0.34)
+        p.setBrush(QColor(40, 40, 44))
+        for dx in (-0.12, 0.12):
+            p.drawEllipse(QPointF(socket.center().x() + socket.width() * dx, socket.center().y()), 3, 3)
+        # kablo ve fiş
+        plug = self._plug_at()
+        start = QPointF(ps5.right() - ps5.width() * 0.1, ps5.bottom() - 6)
+        cable = QPainterPath(start)
+        cable.cubicTo(QPointF(start.x() + 60, start.y() + 10), QPointF(plug.x() - 10, plug.y() + 90),
+                      QPointF(plug.x(), plug.y() + 22))
+        p.setPen(QPen(QColor(25, 25, 28), 5, Qt.SolidLine, Qt.RoundCap))
+        p.setBrush(Qt.NoBrush)
+        p.drawPath(cable)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(30, 30, 34))
+        p.drawRoundedRect(QRectF(plug.x() - 13, plug.y() - 8, 26, 30), 5, 5)
+        if not self.running or self._plug_pos is not None:
+            p.setBrush(QColor(200, 200, 205))
+            for dx in (-6, 6):
+                p.drawRoundedRect(QRectF(plug.x() + dx - 2, plug.y() - 22, 4, 15), 2, 2)

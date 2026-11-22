@@ -7,7 +7,7 @@
   'use strict';
 
   // TV uygulamasının sürümü: appinfo.json, tv-tizen/config.xml ve tv-android/app/build.gradle ile aynı tutulur.
-  var APP_VERSION = '0.4.0';
+  var APP_VERSION = '0.5.0';
   var t = window.t;
   var config = window.COUCHSUBS_CONFIG || {};
   var platform = window.COUCHSUBS_PLATFORM;
@@ -857,7 +857,7 @@
       return;
     }
     setStatus('st-conn', t('connecting'), 'muted');
-    eventSource = new EventSource(address + '/events');
+    eventSource = new EventSource(address + '/events?v=' + encodeURIComponent(APP_VERSION));
     lastActivity = Date.now();
     eventSource.onopen = function () {
       lastActivity = Date.now();

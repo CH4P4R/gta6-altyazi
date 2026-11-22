@@ -3,6 +3,14 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.9.2 · Fişi prize tak, OBS katmanı, TV uygulaması sürümü
+- **Fişi prize sürükle (Nino):** ana ekranda TV, sehpa, PS5 ve priz; fişi prize sürükleyince çeviri başlar, çekince
+  durur. Çeviri açıkken TV'de son Türkçe altyazı görünür.
+- **OBS katmanı** sayfası: tarayıcı kaynağı adresleri (localhost ve ağ adresi, Kopyala) ve **yayın penceresi** (yeşil /
+  siyah / mor zemin; Chroma key ile silinir).
+- **Sistem sağlığı:** TV uygulamasının kurulu sürümü ve güncel olup olmadığı (TV uygulaması bağlanırken sürümünü bildirir;
+  TV uygulaması 0.5.0).
+
 ## 0.9.1 · Görsellerdeki kalan her şey
 - **Açık / koyu görünüm** (Hakkında › Görünüm; programı yeniden açınca geçer).
 - **Okuma alanı:** "Otomatik (önerilen)" (öğrenilen yeri unutup yeniden öğrenir), seçili bölge için Üst / Alt / Sol / Sağ

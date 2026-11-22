@@ -158,6 +158,7 @@ class EventServer:
         self._overlay: list[dict] = []   # telefon, harita kartı, mesaj kartı (sahne/izleyici.py); altyazıyı silmez
         self._sub_seq = -1
         self._tv_state: dict[str, str] = {}      # yeni bağlanan TV'ye gönderilecek son çerçeveler
+        self.tv_version: str | None = None       # TV uygulamasının bildirdiği sürüm
 
     # Sink arayüzü
     def show(self, it: DisplayItem) -> None:
@@ -351,6 +352,10 @@ class EventServer:
                     self._json(200, {"app": "gta6altyazi", "pid": os.getpid()})
                     return
                 if path == "/events":
+                    from urllib.parse import parse_qs, urlparse
+                    v = (parse_qs(urlparse(self.path).query).get("v") or [""])[0][:20]
+                    if v:
+                        srv.tv_version = v           # Sistem sağlığı: TV uygulamasının sürümü
                     self._tv_stream()
                     return
                 if path in ("/kumanda", "/ekran"):

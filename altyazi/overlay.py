@@ -335,3 +335,36 @@ class VideoWindow(QWidget):
             p.drawImage(area, img)
             self.painter_.paint(p, area)
         p.end()
+
+
+class StreamWindow(QWidget):
+    """Yayın penceresi (CouchSubs): saydam tarayıcı kaynağı olmayan yayın programları (TikTok LIVE Studio, Streamlabs) için
+    düz renkli zemin üstünde Türkçe altyazı. Programda Pencere yakalama ile eklenir, zemin Chroma key ile silinir."""
+
+    def __init__(self, painter: Painter, bridge: Bridge, color: str = "#00ff00"):
+        super().__init__()
+        self.setWindowTitle("GTA6 Altyazı Yayın")
+        self.resize(1280, 720)
+        self.color = QColor(color)
+        self.painter_ = painter
+        bridge.shown.connect(self._show)
+        bridge.cleared.connect(self._clear)
+        bridge.overlaid.connect(self._overlaid)
+
+    def _show(self, it) -> None:  # noqa: ANN001
+        self.painter_.on_show(it)
+        self.update()
+
+    def _clear(self, zone: str) -> None:
+        self.painter_.on_clear(zone)
+        self.update()
+
+    def _overlaid(self, items: list) -> None:
+        self.painter_.overlay = list(items or [])
+        self.update()
+
+    def paintEvent(self, _e) -> None:  # noqa: ANN001, N802
+        p = QPainter(self)
+        p.fillRect(self.rect(), self.color)
+        self.painter_.paint(p, QRectF(self.rect()))
+        p.end()

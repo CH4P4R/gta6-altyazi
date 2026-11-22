@@ -23,7 +23,7 @@ from ..app import CHIAKI_DOWNLOAD, AppController, open_path
 from ..config import BolgeCfg
 from . import theme as T
 from .parcalar import (TEXT_COLORS, Backdrop, Chips, Collapsible, ColorDots, HealthRow, HelpFab, IconTile, Pill,
-                       RadioCard, RadioGroup, SectionCard, Segmented, StyleCard, SubtitlePreview, Toggle)
+                       PlugScene, RadioCard, RadioGroup, SectionCard, Segmented, StyleCard, SubtitlePreview, Toggle)
 from .region_editor import PRESETS, RegionCanvas
 from .widgets import Card, Icon, Logo, NavButton, QrCode, Sparkline, Toast, button, hbox, label, scroll_page, vbox
 
@@ -159,7 +159,10 @@ class HomePage(QWidget):
         super().__init__()
         self.ctl = ctl
         _transparent(self)
-        outer = QHBoxLayout(self)
+        content = QWidget()
+        content.setObjectName("clearHome")
+        content.setStyleSheet("#clearHome { background: transparent; }")
+        outer = QHBoxLayout(content)
         outer.setContentsMargins(36, 26, 36, 24)
         col_w = QWidget()
         col_w.setMaximumWidth(1120)
@@ -225,6 +228,14 @@ class HomePage(QWidget):
         root.addLayout(hbox(None, label("Ortalama gecikme", "faint"), self.lat, label("ms", "faint"), self.spark,
                             12, vbox(self.spend, self.spend_sub, spacing=0), None, spacing=6))
         root.addSpacing(4)
+
+        # --- fişi prize sürükle (Nino): TV, sehpa, PS5, priz
+        self.scene = PlugScene()
+        self.scene.setFixedHeight(330)
+        self.scene.plugged.connect(self._plugged)
+        scene_card = Card(margins=10)
+        scene_card.add(self.scene)
+        root.addWidget(scene_card)
 
         # --- PS5 / Bilgisayar / TV kartları
         grid = QGridLayout()
@@ -294,7 +305,11 @@ class HomePage(QWidget):
         phone.lay.addStretch(1)
         phone.setMaximumWidth(330)
         bottom.addWidget(phone, 1)
+        feed.setMinimumHeight(360)
         root.addLayout(bottom, 1)
+        page = QVBoxLayout(self)
+        page.setContentsMargins(0, 0, 0, 0)
+        page.addWidget(scroll_page(content))
         self.items: dict[int, object] = {}
         self._live_seq = None
 
@@ -324,6 +339,13 @@ class HomePage(QWidget):
     def _pause(self) -> None:
         r = self.ctl.command("duraklat")
         self.pause_btn.setText("Devam et" if r.get("duraklatildi") and self.ctl.pipe else "Duraklat")
+
+    def _plugged(self, on: bool) -> None:
+        if on and self.ctl.state == "hazir":
+            self.ctl.toggle()
+        elif not on and self.ctl.state == "calisiyor":
+            self.ctl.toggle()
+        self.scene.setRunning(self.ctl.state == "calisiyor")
 
     def _set_where(self, v: str) -> None:
         cfg = self.ctl.edit_config()
@@ -386,6 +408,7 @@ class HomePage(QWidget):
         self.state_hint.setText(h)
         self.sub.setText(sub)
         running = s == "calisiyor"
+        self.scene.setRunning(running)
         self.start.setObjectName("stopBig" if running else "primaryBig")
         self.start.setText("■  Çeviriyi Durdur" if running else "▶  Çeviriyi Başlat")
         self.start.style().unpolish(self.start)
@@ -436,6 +459,7 @@ class HomePage(QWidget):
             self.spark.push(it.latency_ms)
 
     def _show_live(self, it) -> None:  # noqa: ANN001
+        self.scene.setText(it.text)
         self._live_seq = it.seq
         self._live_item = it
         self.live_tr.setText(it.text)
@@ -2327,6 +2351,49 @@ def _log_tail(n: int = 80) -> str:
         return f"Kayıt okunamadı: {e}"
 
 
+# ============================================================================ OBS katmanı
+class ObsPage(QWidget):
+    """Yayın yapanlar için (CouchSubs / Nino OBS katmanı): tarayıcı kaynağı adresi ve yayın penceresi."""
+
+    def __init__(self, ctl: AppController):
+        super().__init__()
+        self.ctl = ctl
+        _transparent(self)
+        root = page_shell(self, "OBS katmanı", "Yayın yapıyorsan Türkçe altyazı hem senin ekranında hem yayında oyunun "
+                          "üstünde görünür.", "play")
+        port = ctl.cfg.sunucu.port
+        local = f"http://localhost:{port}/obs"
+        lan = ctl.server_url("obs")
+        src = SectionCard("Tarayıcı kaynağı", "Capture card ile yayın mı yapıyorsun? OBS'te bu adresle bir Tarayıcı "
+                          "kaynağı ekle (genişlik 1920, yükseklik 1080). Katman yalnız çeviri çalışırken altyazı gösterir.",
+                          margins=18)
+        for url, hint in ((local, ""), (lan, "OBS başka bir bilgisayardaysa ya da yayın programın localhost'u kabul "
+                                            "etmiyorsa (ör. TikTok LIVE Studio) bu bilgisayarın ağ adresiyle bunu kullan:")):
+            if hint:
+                src.add(label(hint, "faint", wrap=True))
+            box = QLineEdit(url)
+            box.setReadOnly(True)
+            box.setObjectName("mono")
+            src.add(hbox(box, button("Kopyala", None, lambda _=False, u=url: self._copy(u)), spacing=8))
+        root.addWidget(src)
+        win = SectionCard("Yayın penceresi", "Saydam tarayıcı kaynağı olmayan yayın programları (TikTok LIVE Studio, "
+                          "Streamlabs ve diğerleri) için: yayın penceresini aç, programda Pencere yakalama ile ekle "
+                          "(pencerenin adı GTA6 Altyazı Yayın) ve zeminini Chroma key filtresiyle sil.", margins=18)
+        self.bg = Segmented([("#00ff00", "Yeşil"), ("#000000", "Siyah"), ("#ff00ff", "Mor")], "#00ff00")
+        self.bg.setFixedWidth(320)
+        win.add(hbox(label("Arka plan", "h3"), self.bg, None, spacing=12))
+        win.add(hbox(button("Yayın penceresini aç", "primary", lambda: ctl.open_stream_window(self.bg.value())), None))
+        win.add(label("Yayın boyunca pencereyi açık ve önü kapalı olmadan tut. Çeviri sürerken altyazılar, yalnız TV'de "
+                      "gösterilseler bile bu pencerede görünür.", "faint", wrap=True))
+        root.addWidget(win)
+        root.addStretch(1)
+
+    def _copy(self, url: str) -> None:
+        from PySide6.QtWidgets import QApplication
+        QApplication.clipboard().setText(url)
+        self.window().toast.show_text("Adres kopyalandı")
+
+
 # ============================================================================ Hakkında
 class AboutPage(QWidget):
     def __init__(self, ctl: AppController):
@@ -2433,6 +2500,7 @@ class MainWindow(QMainWindow):
              ("look", "Altyazı görünümü", "translate", "AYARLAR"), ("regions", "Okuma alanı", "regions", None),
              ("translate", "Çeviri ve paketler", "bolt", None), ("tv", "Bağlantı", "tv", None),
              ("settings", "Ses ve kısayollar", "settings", None), ("history", "Altyazı geçmişi", "history", None),
+             ("obs", "OBS katmanı", "play", None),
              ("health", "Sistem sağlığı", "bolt", "YARDIM"), ("guide", "Rehber", "guide", None),
              ("about", "Hakkında", "check", None)]
 
@@ -2461,7 +2529,7 @@ class MainWindow(QMainWindow):
         _transparent(self.stack)
         factories = {"home": HomePage, "look": AppearancePage, "regions": RegionsPage, "tv": TvPage,
                      "translate": TranslationPage, "history": HistoryPage, "guide": GuidePage,
-                     "settings": SettingsPage, "about": AboutPage, "health": HealthPage}
+                     "settings": SettingsPage, "about": AboutPage, "health": HealthPage, "obs": ObsPage}
         self.pages: dict[str, QWidget] = {}
         for key, text, icon, group in self.PAGES:
             if group:

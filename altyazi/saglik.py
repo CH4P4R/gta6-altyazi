@@ -141,8 +141,26 @@ def check_tv(state: str, brand: str, ip: str) -> dict:
     return _row("tv", "TV", f"{name} · çeviri başlayınca bağlanır", "ok", "")
 
 
+def _ver(v: str) -> tuple:
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except ValueError:
+        return ()
+
+
+def check_tv_app(reported: str | None, expected: str, connected: bool) -> dict:
+    if not reported:
+        return _row("tvapp", "TV uygulaması", "TV bağlanınca sürümü görünür" if not connected else
+                    "Sürüm bilgisi gelmedi (eski TV uygulaması)", "off" if not connected else "warn",
+                    "" if not connected else "Bağlantı › TV › Bağlan, kur ve başlat ile TV uygulamasını güncelle.")
+    if _ver(reported) and _ver(expected) and _ver(reported) < _ver(expected):
+        return _row("tvapp", "TV uygulaması", f"Kurulu sürüm {reported} · yenisi {expected}", "warn",
+                    "Bağlantı › TV › Bağlan, kur ve başlat ile güncelle (yeni renkler ve yazı tipi için gerekir).")
+    return _row("tvapp", "TV uygulaması", f"Kurulu (sürüm {reported})", "ok", "")
+
+
 def _row(key: str, title: str, sub: str, state: str, advice: str) -> dict:
-    icons = {"ag": "swap", "ps5": "ps", "goruntu": "play", "hiz": "bolt", "tv": "tv"}
+    icons = {"ag": "swap", "ps5": "ps", "goruntu": "play", "hiz": "bolt", "tv": "tv", "tvapp": "copy"}
     return {"key": key, "icon": icons.get(key, "check"), "title": title, "sub": sub, "state": state,
             "advice": advice}
 
@@ -164,6 +182,9 @@ def checks(ctl, kind: str | None = None) -> list[dict]:  # noqa: ANN001
         rows.append(check_picture(stream))
     rows.append(check_speed(ctl.avg_latency(), len(getattr(ctl, "latencies", []) or [])))
     rows.append(check_tv(ctl.tv_state[0], ctl.cfg.tv.marka, ctl.cfg.tv.ip))
+    from .tv import TV_APP_VERSION
+    version = ctl.tv_app_version() if hasattr(ctl, "tv_app_version") else None
+    rows.append(check_tv_app(version, TV_APP_VERSION, ctl.tv_state[0] == "bagli"))
     return rows
 
 
@@ -198,7 +219,9 @@ def device_info(ctl) -> list[tuple[str, str]]:  # noqa: ANN001
     return [("Uygulama sürümü", __version__), ("Cihaz modeli", device_model()), ("İşletim sistemi", os_name()),
             ("Yazı okuma", str(info.get("ocr", "…"))),
             ("Çeviri", " + ".join(x for x in (info.get("hizli"), info.get("kalite")) if x) or "yok"),
-            ("TV", f"{brand} · {tv}"), ("Görüntü kaynağı", src), ("Şu anki durum", state)]
+            ("TV", f"{brand} · {tv}" + (f" · TV uygulaması {ctl.tv_app_version()}" if
+                                         getattr(ctl, "tv_app_version", lambda: None)() else "")),
+            ("Görüntü kaynağı", src), ("Şu anki durum", state)]
 
 
 def info_text(ctl) -> str:  # noqa: ANN001
