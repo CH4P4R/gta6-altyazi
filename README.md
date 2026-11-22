@@ -114,7 +114,7 @@ Her çevirinin süresi uygulamanın ana ekranında ve oyunun sağ üstünde gör
 
 <table>
 <tr>
-<td width="50%"><img src="docs/img/uygulama-ana.png" alt="Ana ekran"><br><sub><b>Ana ekran:</b> başlat/durdur, ortalama gecikme, PS5/TV/motor durumu, telefon kumandası QR'ı, canlı çeviriler</sub></td>
+<td width="50%"><img src="docs/img/uygulama-ana.png" alt="Ana ekran"><br><sub><b>Ana ekran:</b> fişi prize tak (ya da kaydırmalı düğme), TV'de canlı Türkçe altyazı, ortalama gecikme, PS5/TV/motor durumu, telefon kumandası QR'ı</sub></td>
 <td width="50%"><img src="docs/img/uygulama-alanlar.png" alt="Okuma alanları"><br><sub><b>Okuma alanları:</b> kutuları oyun görüntüsünün üstünde fareyle ayarla; yazı sayılan pikseller kırmızıyla görünür</sub></td>
 </tr>
 <tr>

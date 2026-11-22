@@ -37,7 +37,7 @@ function startServer() {
         res.writeHead(200, { 'Content-Type': TYPES['.js'] });
         return res.end(platformJs(base));
       }
-      if (url === '/icon.png' || url === '/largeIcon.png') { res.writeHead(204); return res.end(); }
+      if (url === '/icon.png' || url === '/largeIcon.png' || url === '/logo.png') { res.writeHead(204); return res.end(); }
       const file = path.normalize(path.join(SRC, url === '/' ? 'index.html' : decodeURIComponent(url)));
       if (!file.startsWith(SRC + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
         res.writeHead(404); return res.end();

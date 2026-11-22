@@ -8,7 +8,7 @@ import webbrowser
 
 from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPen
-from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout,
+from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel,
                                QLineEdit, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
 
 from .. import rehber
@@ -203,7 +203,7 @@ def need_card(icon: str, title: str, text: str) -> Card:
     row = QHBoxLayout()
     row.setSpacing(14)
     row.addWidget(GlyphTile(icon, 42, glow=False), 0, Qt.AlignTop)
-    c.title = label(title, "h3")
+    c.title = label(title, "h3", wrap=True)
     c.sub = label(text, "muted", wrap=True)
     c.sub.setStyleSheet("font-size: 11pt;")
     row.addLayout(vbox(c.title, c.sub, None, spacing=3), 1)
@@ -313,7 +313,31 @@ class Wizard(QDialog):
         lay = QVBoxLayout(w)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(16)
-        lay.addWidget(label("GTA 6 · CANLI TÜRKÇE ÇEVİRİ", "tag"))
+        # Nino'nun tanıtımı gibi: büyük simge, ad, harf aralıklı alt yazı ve örnek çeviri kartı
+        from .widgets import marka_pixmap
+        icon = QLabel()
+        icon.setFixedSize(96, 96)
+        icon.setPixmap(marka_pixmap("simge.png", 96))
+        name = label("GTA6 Altyazı", "h1")
+        name.setStyleSheet("font-size: 26pt; font-weight: 900;")
+        cap = label("TÜRKÇE ALTYAZI", "tag")
+        cap.setStyleSheet("color: #5fa8ff; letter-spacing: 5px;")
+        sample = QFrame()
+        sample.setObjectName("sampleCard")
+        sample.setStyleSheet(f"#sampleCard {{ background: {T.SURFACE2}; border: 1px solid {T.BORDER}; "
+                             "border-radius: 18px; }")
+        sl = QVBoxLayout(sample)
+        sl.setContentsMargins(18, 14, 18, 14)
+        sl.setSpacing(4)
+        sl.addWidget(label("Are you listening to me?", "muted"))
+        tr = label("Beni dinliyor musunuz?", "h3")
+        sl.addWidget(tr)
+        ok = label(f"<span style='color:{T.OK}'>●</span> PS5 bağlı &nbsp; "
+                   f"<span style='background:{T.SURFACE}; color:#5fa8ff'>&nbsp;Hazır çeviri&nbsp;</span>", "faint")
+        ok.setTextFormat(Qt.RichText)
+        sl.addWidget(ok)
+        sample.setMaximumWidth(270)
+        lay.addLayout(hbox(icon, 8, vbox(name, cap, spacing=2), None, sample, spacing=12))
         head = label(f"Oyun İngilizce,<br><span style='color:{T.A1}'>sen Türkçe oyna.</span>", "hero")
         head.setTextFormat(Qt.RichText)
         lay.addWidget(head)

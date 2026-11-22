@@ -23,7 +23,8 @@ from ..app import CHIAKI_DOWNLOAD, AppController, open_path
 from ..config import BolgeCfg
 from . import theme as T
 from .parcalar import (TEXT_COLORS, Backdrop, Chips, Collapsible, ColorDots, HealthRow, HelpFab, IconTile, Pill,
-                       PlugScene, RadioCard, RadioGroup, SectionCard, Segmented, StyleCard, SubtitlePreview, Toggle)
+                       PlugScene, RadioCard, RadioGroup, SectionCard, Segmented, SlideToggle, StyleCard, SubtitlePreview,
+                       Toggle, TvPreview)
 from .region_editor import PRESETS, RegionCanvas
 from .widgets import Card, Icon, Logo, NavButton, QrCode, Sparkline, Toast, button, hbox, label, scroll_page, vbox
 
@@ -185,36 +186,72 @@ class HomePage(QWidget):
         ctl.updateAvailable.connect(self._on_update)
         ctl.updateProgress.connect(self._on_update_progress)
 
-        # --- kahraman: büyük durum, tek düğme (GameTranslator)
-        self.sub = label("", "eyebrow")                     # eski testler/araçlar için: kısa durum
-        self.sub.setAlignment(Qt.AlignCenter)
-        self.state_title = label("Hazırlanıyor", "heroTitle")
-        self.state_title.setAlignment(Qt.AlignCenter)
-        self.state_hint = label("Çeviri modelleri ve yazı okuyucu yükleniyor.", "heroSub", wrap=True)
-        self.state_hint.setAlignment(Qt.AlignCenter)
+        # --- sahne (Nino): lacivert duvarda TV, sehpa, PS5 ve priz; ya da TV önizlemesi + kaydırmalı düğme
+        stage = QFrame()
+        stage.setObjectName("stagePanel")
+        stage.setStyleSheet("#stagePanel { border-radius: 26px; border: 1px solid rgba(120, 170, 255, 0.20);"
+                            " background: qradialgradient(cx:0.5, cy:0.32, radius:0.95, fx:0.5, fy:0.28,"
+                            " stop:0 #15357a, stop:0.55 #0a1a45, stop:1 #040a1c); }")
+        sv = QVBoxLayout(stage)
+        sv.setContentsMargins(22, 16, 22, 14)
+        sv.setSpacing(6)
+        self.sub = label("", "eyebrow")                     # kısa durum: HAZIR / ÇEVİRİ ÇALIŞIYOR
+        self.style_sw = Segmented([("fis", "Fiş"), ("dugme", "Düğme")], ctl.cfg.gosterim.ana_ekran
+                                  if ctl.cfg.gosterim.ana_ekran in ("fis", "dugme") else "fis")
+        self.style_sw.setFixedWidth(170)
+        self.style_sw.setToolTip("Ana ekranın görünümü: fişi prize sürükle ya da kaydırmalı düğme")
+        self.style_sw.changed.connect(self._set_style)
+        sv.addLayout(hbox(self.sub, None, self.style_sw, spacing=8))
+        self.stage = QStackedWidget()
+        _transparent(self.stage)
+        self.scene = PlugScene()                            # fişi prize sürükle
+        self.scene.plugged.connect(self._plugged)
+        self.stage.addWidget(self.scene)
+        slider_page = QWidget()
+        _transparent(slider_page)
+        spl = QVBoxLayout(slider_page)
+        spl.setContentsMargins(0, 0, 0, 0)
+        spl.setSpacing(4)
+        self.tv_prev = TvPreview()
+        self.slide = SlideToggle()
+        self.slide.toggled.connect(self._plugged)
+        spl.addWidget(self.tv_prev, 1)
+        spl.addLayout(hbox(None, self.slide, None))
+        self.stage.addWidget(slider_page)
+        self.stage.setMinimumHeight(470)
+        sv.addWidget(self.stage, 1)
+        self.stage_cap = label("", "faint")
+        self.stage_cap.setAlignment(Qt.AlignCenter)
+        self.stage_cap.setStyleSheet("color: rgba(220, 230, 255, 0.75); font-size: 11pt;")
+        sv.addWidget(self.stage_cap)
+        root.addWidget(stage)
+        self._set_style(self.style_sw.value(), save=False)
+
+        # --- durum ve düğmeler (GameTranslator'ın tek düğmesi sahnenin altında)
+        bar = Card(margins=18, spacing=10)
+        self.state_title = label("Hazırlanıyor", "h2")
+        self.state_hint = label("Çeviri modelleri ve yazı okuyucu yükleniyor.", "muted", wrap=True)
         self.start = button("▶  Çeviriyi Başlat", "primaryBig", ctl.toggle)
-        self.start.setMinimumWidth(230)
-        how = button("Nasıl çalışır ›", "linkBig", lambda: self.window().go("guide"))
-        self.stats = label("", "stat")
-        self.stats.setAlignment(Qt.AlignCenter)
-        keys = ctl.cfg.kisayol
-        self.keys_hint = label(f"Kısayol: {keys.tam_ekran.upper()} ekranı çevir · {keys.duraklat.upper()} duraklat",
-                               "faint")
-        self.keys_hint.setAlignment(Qt.AlignCenter)
-        root.addSpacing(8)
-        root.addWidget(self.sub)
-        root.addWidget(self.state_title)
-        root.addWidget(self.state_hint)
-        root.addSpacing(6)
-        root.addLayout(hbox(None, self.start, 6, how, None, spacing=8))
+        self.start.setMinimumWidth(220)
+        how = button("Nasıl çalışır ›", "link", lambda: self.window().go("guide"))
+        head = QHBoxLayout()
+        head.setSpacing(8)
+        head.addLayout(vbox(self.state_title, self.state_hint, spacing=2), 1)
+        head.addWidget(how)
+        head.addSpacing(10)
+        head.addWidget(self.start)
+        bar.add(head)
         self.show_where = Segmented([("tv", "TV"), ("monitor", "Bilgisayar ekranı"), ("ikisi", "İkisi de")],
                                     ctl.cfg.kaynak.oyun_yeri)
-        self.show_where.setFixedWidth(420)
+        self.show_where.setFixedWidth(400)
         self.show_where.changed.connect(self._set_where)
         demo = button("▷  Deneme modu (konsol olmadan dene)", "link", self._demo,
                       "Örnek görüntüyle her şeyi dene: konsol, hesap ya da TV gerekmez")
-        root.addLayout(hbox(None, label("Altyazıyı göster", "faint"), self.show_where, 14, demo, None, spacing=10))
-        root.addWidget(self.stats)
+        bar.add(hbox(label("Altyazıyı göster", "faint"), self.show_where, 14, demo, None, spacing=10))
+        self.stats = label("", "stat")
+        keys = ctl.cfg.kisayol
+        self.keys_hint = label(f"Kısayol: {keys.tam_ekran.upper()} ekranı çevir · {keys.duraklat.upper()} duraklat",
+                               "faint")
         # gecikme ve Claude harcaması (kalite katmanı Claude ise)
         self.lat = label("—", "h3")
         self.spark = Sparkline()
@@ -225,17 +262,10 @@ class HomePage(QWidget):
                "gelen çeviriler ücretsizdir. Kesin fatura: console.anthropic.com › Billing.")
         self.spend.setToolTip(tip)
         self.spend_sub.setToolTip(tip)
-        root.addLayout(hbox(None, label("Ortalama gecikme", "faint"), self.lat, label("ms", "faint"), self.spark,
-                            12, vbox(self.spend, self.spend_sub, spacing=0), None, spacing=6))
-        root.addSpacing(4)
-
-        # --- fişi prize sürükle (Nino): TV, sehpa, PS5, priz
-        self.scene = PlugScene()
-        self.scene.setFixedHeight(330)
-        self.scene.plugged.connect(self._plugged)
-        scene_card = Card(margins=10)
-        scene_card.add(self.scene)
-        root.addWidget(scene_card)
+        bar.add(hbox(self.stats, None, label("Ortalama gecikme", "faint"), self.lat, label("ms", "faint"), self.spark,
+                     12, vbox(self.spend, self.spend_sub, spacing=0), spacing=6))
+        bar.add(self.keys_hint)
+        root.addWidget(bar)
 
         # --- PS5 / Bilgisayar / TV kartları
         grid = QGridLayout()
@@ -345,7 +375,28 @@ class HomePage(QWidget):
             self.ctl.toggle()
         elif not on and self.ctl.state == "calisiyor":
             self.ctl.toggle()
-        self.scene.setRunning(self.ctl.state == "calisiyor")
+        running = self.ctl.state == "calisiyor"
+        self.scene.setRunning(running)
+        self.slide.setOn(running)
+        self._caption()
+
+    def _set_style(self, v: str, save: bool = True) -> None:
+        self.stage.setCurrentIndex(1 if v == "dugme" else 0)
+        if save and v != self.ctl.cfg.gosterim.ana_ekran:
+            cfg = self.ctl.edit_config()
+            cfg.gosterim.ana_ekran = v
+            self.ctl.apply_config(cfg)
+        self._caption()
+
+    def _caption(self) -> None:
+        running = self.ctl.state == "calisiyor"
+        if self.stage.currentIndex() == 1:
+            t = "Kapatmak için düğmeyi sola kaydırın" if running else "Açmak için düğmeyi sağa kaydırın"
+        else:
+            t = "Durdurmak için fişi çekin" if running else "Çeviriyi başlatmak için fişi prize takın"
+        if self.ctl.state == "hazirlaniyor":
+            t = "Hazırlanıyor… birkaç saniye sonra başlatabilirsin"
+        self.stage_cap.setText(t)
 
     def _set_where(self, v: str) -> None:
         cfg = self.ctl.edit_config()
@@ -409,6 +460,9 @@ class HomePage(QWidget):
         self.sub.setText(sub)
         running = s == "calisiyor"
         self.scene.setRunning(running)
+        self.slide.setOn(running)
+        self.tv_prev.setRunning(running)
+        self._caption()
         self.start.setObjectName("stopBig" if running else "primaryBig")
         self.start.setText("■  Çeviriyi Durdur" if running else "▶  Çeviriyi Başlat")
         self.start.style().unpolish(self.start)
@@ -460,6 +514,7 @@ class HomePage(QWidget):
 
     def _show_live(self, it) -> None:  # noqa: ANN001
         self.scene.setText(it.text)
+        self.tv_prev.setText(it.text, it.english)
         self._live_seq = it.seq
         self._live_item = it
         self.live_tr.setText(it.text)
@@ -2608,25 +2663,13 @@ class MainWindow(QMainWindow):
 
 
 def app_icon() -> QIcon:
-    from PySide6.QtCore import QRectF
-    from PySide6.QtGui import QBrush, QColor, QPainter, QPixmap
-    pm = QPixmap(256, 256)
-    pm.fill(Qt.transparent)
-    p = QPainter(pm)
-    p.setRenderHint(QPainter.Antialiasing)
-    r = QRectF(8, 8, 240, 240)
-    p.setPen(Qt.NoPen)
-    p.setBrush(QBrush(T.accent_gradient(r.left(), r.top(), r.right(), r.bottom())))
-    p.drawRoundedRect(r, 60, 60)
-    f = T.font(10, QFont.Black, display=True)
-    f.setPixelSize(96)
-    p.setFont(f)
-    p.setPen(QColor("white"))
-    p.drawText(r.adjusted(0, -40, 0, -40), Qt.AlignCenter, "TR")
-    p.setPen(Qt.NoPen)
-    p.setBrush(QColor("white"))
-    p.drawRoundedRect(QRectF(56, 166, 144, 16), 8, 8)
-    p.setBrush(QColor(255, 255, 255, 190))
-    p.drawRoundedRect(QRectF(82, 194, 92, 16), 8, 8)
-    p.end()
-    return QIcon(pm)
+    """Pencere / görev çubuğu simgesi (tools/marka_gorsel.py): küçük boyutlarda yazısız, büyükte yazılı sürüm."""
+    from PySide6.QtGui import QPixmap
+    from .widgets import marka_image
+    icon = QIcon()
+    small, big = marka_image("simge_yazisiz.png"), marka_image("simge.png")
+    for size in (16, 24, 32, 48, 64, 128, 256, 512):
+        src = big if size >= 128 and not big.isNull() else small
+        if not src.isNull():
+            icon.addPixmap(QPixmap.fromImage(src.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)))
+    return icon

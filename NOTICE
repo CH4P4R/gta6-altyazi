@@ -29,6 +29,10 @@ Kütüphane şunlarla derlenir:
   OpenSSL - Apache-2.0; json-c - MIT; libevent - BSD-3; miniupnpc - BSD-3;
   curl - curl lisansı; nanopb - zlib; jerasure / gf-complete - BSD-3
 
+Marka görselleri (simge, logo, banner, ana ekran sahnesi) tools/marka_gorsel.py ile
+bu projede çizilmiştir. Yazı tipi: Inter - SIL OFL 1.1 - https://github.com/rsms/inter
+(tools/marka/fonts/OFL-Inter.txt).
+
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU Affero General Public License version 3 (see LICENSE).
 This notice and the license notices must be kept intact in copies and modified

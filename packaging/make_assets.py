@@ -37,46 +37,40 @@ def gradient(w: int, h: int, c0, c1, diagonal: bool = True) -> Image.Image:  # n
     return img
 
 
-def badge(size: int) -> Image.Image:
-    s = size * 4
-    g = gradient(s, s, A1, A2)
-    mask = Image.new("L", (s, s), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, s - 1, s - 1), radius=int(s * 0.24), fill=255)
-    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    img.paste(g, (0, 0), mask)
-    d = ImageDraw.Draw(img)
-    f = font(int(s * 0.40))
-    tw = d.textlength("TR", font=f)
-    d.text(((s - tw) / 2, s * 0.14), "TR", font=f, fill="white")
-    # altyazı satırları
-    d.rounded_rectangle((s * 0.2, s * 0.66, s * 0.8, s * 0.72), radius=int(s * 0.03), fill="white")
-    d.rounded_rectangle((s * 0.3, s * 0.77, s * 0.7, s * 0.83), radius=int(s * 0.03), fill=(255, 255, 255, 190))
-    return img.resize((size, size), Image.LANCZOS)
+MARKA = Path(__file__).resolve().parents[1] / "altyazi" / "ui" / "marka"
+
+
+def badge(size: int, text: bool | None = None) -> Image.Image:
+    """Uygulama simgesi (tools/marka_gorsel.py çizer). Küçük boyutlarda yazısız sürüm: yazı okunmaz."""
+    if text is None:
+        text = size >= 200
+    src = Image.open(MARKA / ("simge.png" if text else "simge_yazisiz.png")).convert("RGBA")
+    return src.resize((size, size), Image.LANCZOS)
 
 
 def scene(w: int, h: int) -> Image.Image:
     """Vice City gün batımı: degrade gökyüzü, güneş, şehir silueti, palmiyeler."""
-    img = gradient(w, h, (43, 16, 85), (255, 150, 80), diagonal=False)
+    img = gradient(w, h, (8, 22, 66), (28, 92, 214), diagonal=False)
     d = ImageDraw.Draw(img, "RGBA")
     sun = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    ImageDraw.Draw(sun).ellipse((w * 0.15, h * 0.52, w * 0.85, h * 0.52 + w * 0.7), fill=(255, 210, 140, 160))
+    ImageDraw.Draw(sun).ellipse((w * 0.15, h * 0.52, w * 0.85, h * 0.52 + w * 0.7), fill=(90, 170, 255, 150))
     img.paste(sun.filter(ImageFilter.GaussianBlur(w * 0.08)), (0, 0), sun.filter(ImageFilter.GaussianBlur(w * 0.08)))
     rnd = random.Random(6)
     x = 0
     while x < w:
         bw = rnd.uniform(w * 0.08, w * 0.2)
         bh = rnd.uniform(0.12, 0.4) * h
-        d.rectangle((x, h - bh, x + bw - 2, h), fill=(28, 12, 40, 240))
+        d.rectangle((x, h - bh, x + bw - 2, h), fill=(6, 12, 34, 240))
         for wy in range(int(h - bh + 6), h - 4, max(6, h // 60)):
             if rnd.random() < 0.3:
                 wx = x + rnd.uniform(2, max(3, bw - 6))
-                d.rectangle((wx, wy, wx + 2, wy + 3), fill=(255, 190, 120, 140))
+                d.rectangle((wx, wy, wx + 2, wy + 3), fill=(140, 200, 255, 140))
         x += bw
     for px in (w * 0.18, w * 0.78):
         top = (px + w * 0.04, h * 0.62)
-        d.line((px, h, *top), fill=(18, 8, 26), width=max(3, w // 40))
+        d.line((px, h, *top), fill=(4, 8, 22), width=max(3, w // 40))
         for dx, dy in ((-0.22, 0.05), (-0.14, -0.04), (0.0, -0.06), (0.14, -0.04), (0.22, 0.05)):
-            d.line((*top, top[0] + dx * w, top[1] + dy * h + 6), fill=(18, 8, 26), width=max(2, w // 60))
+            d.line((*top, top[0] + dx * w, top[1] + dy * h + 6), fill=(4, 8, 22), width=max(2, w // 60))
     return img
 
 
@@ -88,19 +82,20 @@ def wizard_large(scale: int) -> Image.Image:
     img.paste(b, (16 * scale, 22 * scale), b)
     d.text((16 * scale, 84 * scale), "GTA6", font=font(26 * scale), fill="white")
     d.text((16 * scale, 114 * scale), "Altyazı", font=font(26 * scale), fill="white")
-    d.text((17 * scale, 150 * scale), "CANLI TÜRKÇE ÇEVİRİ", font=font(8 * scale), fill=(255, 230, 240))
+    d.text((17 * scale, 150 * scale), "CANLI TÜRKÇE ÇEVİRİ", font=font(8 * scale), fill=(190, 222, 255))
     return img
 
 
 def main() -> int:
     OUT.mkdir(exist_ok=True)
     sizes = [16, 24, 32, 48, 64, 128, 256]
-    badge(256).save(OUT / "icon.ico", sizes=[(s, s) for s in sizes])
+    small = [badge(s) for s in sizes]                 # 16-128: yazısız; 256: yazılı
+    small[-1].save(OUT / "icon.ico", sizes=[(s, s) for s in sizes], append_images=small[:-1])
     badge(256).save(OUT / "icon.png")
     badge(1024).save(OUT / "icon.icns")          # macOS uygulama simgesi
     for scale in (1, 2):
         wizard_large(scale).save(OUT / f"wizard_large_{scale}x.bmp")
-        small = Image.new("RGB", (55 * scale, 55 * scale), (13, 11, 19))
+        small = Image.new("RGB", (55 * scale, 55 * scale), (8, 20, 56))
         b = badge(47 * scale)
         small.paste(b, (4 * scale, 4 * scale), b)
         small.save(OUT / f"wizard_small_{scale}x.bmp")

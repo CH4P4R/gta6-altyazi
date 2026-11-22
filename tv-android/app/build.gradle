@@ -64,5 +64,6 @@ tasks.register('copyTvAssets', Copy) {
     from('..') { include 'platform.js' }
     from('src/main/res/mipmap-nodpi') { include 'icon.png'; rename { 'icon.png' } }
     from('src/main/res/mipmap-nodpi') { include 'icon.png'; rename { 'largeIcon.png' } }
+    from('src/main/res/mipmap-nodpi') { include 'icon.png'; rename { 'logo.png' } }
 }
 preBuild.dependsOn 'copyTvAssets'

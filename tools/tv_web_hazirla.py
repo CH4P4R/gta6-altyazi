@@ -44,9 +44,10 @@ def main() -> int:
             # webOS 25 oyunun üstüne ekran koruyucu açmasın (CouchSubs #230)
             info.setdefault("screenSaverProperties", {"preferredType": 2})
             (out / "appinfo.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
-        # index.html iki simgeyi de kullanır (bekleme ekranı ve panel)
+        # index.html simgeleri kullanır: panel (icon), bekleme ekranı (logo)
         badge(80).save(out / "icon.png")
         badge(130).save(out / "largeIcon.png")
+        badge(300, text=True).save(out / "logo.png")      # bekleme ekranındaki büyük logo
         if platform == "tizen":
             badge(117).save(out / "icon.png")
             # Samsung'un webapis.js'i (ekran koruyucuyu kapatmak için; CouchSubs package-tizen.sh gibi)

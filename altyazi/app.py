@@ -532,10 +532,14 @@ class AppController(QObject):
             return {"mesaj": "chiaki-ng açılıyor..."}
         if name == "durum":
             from . import remoteplay
-            return {"durum": self.state, "ps5": self.ps5_state, "duraklatildi": bool(pipe and pipe.paused),
-                    "remoteplay": remoteplay.available(),
-                    "mesaj": {"calisiyor": "Çeviri açık", "hazir": "Çeviri kapalı",
-                              "hazirlaniyor": "Hazırlanıyor"}.get(self.state, self.state)}
+            out = {"durum": self.state, "ps5": self.ps5_state, "duraklatildi": bool(pipe and pipe.paused),
+                   "remoteplay": remoteplay.available(),
+                   "mesaj": {"calisiyor": "Çeviri açık", "hazir": "Çeviri kapalı",
+                             "hazirlaniyor": "Hazırlanıyor"}.get(self.state, self.state)}
+            # Telefon kumandasının kartları için ek bilgiler (hepsi isteğe bağlı; hata olursa eklenmez)
+            for k, v in remote_card_info(self).items():
+                out.setdefault(k, v)
+            return out
         return {"mesaj": f"Bilinmeyen komut: {name}"}
 
     # Sink arayüzü (Pipeline buraya yazar; başka iş parçacığından gelir, sinyaller kuyruğa alınır)
@@ -1102,3 +1106,49 @@ def open_path(path: str) -> None:
         subprocess.Popen(["open", path])
     else:
         subprocess.Popen(["xdg-open", path])
+
+
+_CIKIS = {"tv": "TV", "monitor": "Bilgisayar", "ikisi": "TV ve bilgisayar"}
+_MOTOR = {"claude": "Claude", "gemini": "Gemini", "deepl": "DeepL", "yerelai": "Yerel yapay zekâ",
+          "yerel": "Yerel model", "google": "Google"}
+
+
+def remote_card_info(ctl) -> dict:  # noqa: ANN001
+    """Telefon kumandasının (server.REMOTE) kartlarındaki bilgiler: PS5 adı, altyazının çıktığı yer, çeviri motoru,
+    hazır paketler, bu oturumda çevrilen satır sayısı. Her alan ayrı ayrı denenir; hiçbiri hata fırlatmaz."""
+    out: dict = {}
+    cfg = getattr(ctl, "cfg", None)
+
+    def put(key: str, fn) -> None:  # noqa: ANN001
+        try:
+            v = fn()
+        except Exception:  # noqa: BLE001
+            return
+        if v is not None:
+            out[key] = v
+
+    put("ps5_adi", lambda: str(cfg.ps5.ad or cfg.otomatik.ps5_adi or ""))
+    put("cikis", lambda: _CIKIS.get(cfg.kaynak.oyun_yeri, "TV" if cfg.tv.ip else "Bilgisayar"))
+    put("tv_bagli", lambda: bool(ctl.server and ctl.server.tv_count > 0))
+
+    def motor():  # noqa: ANN202
+        info = getattr(ctl, "engine_info", None) or {}
+        name = info.get("kalite") or (cfg.ceviri.kalite if cfg.ceviri.kalite != "yok" else None)
+        if not name:
+            fast = info.get("hizli") or cfg.ceviri.hizli
+            name = str(fast).split(" (")[0] if fast and fast != "yok" else None
+        return _MOTOR.get(name, str(name)) if name else None
+    put("ceviri", motor)
+    put("paket_acik", lambda: bool(cfg.ceviri.paket_kullan))
+
+    eng = getattr(ctl, "engine", None)          # motorlar hazırlanmadan paket sayısı bilinmez: alan eklenmez
+    if eng is not None:
+        put("paket_oyun", lambda: len(eng.packs.packs))
+        put("paket_satir", lambda: sum(p.count for p in eng.packs.packs))
+    put("oturum_satir", lambda: len(ctl.history))
+
+    def version() -> str:
+        from . import __version__
+        return __version__
+    put("surum", version)
+    return out

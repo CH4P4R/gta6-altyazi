@@ -291,3 +291,54 @@ def test_plug_scene_obs_and_tv_app_version(tmp_path, monkeypatch):
             pass
         assert ctl.tv_app_version() in ("0.5.0", None)
     ctl.shutdown()
+
+
+def test_brand_assets_and_home_styles(tmp_path, monkeypatch):
+    """Marka görselleri (tools/marka_gorsel.py) yerinde; ana ekranın iki görünümü (fiş / kaydırmalı düğme) çalışır."""
+    import json
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    marka = root / "altyazi" / "ui" / "marka"
+    for name in ("simge.png", "simge_yazisiz.png", "rozet.png", "bot.png", "logo.png", "logo_acik.png", "sahne.png",
+                 "sahne_isik.png", "sahne.json"):
+        assert (marka / name).stat().st_size > 200, name
+    geo = json.loads((marka / "sahne.json").read_text("utf-8"))
+    for key in ("screen", "socket", "ps5", "shelf", "plug_rest", "cable_from"):
+        assert key in geo
+    from PIL import Image
+    assert Image.open(root / "tv-android/app/src/main/res/mipmap-nodpi/icon.png").size == (512, 512)
+    assert Image.open(root / "tv-android/app/src/main/res/drawable-nodpi/banner.png").size == (640, 360)
+    assert "logo.png" in (root / "tv-web/src/index.html").read_text("utf-8")
+    assert '"ui" / "marka"' in (root / "packaging/gta6altyazi.spec").read_text("utf-8")    # kuruluma girer
+
+    app, ctl = _app(tmp_path, monkeypatch)
+    from altyazi.ui.main_window import MainWindow, app_icon
+    assert not app_icon().isNull()
+    win = MainWindow(ctl)
+    win.resize(1400, 900)
+    win.show()
+    app.processEvents()
+    home = win.pages["home"]
+    assert home.stage.currentIndex() == 0                       # varsayılan: fiş
+    home._set_style("dugme")
+    assert home.stage.currentIndex() == 1 and ctl.cfg.gosterim.ana_ekran == "dugme"
+    got = []
+    home.slide.toggled.disconnect()
+    home.slide.toggled.connect(got.append)
+    from PySide6.QtCore import QEvent, QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+    sl = home.slide
+    pt = QPointF(sl.width() / 2, sl.height() / 2)
+    sl.mousePressEvent(QMouseEvent(QEvent.MouseButtonPress, pt, pt, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier))
+    sl.mouseReleaseEvent(QMouseEvent(QEvent.MouseButtonRelease, pt, pt, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier))
+    assert got == [True]                                        # tıklamak açar
+    sl.setOn(True)
+    a, b = QPointF(sl.width() - 40, 50), QPointF(10, 50)
+    sl.mousePressEvent(QMouseEvent(QEvent.MouseButtonPress, a, a, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier))
+    sl.mouseMoveEvent(QMouseEvent(QEvent.MouseMove, b, b, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier))
+    sl.mouseReleaseEvent(QMouseEvent(QEvent.MouseButtonRelease, b, b, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier))
+    assert got == [True, False]                                 # sola kaydırmak kapatır
+    home.tv_prev.setRunning(True)
+    home.tv_prev.setText("Bu iş daha bitmedi.", "This isn't over.")
+    assert not home.tv_prev.grab().isNull() and not home.scene.grab().isNull()
+    ctl.shutdown()

@@ -3,6 +3,20 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.9.3 · Yeni simge ve logo, gerçekçi ana ekran, kaydırmalı düğme, yeni telefon kumandası
+- **Yeni marka:** uygulama simgesi (ay yıldızlı oyun kolu, EN → TR balonları), büyük simge, logo, rozet, yardımcının robot
+  yüzü; Windows / macOS simgesi, kurulum görselleri, Android TV simgesi ve ana ekran banner'ı, LG / Samsung simgeleri,
+  README tanıtım görseli.
+- **Ana ekran (Nino):** lacivert duvarda gerçekçi TV, metal sehpa, PS5 ve priz. Fişi prize takınca TV'nin arkası mavi
+  ışıkla parlar, ekranda ● CANLI ve Türkçe altyazı çıkar; çekince durur. TV kapalıyken ekranda logo ve "Oyunlarınız artık
+  Türkçe".
+- **Kaydırmalı düğme görünümü:** TV önizlemesi (Türkçe altyazı, altında İngilizcesi) ve kırmızı "Türkçe · Altyazı açık"
+  düğmesi; ay yıldızlı topu kaydırarak aç / kapat. Ana ekranın sağ üstünden Fiş / Düğme seçilir.
+- **Telefon kumandası yenilendi:** ilk açılışta tanıtım, "Hazır" kartları (PS5, altyazının gittiği yer, hazır paketler,
+  çeviri, son oturum), Çeviriyi başlat, CANLI önizleme, kaydırmalı düğme ya da fiş sahnesi, geçmiş ve ayarlar.
+- **Kurulum:** hoş geldin sayfasında büyük simge, ad ve örnek çeviri kartı. **Sor:** robot yüzlü yardımcı.
+- **TV bekleme ekranı:** ışıklı halkada logo, "GTA6 Altyazı · Oyunlarınız artık Türkçe" (TV uygulaması 0.6.0).
+
 ## 0.9.2 · Fişi prize tak, OBS katmanı, TV uygulaması sürümü
 - **Fişi prize sürükle (Nino):** ana ekranda TV, sehpa, PS5 ve priz; fişi prize sürükleyince çeviri başlar, çekince
   durur. Çeviri açıkken TV'de son Türkçe altyazı görünür.

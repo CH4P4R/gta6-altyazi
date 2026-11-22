@@ -102,11 +102,16 @@ class AskDialog(QDialog):
         lay.setContentsMargins(24, 22, 24, 20)
         lay.setSpacing(12)
         engine = self.bot.available()
-        lay.addLayout(vbox(label("Sor", "h1"),
-                           label("Takıldığın yeri yaz: TV'nin markası, ekranda ne yazdığı... Adım adım anlatırım. "
-                                 "İstersen ekranın fotoğrafını da ekle." +
-                                 (f" (Cevaplar senin {engine.capitalize()} anahtarınla.)" if engine else ""),
-                                 "muted", wrap=True), spacing=4))
+        from PySide6.QtWidgets import QLabel
+        from .widgets import marka_pixmap
+        face = QLabel()
+        face.setFixedSize(72, 72)
+        face.setPixmap(marka_pixmap("bot.png", 72))
+        lay.addLayout(hbox(face, 6, vbox(label("Sor", "h1"),
+                                         label("Takıldığın yeri yaz: TV'nin markası, ekranda ne yazdığı... Adım adım "
+                                               "anlatırım. İstersen ekranın fotoğrafını da ekle." +
+                                               (f" (Cevaplar senin {engine.capitalize()} anahtarınla.)" if engine
+                                                else ""), "muted", wrap=True), spacing=4), spacing=10))
         self.view = QTextBrowser()
         self.view.setOpenExternalLinks(True)
         lay.addWidget(self.view, 1)
@@ -138,9 +143,15 @@ class AskDialog(QDialog):
         name = "Sen" if me else "Yardımcı"
         bg = "#2c1a2a" if me else T.SURFACE2
         side = "right" if me else "left"
+        face = ""
+        if not me:
+            from .widgets import marka_path
+            bot = marka_path("bot.png")
+            if bot.exists():
+                face = f"<img src='{bot.as_uri()}' width='26' height='26' style='vertical-align:middle'> "
         self._log.append(f"<table width='86%' align='{side}' cellpadding='10' cellspacing='0' "
                          f"style='background-color:{bg}; margin-bottom:10px'><tr><td>"
-                         f"<b style='color:{color}'>{name}</b><br>{md_html(text)}</td></tr></table>"
+                         f"{face}<b style='color:{color}'>{name}</b><br>{md_html(text)}</td></tr></table>"
                          "<table width='100%' cellspacing='0' cellpadding='0'><tr><td height='4'></td></tr></table>")
         self.view.setHtml("".join(self._log))
         self.view.verticalScrollBar().setValue(self.view.verticalScrollBar().maximum())

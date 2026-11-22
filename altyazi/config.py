@@ -122,6 +122,7 @@ class GosterimCfg:
     seslendir: bool = False       # altyazının Türkçesini sesli oku (dublaj; oyunun konuşma sesini kısmak gerekir)
     ses_hizi: int = 10            # konuşma hızı (yüzde, -50 … +50)
     tema: str = "koyu"            # koyu | acik (programın görünümü; yeniden açınca geçer)
+    ana_ekran: str = "fis"        # fis: TV-sehpa-PS5 sahnesi, fişi prize sürükle | dugme: TV önizlemesi + kaydırmalı düğme
 
 
 @dataclass

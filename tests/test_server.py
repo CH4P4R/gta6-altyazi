@@ -35,7 +35,7 @@ def test_tv_stream_delivers_fast_with_all_fields():
     d = json.loads(line[6:])
     assert d["type"] == "show" and d["text"] == "Bin." and d["zone_rect"] == [0.1, 0.76, 0.9, 0.97]
     assert d["line_h"] == 0.037 and d["box_opacity"] == 255 and d["tv"] == {"x": 0.01, "y": 0.02, "w": 0.98, "h": 0.97}
-    assert ms < 50, ms
+    assert ms < 150, ms      # yavaş CI makinesinde (macOS sanal makinesi) 55 ms görüldü; Nagle olsaydı 200+ ms
     f.readline()
     srv.clear("altyazi")
     assert json.loads(f.readline()[6:]) == {"type": "clear", "zone": "altyazi"}

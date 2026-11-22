@@ -158,40 +158,11 @@ def comparison(out: Path) -> None:
 
 
 def banner(out: Path) -> None:
+    """README'nin üstündeki tanıtım görseli: marka banner'ı (tools/marka_gorsel.py ile aynı çizim)."""
     import sys as _s
-    from PIL import Image, ImageDraw, ImageFilter
-    _s.path.insert(0, str(ROOT / "packaging"))
-    from make_assets import badge
-
-    W, H = 1600, 600
-    bg = Image.new("RGB", (W, H))
-    d = ImageDraw.Draw(bg)
-    for x in range(W):
-        t = x / W
-        c = (int(20 + 22 * t), int(15 + 5 * t), int(29 + 4 * t))
-        d.line([(x, 0), (x, H)], fill=c)
-    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(glow).ellipse([900, -200, 1700, 600], fill=(255, 80, 140, 70))
-    bg = Image.alpha_composite(bg.convert("RGBA"), glow.filter(ImageFilter.GaussianBlur(120)))
-    shot = Image.open(out / "demo-sonra.png").convert("RGB").resize((800, 450), Image.LANCZOS)
-    shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).rounded_rectangle([730, 95, 1550, 565], 26, fill=(0, 0, 0, 160))
-    bg = Image.alpha_composite(bg, shadow.filter(ImageFilter.GaussianBlur(22)))
-    bg.alpha_composite(_rounded(shot, 22), (740, 75))
-    logo = badge(116)
-    bg.alpha_composite(logo, (80, 110))
-    d = ImageDraw.Draw(bg)
-    d.text((80, 250), "GTA6 Altyazı", font=_font("InterDisplay-ExtraBold.otf", 84), fill=(255, 255, 255))
-    d.text((84, 355), "Oyundaki İngilizce yazılar,", font=_font("Inter-Medium.otf", 34), fill=(205, 200, 220))
-    d.text((84, 398), "anında Türkçe.", font=_font("Inter-Medium.otf", 34), fill=(205, 200, 220))
-    x = 84
-    for chip in ("PS5", "TV", "Discord", "Claude"):
-        f = _font("Inter-SemiBold.otf", 24)
-        tw = d.textlength(chip, font=f)
-        d.rounded_rectangle([x, 470, x + tw + 36, 516], 23, fill=(48, 34, 64), outline=(255, 110, 150), width=2)
-        d.text((x + 18, 478), chip, font=f, fill=(255, 225, 235))
-        x += tw + 52
-    bg.convert("RGB").save(out / "banner.png", optimize=True)
+    _s.path.insert(0, str(ROOT / "tools"))
+    import marka_gorsel
+    marka_gorsel.save(marka_gorsel.banner(1280, 720), out / "banner.png")
 
 
 def main() -> int:
@@ -210,6 +181,8 @@ def main() -> int:
     cfg.sunucu.port = 18799
     cfg.ceviri.claude_anahtar = "sk-ant-ornek"
     AppController.warmup = lambda self: None
+    AppController.stop = lambda self, *a, **k: None          # görüntü kaynağı yok: "çalışıyor" durumu bozulmasın
+    AppController._auto_source = lambda self, *a, **k: None
     ctl = AppController(cfg)
     win = MainWindow(ctl)
     win.resize(1360, 860)
@@ -260,7 +233,7 @@ def main() -> int:
             ctl._set_state("calisiyor")
         except Exception:  # noqa: BLE001
             pass
-        pump(0.1)
+        pump(0.9 if key == "home" else 0.1)      # ana ekranda arka ışığın yanması
         if getattr(win, "toast", None) is not None:
             win.toast.hide()
         pump(0.05)

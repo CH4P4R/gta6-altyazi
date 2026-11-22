@@ -13,6 +13,41 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGraphicsOpacityEffect, QHB
 from . import theme as T
 
 
+# --------------------------------------------------------------------------- marka görselleri
+_MARKA: dict[str, object] = {}
+
+
+def marka_path(name: str):  # noqa: ANN201
+    """altyazi/ui/marka içindeki görsel (tools/marka_gorsel.py çizer; kurulumda aynı yerde)."""
+    from pathlib import Path
+    return Path(__file__).resolve().parent / "marka" / name
+
+
+def marka_image(name: str):  # noqa: ANN201
+    """QImage (önbellekli); dosya yoksa boş QImage: çizen yer yedek çizime geçer."""
+    from PySide6.QtGui import QImage
+    if name not in _MARKA:
+        _MARKA[name] = QImage(str(marka_path(name)))
+    return _MARKA[name]
+
+
+def marka_pixmap(name: str, size: int):  # noqa: ANN201
+    """Kare görseli size×size (yüksek DPI ekranda keskin) QPixmap olarak verir."""
+    from PySide6.QtGui import QPixmap
+    key = f"{name}@{size}"
+    if key not in _MARKA:
+        img = marka_image(name)
+        dpr = 2.0
+        if img.isNull():
+            pm = QPixmap()
+        else:
+            pm = QPixmap.fromImage(img.scaled(int(size * dpr), int(size * dpr), Qt.KeepAspectRatio,
+                                              Qt.SmoothTransformation))
+            pm.setDevicePixelRatio(dpr)
+        _MARKA[key] = pm
+    return _MARKA[key]
+
+
 # --------------------------------------------------------------------------- yardımcılar
 def label(text: str = "", obj: str | None = None, wrap: bool = False) -> QLabel:
     lb = QLabel(text)
@@ -230,43 +265,38 @@ class NavButton(QPushButton):
 
 
 class Logo(QWidget):
+    """Kenar çubuğunun üstü: uygulama simgesi + 'GTA6 Altyazı' + 'TÜRKÇE ALTYAZI' (Nino'nun sol üstü gibi)."""
+
     def __init__(self, scale: float = 1.0):
         super().__init__()
         self.s = scale
-        self.setFixedHeight(int(54 * scale))
-        self.setMinimumWidth(int(170 * scale))
+        self.setFixedHeight(int(58 * scale))
+        self.setMinimumWidth(int(176 * scale))
 
     def paintEvent(self, _e) -> None:  # noqa: ANN001, N802
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
+        p.setRenderHint(QPainter.SmoothPixmapTransform)
         s = self.s
-        # rozet
-        badge = QRectF(0, 6 * s, 40 * s, 40 * s)
-        p.setPen(Qt.NoPen)
-        p.setBrush(QBrush(T.accent_gradient(badge.left(), badge.top(), badge.right(), badge.bottom())))
-        p.drawRoundedRect(badge, 11 * s, 11 * s)
-        f = T.font(10, QFont.Black, display=True)
-        f.setPixelSize(int(15 * s))
-        p.setFont(f)
-        p.setPen(QColor("white"))
-        p.drawText(badge.adjusted(0, -7 * s, 0, -7 * s), Qt.AlignCenter, "TR")
-        p.setBrush(QColor("white"))
-        p.setPen(Qt.NoPen)
-        p.drawRoundedRect(QRectF(badge.left() + 9 * s, badge.top() + 26 * s, 22 * s, 3 * s), 1.5 * s, 1.5 * s)
-        p.setBrush(QColor(255, 255, 255, 190))
-        p.drawRoundedRect(QRectF(badge.left() + 13 * s, badge.top() + 31.5 * s, 14 * s, 3 * s), 1.5 * s, 1.5 * s)
-        # yazı
-        f1 = T.font(10, QFont.Bold, display=True)
+        badge = QRectF(0, 3 * s, 52 * s, 52 * s)
+        pm = marka_pixmap("simge_yazisiz.png", int(52 * s))
+        if not pm.isNull():
+            p.drawPixmap(badge.toRect(), pm)
+        else:
+            p.setPen(Qt.NoPen)
+            p.setBrush(QBrush(T.accent_gradient(badge.left(), badge.top(), badge.right(), badge.bottom())))
+            p.drawRoundedRect(badge, 12 * s, 12 * s)
+        f1 = T.font(10, QFont.Black, display=True)
         f1.setPixelSize(int(19 * s))
         p.setFont(f1)
         p.setPen(QColor(T.TEXT))
-        p.drawText(QPointF(52 * s, 26 * s), "GTA6 Altyazı")
+        p.drawText(QPointF(62 * s, 28 * s), "GTA6 Altyazı")
         f2 = T.font(8, QFont.DemiBold)
-        f2.setPixelSize(int(10.5 * s))
-        f2.setLetterSpacing(QFont.AbsoluteSpacing, 1.4 * s)
+        f2.setPixelSize(int(9.5 * s))
+        f2.setLetterSpacing(QFont.AbsoluteSpacing, 2.2 * s)
         p.setFont(f2)
-        p.setPen(QColor(T.MUTED))
-        p.drawText(QPointF(53 * s, 43 * s), "CANLI TÜRKÇE ÇEVİRİ")
+        p.setPen(QColor("#5fa8ff"))
+        p.drawText(QPointF(63 * s, 45 * s), "TÜRKÇE ALTYAZI")
 
 
 class Dot(QWidget):
