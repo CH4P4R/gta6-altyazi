@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<link rel="stylesheet" href="ortak.css">
+<style>
+  /* 1260×1260, saydam zemin: perspektifte mavi oyun kutusu (kendi tasarımımız; konsol/oyun logosu yok). */
+  html, body { width: 1260px; height: 1260px; background: transparent; }
+  .golge { position: absolute; left: 230px; top: 1090px; width: 860px; height: 90px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(10,20,50,.42), rgba(10,20,50,0)); filter: blur(6px); }
+  .sahne { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 50% 42%; }
+  .kutu { position: absolute; left: 270px; top: 130px; width: 740px; height: 960px; transform-style: preserve-3d;
+    transform: rotateY(24deg) rotateX(-3deg); }
+  .yuz { position: absolute; backface-visibility: hidden; }
+  .on { inset: 0; transform: translateZ(34px); border-radius: 14px;
+    background: linear-gradient(90deg, #0b3fa8 0, #1659d6 3%, #1e66e8 50%, #1a5edc 100%); }
+  .sirt { top: 0; left: 336px; width: 68px; height: 960px; transform: rotateY(-90deg) translateZ(370px);
+    background: linear-gradient(90deg, #08329a 0%, #1452cc 22%, #2a74ef 46%, #1452cc 70%, #0a3aa8 100%); border-radius: 6px; overflow: hidden; }
+  .sirt .bant { position: absolute; left: 0; right: 0; top: 0; height: 128px; background: linear-gradient(90deg,#dfe4ee,#ffffff 46%,#dfe4ee); }
+  .sirt .yazi { position: absolute; left: 50%; top: 520px; transform: translate(-50%,-50%) rotate(90deg); white-space: nowrap;
+    color: #fff; font-weight: 900; font-size: 34px; letter-spacing: -0.4px; text-shadow: 0 1px 2px rgba(0,0,0,.3); }
+  .sirt .cizgi { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.18); }
+  .ustyuz { left: 0; top: 446px; width: 740px; height: 68px; transform: rotateX(90deg) translateZ(480px);
+    background: linear-gradient(180deg, #2c78f2, #1a5edc); border-radius: 6px; }
+  /* kapak */
+  .kapak { position: absolute; left: 30px; top: 12px; right: 12px; bottom: 12px; border-radius: 6px; overflow: hidden; background: #22195a; }
+  .kapak .bant { position: absolute; left: 0; right: 0; top: 0; height: 140px; background: #fff; }
+  .kapak .ad { position: absolute; left: 36px; top: 24px; font-weight: 900; font-size: 66px; letter-spacing: -1.8px; color: #0f1a33; line-height: 1; }
+  .kapak .ps { position: absolute; left: 38px; top: 98px; font-weight: 700; font-size: 23px; color: #5b6478; letter-spacing: .2px; }
+  .kapak .sanat { position: absolute; left: 0; right: 0; top: 140px; bottom: 0; }
+  .kapak .sanat svg { display: block; }
+  .kapak .karartma { position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(180deg, rgba(20,8,40,0), rgba(20,8,40,.55)); }
+  .kapak .simge { position: absolute; left: 50%; bottom: 46px; width: 430px; height: 430px; transform: translateX(-50%);
+    filter: drop-shadow(0 24px 40px rgba(10,0,30,.6)); }
+  .kapak .ucgen { position: absolute; right: 0; top: 0; }
+  .parlama { position: absolute; inset: 0; border-radius: 14px; pointer-events: none;
+    background: linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.20) 18%, rgba(255,255,255,0) 34%, rgba(255,255,255,0) 70%, rgba(255,255,255,.10) 86%, rgba(255,255,255,0) 100%); }
+  .kenar { position: absolute; inset: 0; border-radius: 14px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.28), inset 4px 0 0 rgba(255,255,255,.10); }
+  .mentese { position: absolute; left: 8px; top: 30px; bottom: 30px; width: 12px; border-radius: 6px;
+    background: linear-gradient(90deg, #0a3aa8, #3a84ff 50%, #0a3aa8); opacity: .9; }
+</style></head>
+<body>
+<div class="golge"></div>
+<div class="sahne"><div class="kutu">
+  <div class="yuz ustyuz"></div>
+  <div class="yuz sirt"><div class="bant"></div><div class="cizgi" style="left:10px"></div><div class="cizgi" style="right:10px"></div>
+    <div class="yazi">GTA6 Altyazı</div></div>
+  <div class="yuz on">
+    <div class="mentese"></div>
+    <div class="kapak" id="kapak"></div>
+    <div class="parlama"></div><div class="kenar"></div>
+  </div>
+</div></div>
+<script src="ortak.js"></script>
+<script>
+const W = 698, H = 936;
+const U = 240;
+document.getElementById("kapak").innerHTML = `
+  <div class="sanat">${sehir(W, H - 140, { tohum: 5, gunesX: 0.5, gunesR: 150, ufuk: 0.5, kum: 0.97,
+      palmiyeler: [[0.05, 0.86, 0.62, 0.16], [0.16, 0.9, 0.46, 0.08], [0.94, 0.86, 0.58, -0.15], [0.84, 0.9, 0.4, -0.06]] })}</div>
+  <div class="karartma"></div>
+  <div class="bant"></div>
+  <div class="ad">GTA6 Altyazı</div>
+  <div class="ps">PS5 için · Türkçe altyazı</div>
+  <svg class="ucgen" width="${U}" height="${U}" viewBox="0 0 ${U} ${U}">
+    <defs><linearGradient id="kr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0202c"/><stop offset="1" stop-color="#c8000e"/></linearGradient></defs>
+    <path d="M0 0 H${U} V${U} Z" fill="url(#kr)"/>
+    ${ayYildiz(U - 104, 66, 100)}
+  </svg>
+  <img class="simge" src="${MARKA}simge.png">`;
+</script>
+</body></html>

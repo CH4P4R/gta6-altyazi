@@ -139,7 +139,7 @@ function sehir(w, h, o = {}) {
 }
 
 /* Türk bayrağı ay-yıldızı. G = bayrak yüksekliği; (x0,y0) = dış ay dairesinin merkezi. */
-function ayYildiz(x0, y0, G, renk = "#fff", zemin = "#e30a17") {
+function ayYildiz(x0, y0, G, renk = "#fff") {
   const R1 = G / 4, R2 = G * 0.2, d = G / 16;
   const xs = x0 + d + R2 + G / 3 + G / 8, Rs = G / 8, rs = Rs * 0.381966;
   let p = "";
@@ -148,7 +148,9 @@ function ayYildiz(x0, y0, G, renk = "#fff", zemin = "#e30a17") {
     const rr = i % 2 ? rs : Rs;
     p += (i ? "L" : "M") + (xs + Math.cos(a) * rr).toFixed(2) + " " + (y0 + Math.sin(a) * rr).toFixed(2);
   }
-  return `<circle cx="${x0}" cy="${y0}" r="${R1}" fill="${renk}"/><circle cx="${x0 + d}" cy="${y0}" r="${R2}" fill="${zemin}"/><path d="${p}Z" fill="${renk}"/>`;
+  const m = "ay" + (++_svgNo);
+  return `<mask id="${m}" maskUnits="userSpaceOnUse" x="${x0 - G}" y="${y0 - G}" width="${2 * G}" height="${2 * G}"><circle cx="${x0}" cy="${y0}" r="${R1}" fill="#fff"/><circle cx="${x0 + d}" cy="${y0}" r="${R2}" fill="#000"/></mask>` +
+    `<circle cx="${x0}" cy="${y0}" r="${R1}" fill="${renk}" mask="url(#${m})"/><path d="${p}Z" fill="${renk}"/>`;
 }
 
 function kart(o) {

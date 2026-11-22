@@ -560,10 +560,17 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 <img src="altyazi/ui/rehber/tv-izin.png" alt="Bağlan ve izin ver" width="640">
 
 1. Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de **Ayarlar › Ağ ve İnternet**'te bağlı olduğun Wi-Fi'ye gir, IP adresi orada yazar.
-2. **Bağlan ve kur**'a bas.
+2. **Bağlan, kur ve başlat**'a bas (kurulum sihirbazında: **Bağlan ve kur**).
 3. TV'de çıkan soruda **Bu bilgisayardan her zaman izin ver**'i işaretle, **İzin ver**'e bas.
 
 > TV ile bilgisayar aynı modeme bağlı olmalı. TV uygulaması PS5'in HDMI'ını kendisi bulur; TV HDMI'yı öne alırsa ya da görüntü siyah kalırsa kendiliğinden katman moduna geçer.
+
+#### Adım 4: Tek resimde özet
+
+<img src="altyazi/ui/rehber/kurulum-android.png" alt="Tek resimde özet" width="640">
+
+1. Bütün adımlar bir arada: yazdırıp TV'nin yanında tutabilirsin.
+2. Bunu bir kez yaparsın; sonra program TV uygulamasını kendisi kurar ve günceller.
 
 </details>
 
@@ -604,8 +611,15 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 <img src="altyazi/ui/rehber/lg-devmode.png" alt="Programdan kur" width="640">
 
 1. Developer Mode ekranındaki **IP**'yi ve **Passphrase**'i programa yaz.
-2. **Bağlan ve kur**'a bas; uygulama kurulur ve açılır.
+2. **Bağlan, kur ve başlat**'a bas (kurulum sihirbazında: **Bağlan ve kur**); uygulama kurulur ve açılır.
 3. LG başka uygulamanın üstüne yazı çizmeye izin vermez: PS5 görüntüsü bizim uygulamanın içinde açılır. Kumandada **◀ ▶** ile PS5'in takılı olduğu HDMI girişini seç.
+
+#### Adım 5: Tek resimde özet
+
+<img src="altyazi/ui/rehber/kurulum-lg.png" alt="Tek resimde özet" width="640">
+
+1. Bütün adımlar bir arada: yazdırıp TV'nin yanında tutabilirsin.
+2. Bunu bir kez yaparsın; sonra program TV uygulamasını kendisi kurar ve günceller.
 
 </details>
 
@@ -669,7 +683,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 <img src="altyazi/ui/rehber/samsung-devmode.png" alt="Programdan kur" width="640">
 
 1. Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de **Ayarlar › Genel › Ağ › Ağ Durumu › IP Ayarları**'nda yazar.
-2. **Bağlan ve kur**'a bas.
+2. **Bağlan, kur ve başlat**'a bas (kurulum sihirbazında: **Bağlan ve kur**).
 3. İlk seferde tarayıcıda Samsung hesabı sayfası açılır: gir (hesabın yoksa aynı sayfadan ücretsiz aç). Program uygulamayı bu TV'ye özel imzalatır, kurar ve açar. Sonraki seferlerde giriş gerekmez.
 
 > Tizen Studio gerekmez.
@@ -681,6 +695,13 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 1. Samsung başka uygulamanın üstüne yazı çizmeye izin vermez: PS5 görüntüsü bizim uygulamanın içinde açılır.
 2. Kumandada **◀ ▶** ile PS5'in takılı olduğu HDMI girişini seç.
 3. Altyazı yeri kaymışsa **Yeşil** tuşla ayar panelini aç (ince kumandada **123** / renkli nokta tuşundan renkli tuşlara geç).
+
+#### Adım 8: Tek resimde özet
+
+<img src="altyazi/ui/rehber/kurulum-samsung.png" alt="Tek resimde özet" width="640">
+
+1. Bütün adımlar bir arada: yazdırıp TV'nin yanında tutabilirsin.
+2. Bunu bir kez yaparsın; sonra program TV uygulamasını kendisi kurar ve günceller.
 
 </details>
 

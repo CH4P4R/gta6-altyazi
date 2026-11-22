@@ -65,7 +65,7 @@ b { font-weight: 600; }
 .crumb b { color: #eef2fc; }
 .crumb i { font-style: normal; margin: 0 5px; color: #56627f; }
 .row {
-  position: relative; height: 35px; margin-bottom: 9px; padding: 0 14px; border-radius: 10px;
+  position: relative; height: 35px; margin-bottom: 8px; padding: 0 14px; border-radius: 10px;
   display: flex; align-items: center; gap: 10px; background: var(--tvrow); font-size: 15.5px; font-weight: 600; white-space: nowrap;
 }
 .row.dim { color: #6f7b99; }
@@ -78,6 +78,7 @@ b { font-weight: 600; }
 }
 .tag.n { right: auto; left: -12px; top: -14px; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 13px; }
 .row .tg + .tag { right: 72px; }
+.row .tg + .tag.edge { right: 10px; }
 .tg { margin-left: auto; position: relative; width: 44px; height: 24px; border-radius: 12px; background: #3a4560; flex: none; }
 .tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #c8d0e2; }
 .tg.on { background: #36d48f; }
@@ -165,7 +166,7 @@ b { font-weight: 600; }
 .tag.side { right: auto; top: 50%; left: calc(100% + 16px); transform: translateY(-50%); }
 .hint.sect { padding-left: 2px; margin: -2px 0 9px; text-transform: none; }
 .hint.lbl { margin: 0 0 6px 2px; }
-.field + .hint.lbl { margin-top: 10px; }
+.field + .hint.lbl { margin-top: 8px; }
 .hint.mid { position: absolute; left: 0; right: 0; top: 56px; text-align: center; font-size: 14px; line-height: 1.5; }
 .hint.below { margin-top: 12px; text-align: center; }
 .row + .hint { margin-top: 12px; padding-left: 2px; line-height: 1.45; }
@@ -173,7 +174,7 @@ b { font-weight: 600; }
 .dlgrow2 { margin: 6px 0 12px; background: #232c44; }
 .dlg.tight { top: 24px; bottom: auto; padding: 16px 18px 18px; }
 .dlg.tight .field { margin-bottom: 14px; }
-.btns.left { justify-content: flex-start; margin-top: 14px; }
+.btns.left { justify-content: flex-start; margin-top: 12px; }
 .btn.blue { background: var(--hl); color: #fff; }
 .field.search { margin-bottom: 16px; color: #e8eefc; }
 .field svg { width: 16px; height: 16px; margin-right: 9px; color: var(--tvfaint); }
@@ -249,14 +250,14 @@ const I = {
 };
 
 /* ---- ekran parçaları: veri.js bunlarla ekranları kurar */
-const tag = (t) => t ? `<span class="tag">${t}</span>` : "";
+const tag = (t, cls = "") => t ? `<span class="tag ${cls}">${t}</span>` : "";
 const ntag = (n) => `<span class="tag n">${n}</span>`;
 const crumb = (...parts) => `<div class="crumb">${parts.map((p, i) => i === parts.length - 1 ? `<b>${p}</b>` : p).join("<i>›</i>")}</div>`;
 const toggle = (on) => `<span class="tg${on ? " on" : ""}"></span>`;
 function row(text, o = {}) {
   const cls = ["row", o.hl ? "hl" : "", o.ring ? "ring" : "", o.dim ? "dim" : ""].join(" ");
   const right = o.toggle !== undefined ? toggle(o.toggle) : (o.sub ? `<span class="sub">${o.sub}</span>` : "");
-  return `<div class="${cls}">${text}${right}${tag(o.tag)}</div>`;
+  return `<div class="${cls}">${text}${right}${tag(o.tag, o.tagEdge ? "edge" : "")}</div>`;
 }
 const screen = (inner, cls = "") => `<div class="screen ${cls}">${inner}</div>`;
 

@@ -127,11 +127,14 @@ GOOGLE_TV = [
     step("Bağlan ve izin ver",
          ["Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de "
           "**Ayarlar › Ağ ve İnternet**'te bağlı olduğun Wi-Fi'ye gir, IP adresi orada yazar.",
-          "**Bağlan ve kur**'a bas.",
+          "**Bağlan, kur ve başlat**'a bas (kurulum sihirbazında: **Bağlan ve kur**).",
           "TV'de çıkan soruda **Bu bilgisayardan her zaman izin ver**'i işaretle, **İzin ver**'e bas."],
          img="tv-izin", sid="baglan",
          note="TV ile bilgisayar aynı modeme bağlı olmalı. TV uygulaması PS5'in HDMI'ını kendisi bulur; TV HDMI'yı "
               "öne alırsa ya da görüntü siyah kalırsa kendiliğinden katman moduna geçer."),
+    step("Tek resimde özet",
+         ["Bütün adımlar bir arada: yazdırıp TV'nin yanında tutabilirsin.",
+          "Bunu bir kez yaparsın; sonra program TV uygulamasını kendisi kurar ve günceller."], img="kurulum-android"),
 ]
 
 LG_TV = [
@@ -152,10 +155,13 @@ LG_TV = [
                                 "kendisi baştan başlatır."),
     step("Programdan kur",
          ["Developer Mode ekranındaki **IP**'yi ve **Passphrase**'i programa yaz.",
-          "**Bağlan ve kur**'a bas; uygulama kurulur ve açılır.",
+          "**Bağlan, kur ve başlat**'a bas (kurulum sihirbazında: **Bağlan ve kur**); uygulama kurulur ve açılır.",
           "LG başka uygulamanın üstüne yazı çizmeye izin vermez: PS5 görüntüsü bizim uygulamanın içinde açılır. "
           "Kumandada **◀ ▶** ile PS5'in takılı olduğu HDMI girişini seç."],
          img="lg-devmode", sid="baglan"),
+    step("Tek resimde özet",
+         ["Bütün adımlar bir arada: yazdırıp TV'nin yanında tutabilirsin.",
+          "Bunu bir kez yaparsın; sonra program TV uygulamasını kendisi kurar ve günceller."], img="kurulum-lg"),
 ]
 
 SAMSUNG_TV = [
@@ -199,7 +205,7 @@ SAMSUNG_TV = [
     step("Programdan kur",
          ["Programda **Ağda ara**'ya bas ve listeden TV'yi seç. Bulamazsa TV'nin IP'sini elle yaz: TV'de "
           "**Ayarlar › Genel › Ağ › Ağ Durumu › IP Ayarları**'nda yazar.",
-          "**Bağlan ve kur**'a bas.",
+          "**Bağlan, kur ve başlat**'a bas (kurulum sihirbazında: **Bağlan ve kur**).",
           "İlk seferde tarayıcıda Samsung hesabı sayfası açılır: gir (hesabın yoksa aynı sayfadan ücretsiz aç). "
           "Program uygulamayı bu TV'ye özel imzalatır, kurar ve açar. Sonraki seferlerde giriş gerekmez."],
          img="samsung-devmode", sid="baglan", note="Tizen Studio gerekmez."),
@@ -209,6 +215,9 @@ SAMSUNG_TV = [
           "Altyazı yeri kaymışsa **Yeşil** tuşla ayar panelini aç (ince kumandada **123** / renkli nokta tuşundan "
           "renkli tuşlara geç)."],
          img="samsung-hdmi"),
+    step("Tek resimde özet",
+         ["Bütün adımlar bir arada: yazdırıp TV'nin yanında tutabilirsin.",
+          "Bunu bir kez yaparsın; sonra program TV uygulamasını kendisi kurar ve günceller."], img="kurulum-samsung"),
 ]
 
 MAC = [

@@ -194,7 +194,7 @@ const DATA = {
       },
       {
         screen: screen(crumb("Ayarlar", "Genel", "Harici Aygıt Yöneticisi") +
-          row("Anynet+ (HDMI-CEC)", { hl: true, toggle: false, tag: "Kapatın" }) +
+          row("Anynet+ (HDMI-CEC)", { hl: true, toggle: false, tag: "Kapatın", tagEdge: true }) +
           row("Otomatik Kaynak Değiştirme", { ring: true, toggle: false }) +
           '<div class="hint">Açık kalırsa PS5 açılınca TV <b>doğrudan HDMI\'ya geçer</b>, altyazı görünmez.</div>',
           "glow"),
