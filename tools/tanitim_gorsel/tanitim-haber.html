@@ -7,9 +7,9 @@
   .gaz .mast { font-family: Georgia, "DejaVu Serif", serif; font-weight: 700; font-size: 17px; text-align: center; letter-spacing: -0.2px;
     border-bottom: 2px solid #1b1b1b; padding-bottom: 5px; }
   .gaz .tarih { display: flex; justify-content: space-between; font-size: 8.5px; color: #6b6458; padding: 3px 0 0; text-transform: uppercase; letter-spacing: .6px; }
-  .gaz .etiket { margin-top: 8px; display: inline-block; background: #b3202a; color: #fff; font-size: 9px; font-weight: 700; letter-spacing: .8px; padding: 2px 6px; border-radius: 3px; }
+  .gaz .etiket { margin-top: 7px; display: inline-block; background: #b3202a; color: #fff; font-size: 9px; font-weight: 700; letter-spacing: .8px; padding: 2px 6px; border-radius: 3px; }
   .gaz h4 { margin-top: 5px; font-family: Georgia, "DejaVu Serif", serif; font-weight: 700; font-size: 17.5px; line-height: 1.12; color: #141414; }
-  .gaz .resim { margin-top: 8px; height: 66px; border-radius: 8px; overflow: hidden; }
+  .gaz .resim { margin-top: 7px; height: 50px; border-radius: 8px; overflow: hidden; }
   .gaz p { margin-top: 7px; font-family: Georgia, "DejaVu Serif", serif; font-weight: 400; font-size: 11px; line-height: 1.35; color: #3b3832; }
   .ui .panel { left: 318px; right: 16px; padding: 14px 18px; }
   .p1 { top: 16px; height: 112px; }
@@ -22,7 +22,7 @@
 <body>
 <script src="ortak.js"></script>
 <script>
-const bataklik = `<svg width="206" height="66" viewBox="0 0 206 66">
+const bataklik = `<svg width="206" height="50" viewBox="0 10 206 50" preserveAspectRatio="xMidYMid slice">
   <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6b37a"/><stop offset="1" stop-color="#e46e7d"/></linearGradient></defs>
   <rect width="206" height="66" fill="url(#bg)"/><circle cx="150" cy="40" r="16" fill="#ffe0a0"/>
   <rect y="40" width="206" height="26" fill="#5d6b4a"/><rect y="46" width="206" height="20" fill="#3f5a5a"/>
@@ -43,12 +43,12 @@ kart({
       <div class="etiket">BREAKING</div>
       <h4>Drug sniffing gator has a stroke</h4>
       <div class="resim">${bataklik}</div>
-      <p>Officials say Sgt. Chomps, the county's star narcotics alligator, collapsed during a routine sweep at the docks.</p>
+      <p>Officials say Sgt. Chomps, the county's star narcotics alligator, collapsed during a sweep at the docks.</p>
     </div>
   </div></div>
   <div class="panel p1"><div class="etk"><i></i>Manşet</div><h3>Uyuşturucu arayan timsah felç geçirdi</h3></div>
   <div class="panel p2"><div class="etk"><i></i>Haber</div>
-    <p>Yetkililere göre ilçenin yıldız narkotik timsahı Çavuş Chomps, limandaki olağan arama sırasında yığılıp kaldı.</p>
+    <p>Yetkililere göre ilçenin yıldız narkotik timsahı Çavuş Chomps, limanda yapılan arama sırasında yığılıp kaldı.</p>
     <div class="imza"><img src="${MARKA}simge_yazisiz.png">GTA6 Altyazı</div></div>`
 });
 </script>

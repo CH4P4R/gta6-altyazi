@@ -24,7 +24,7 @@ const DATA = {
         text: "Kumandayla <b>Ayarlar</b>'ı açın; <b>Sistem</b>'e, oradan da <b>Hakkında</b>'ya girin.",
       },
       {
-        screen: screen(crumb("Ayarlar", "Sistem", "Hakkında") + row("Cihaz adı") + row("Android TV OS sürümü") +
+        screen: screen(crumb("Ayarlar", "Sistem", "Hakkında") + row("Android TV OS sürümü") +
           row("Android TV OS derlemesi", { hl: true, tag: "OK × 7 kez" }) +
           '<div class="toast">Artık geliştiricisiniz!</div>', "glow"),
         title: "Derleme satırına 7 kez basın",
