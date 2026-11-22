@@ -295,7 +295,7 @@ class Logo(QWidget):
         f2.setPixelSize(int(9.5 * s))
         f2.setLetterSpacing(QFont.AbsoluteSpacing, 2.2 * s)
         p.setFont(f2)
-        p.setPen(QColor("#5fa8ff"))
+        p.setPen(QColor(T.A2))
         p.drawText(QPointF(63 * s, 45 * s), "TÜRKÇE ALTYAZI")
 
 

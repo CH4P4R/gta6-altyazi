@@ -321,7 +321,7 @@ class Wizard(QDialog):
         name = label("GTA6 Altyazı", "h1")
         name.setStyleSheet("font-size: 26pt; font-weight: 900;")
         cap = label("TÜRKÇE ALTYAZI", "tag")
-        cap.setStyleSheet("color: #5fa8ff; letter-spacing: 5px;")
+        cap.setStyleSheet(f"color: {T.A2}; letter-spacing: 5px;")
         sample = QFrame()
         sample.setObjectName("sampleCard")
         sample.setStyleSheet(f"#sampleCard {{ background: {T.SURFACE2}; border: 1px solid {T.BORDER}; "
@@ -333,7 +333,7 @@ class Wizard(QDialog):
         tr = label("Beni dinliyor musunuz?", "h3")
         sl.addWidget(tr)
         ok = label(f"<span style='color:{T.OK}'>●</span> PS5 bağlı &nbsp; "
-                   f"<span style='background:{T.SURFACE}; color:#5fa8ff'>&nbsp;Hazır çeviri&nbsp;</span>", "faint")
+                   f"<span style='background:{T.SURFACE}; color:{T.A2}'>&nbsp;Hazır çeviri&nbsp;</span>", "faint")
         ok.setTextFormat(Qt.RichText)
         sl.addWidget(ok)
         sample.setMaximumWidth(270)

@@ -518,8 +518,8 @@ class FontChoice(QWidget):
             # Genel QSS düğmenin yazı tipini ezer: ailesi ve boyutu burada, her düğme kendi yazı tipiyle görünsün
             b.setStyleSheet("QPushButton#fontChoice { border-radius: 14px; border: 1.5px solid %s; background: %s;"
                             " padding: 8px 10px; color: %s; font-family: '%s'; font-size: 17px; font-weight: 700; }"
-                            " QPushButton#fontChoice:checked { border: 2px solid #3d8bff; color: #6fb0ff; }"
-                            % (T.BORDER, T.SURFACE2, T.TEXT, fam))
+                            " QPushButton#fontChoice:checked { border: 2px solid %s; color: %s; }"
+                            % (T.BORDER, T.SURFACE2, T.TEXT, fam, T.A1, T.A2))
             b.clicked.connect(lambda _=False, k=key: self._pick(k))
             self.group.addButton(b)
             self.buttons[key] = b
@@ -582,7 +582,7 @@ class _ViewCard(QAbstractButton):
         p.setRenderHint(QPainter.SmoothPixmapTransform)
         r = QRectF(self.rect()).adjusted(1.5, 1.5, -1.5, -1.5)
         on = self.isChecked()
-        p.setPen(QPen(QColor("#3d8bff") if on else QColor(T.BORDER), 2.2 if on else 1.2))
+        p.setPen(QPen(QColor(T.A1) if on else QColor(T.BORDER), 2.2 if on else 1.2))
         p.setBrush(QColor(T.SURFACE2))
         p.drawRoundedRect(r, 18, 18)
         art = QRectF(r.left() + 14, r.top() + 12, r.width() - 28, r.height() - 52)
@@ -614,7 +614,7 @@ class _ViewCard(QAbstractButton):
         f = T.font(11, QFont.DemiBold)
         f.setPixelSize(15)
         p.setFont(f)
-        p.setPen(QColor("#6fb0ff") if on else QColor(T.TEXT))
+        p.setPen(QColor(T.A2) if on else QColor(T.TEXT))
         p.drawText(QRectF(r.left(), r.bottom() - 36, r.width(), 28), Qt.AlignCenter, self.name)
 
 
@@ -741,8 +741,8 @@ class HelpFab(QAbstractButton):
         sh = QGraphicsDropShadowEffect(self)
         sh.setBlurRadius(28)
         sh.setOffset(0, 6)
-        c = QColor(40, 130, 255)
-        c.setAlpha(140)
+        c = QColor(T.A1)
+        c.setAlpha(130)
         sh.setColor(c)
         self.setGraphicsEffect(sh)
 
@@ -1016,13 +1016,13 @@ def draw_idle_screen(p: QPainter, screen: QRectF, title: str = "GTA6 Altyazı",
     c = QPointF(screen.center().x(), screen.top() + 40 * u)
     r = 17 * u
     ring = QRadialGradient(c, r * 1.9)
-    ring.setColorAt(0.45, QColor(60, 150, 255, 120))
-    ring.setColorAt(1, QColor(60, 150, 255, 0))
+    ring.setColorAt(0.45, QColor(255, 80, 165, 120))
+    ring.setColorAt(1, QColor(255, 80, 165, 0))
     p.setPen(Qt.NoPen)
     p.setBrush(QBrush(ring))
     p.drawEllipse(c, r * 1.9, r * 1.9)
     p.setBrush(Qt.NoBrush)
-    p.setPen(QPen(QColor(120, 190, 255, 150), max(1.0, 0.5 * u)))
+    p.setPen(QPen(QColor(255, 170, 120, 160), max(1.0, 0.5 * u)))
     p.drawEllipse(c, r * 1.35, r * 1.35)
     p.setPen(Qt.NoPen)
     pm = marka_pixmap("simge_yazisiz.png", max(16, int(r * 2)))
@@ -1036,7 +1036,7 @@ def draw_idle_screen(p: QPainter, screen: QRectF, title: str = "GTA6 Altyazı",
     f2 = T.font(9, QFont.Medium)
     f2.setPixelSize(max(8, int(3.8 * u)))
     p.setFont(f2)
-    p.setPen(QColor(200, 220, 255, 210))
+    p.setPen(QColor(255, 220, 232, 215))
     p.drawText(QRectF(screen.left(), c.y() + r * 1.5 + 10 * u, screen.width(), 7 * u), Qt.AlignCenter, sub)
 
 
@@ -1213,9 +1213,9 @@ class PlugScene(QWidget):
         c = g["socket"].center() if self.running else self._plug_at() + QPointF(0, 6 * k)
         r = (g["socket"].width() * 0.95) if self.running else 46 * k
         p.setBrush(Qt.NoBrush)
-        p.setPen(QPen(QColor(230, 20, 40, 70), 10 * k))
+        p.setPen(QPen(QColor(255, 79, 163, 70), 10 * k))
         p.drawEllipse(c, r, r)
-        p.setPen(QPen(QColor("#e8142a"), 3.2 * k))
+        p.setPen(QPen(QColor(T.A1), 3.2 * k))
         p.drawEllipse(c, r, r)
         text = "Prizde: çeviri açık ✓" if self.running else "Bu fişe tıklayın ↗"
         f = T.font(10, QFont.Black)
@@ -1229,7 +1229,7 @@ class PlugScene(QWidget):
         box.moveLeft(max(4.0, min(box.left(), self.width() - w - 4)))
         box.moveTop(min(box.top(), self.height() - h - 4))
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor("#e8142a"))
+        p.setBrush(QColor(T.A1))
         p.drawRoundedRect(box, 9 * k, 9 * k)
         p.setFont(f)
         p.setPen(QColor("white"))
@@ -1388,7 +1388,7 @@ class SlideToggle(QWidget):
         self.on = on
         if self._drag is None:
             self._animate_to(1.0 if on else 0.0)
-        self._shadow.setColor(QColor(255, 30, 50, 150) if on else QColor(0, 0, 0, 90))
+        self._shadow.setColor(QColor(255, 79, 163, 150) if on else QColor(0, 0, 0, 90))
         self.update()
 
     def _pill(self) -> QRectF:
@@ -1441,10 +1441,10 @@ class SlideToggle(QWidget):
         if t > 0.01:
             p.setOpacity(t)
             red = QLinearGradient(r.topLeft(), r.bottomLeft())
-            red.setColorAt(0, QColor("#ff5a66"))
-            red.setColorAt(0.5, QColor("#e3192a"))
-            red.setColorAt(1, QColor("#b70a1b"))
-            p.setPen(QPen(QColor(255, 140, 150, 160), 1.4))
+            red = QLinearGradient(r.topLeft(), r.topRight())          # bizim pembe → turuncu
+            red.setColorAt(0, QColor("#ff4fa3"))
+            red.setColorAt(1, QColor("#ff9f43"))
+            p.setPen(QPen(QColor(255, 200, 170, 170), 1.4))
             p.setBrush(QBrush(red))
             p.drawRoundedRect(r, rad, rad)
             gloss = QPainterPath()

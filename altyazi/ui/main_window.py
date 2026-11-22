@@ -186,12 +186,12 @@ class HomePage(QWidget):
         ctl.updateAvailable.connect(self._on_update)
         ctl.updateProgress.connect(self._on_update_progress)
 
-        # --- sahne (Nino): lacivert duvarda TV, sehpa, PS5 ve priz; ya da TV önizlemesi + kaydırmalı düğme
+        # --- sahne: mor gün batımı duvarında TV, sehpa, PS5 ve priz; ya da TV önizlemesi + kaydırmalı düğme
         stage = QFrame()
         stage.setObjectName("stagePanel")
-        stage.setStyleSheet("#stagePanel { border-radius: 26px; border: 1px solid rgba(120, 170, 255, 0.20);"
+        stage.setStyleSheet("#stagePanel { border-radius: 26px; border: 1px solid rgba(255, 120, 190, 0.20);"
                             " background: qradialgradient(cx:0.5, cy:0.32, radius:0.95, fx:0.5, fy:0.28,"
-                            " stop:0 #15357a, stop:0.55 #0a1a45, stop:1 #040a1c); }")
+                            " stop:0 #3d1554, stop:0.55 #1f0c33, stop:1 #0c0614); }")
         sv = QVBoxLayout(stage)
         sv.setContentsMargins(22, 16, 22, 14)
         sv.setSpacing(6)
@@ -222,7 +222,7 @@ class HomePage(QWidget):
         sv.addWidget(self.stage, 1)
         self.stage_cap = label("", "faint")
         self.stage_cap.setAlignment(Qt.AlignCenter)
-        self.stage_cap.setStyleSheet("color: rgba(220, 230, 255, 0.75); font-size: 11pt;")
+        self.stage_cap.setStyleSheet("color: rgba(255, 228, 240, 0.78); font-size: 11pt;")
         sv.addWidget(self.stage_cap)
         root.addWidget(stage)
         self._set_style(self.style_sw.value(), save=False)

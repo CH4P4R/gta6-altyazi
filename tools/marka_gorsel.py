@@ -58,10 +58,10 @@ BOLD = "InterDisplay-Bold.otf"
 SEMI = "Inter-SemiBold.otf"
 
 # Renkler
-NAVY0 = QColor("#0a1a45")
-NAVY1 = QColor("#040917")
-BLUE = QColor("#2f8bff")
-CYAN = QColor("#5fc8ff")
+NAVY0 = QColor("#1f0c33")
+NAVY1 = QColor("#0c0614")
+BLUE = QColor("#ff4fa3")
+CYAN = QColor("#ff9f43")
 RED0 = QColor("#ff2b3a")
 RED1 = QColor("#b3081a")
 
@@ -328,9 +328,9 @@ def draw_orbit(p: QPainter, size, cx, cy, rx, ry, rot, a0, a1, width) -> None:  
         pen.setCapStyle(Qt.RoundCap)
         q.strokePath(path, pen)
 
-    glow(p, size, lambda q: stroke(q, 3.0, QColor(40, 140, 255, 255)), width * 2.2, strength=2)
-    stroke(p, 1.0, QColor(110, 200, 255))
-    stroke(p, 0.4, QColor(235, 250, 255))
+    glow(p, size, lambda q: stroke(q, 3.0, QColor(255, 90, 165, 255)), width * 2.2, strength=2)
+    stroke(p, 1.0, QColor(255, 165, 110))
+    stroke(p, 0.4, QColor(255, 242, 228))
 
 
 # ----------------------------------------------------------------------------- konuşma balonları
@@ -374,12 +374,12 @@ def icon(size: int = 1024, text: bool = True, frame: bool = True) -> QImage:
     tile = rrect(box, rad)
     if frame:
         # dış mavi parlama
-        glow(p, full, lambda q: q.strokePath(tile, QPen(QColor(30, 130, 255), 26)), 22, strength=2,
+        glow(p, full, lambda q: q.strokePath(tile, QPen(QColor(255, 70, 160), 26)), 22, strength=2,
              mode=QPainter.CompositionMode_SourceOver)
     bg = QRadialGradient(QPointF(S * 0.5, S * 0.40), S * 0.62)
-    bg.setColorAt(0.0, QColor("#12307a"))
-    bg.setColorAt(0.55, QColor("#0a1a45"))
-    bg.setColorAt(1.0, QColor("#030713"))
+    bg.setColorAt(0.0, QColor("#3d1554"))
+    bg.setColorAt(0.55, QColor("#1f0c33"))
+    bg.setColorAt(1.0, QColor("#0c0614"))
     p.fillPath(tile, bg)
     p.save()
     p.setClipPath(tile)
@@ -390,7 +390,7 @@ def icon(size: int = 1024, text: bool = True, frame: bool = True) -> QImage:
     p.fillPath(sheen, QColor(255, 255, 255, 14))
     p.restore()
     if frame:
-        rim = lin(0, box.top(), 0, box.bottom(), (0, "#7fd0ff"), (0.35, "#2d8cff"), (1, "#1747d6"))
+        rim = lin(0, box.top(), 0, box.bottom(), (0, "#ffc27a"), (0.35, "#ff5fa8"), (1, "#a8207a"))
         p.setPen(QPen(QBrush(rim), 16))
         p.drawPath(tile)
         p.setPen(QPen(QColor(255, 255, 255, 70), 3))
@@ -421,13 +421,13 @@ def icon(size: int = 1024, text: bool = True, frame: bool = True) -> QImage:
     bubble(p, QRectF(S / 2 - bh * 1.62, by, bh * 1.55, bh), lin(0, by, 0, by + bh, (0, "#ffffff"), (1, "#dfe6f0")),
            True, "EN", QColor("#14213d"), full)
     bubble(p, QRectF(S / 2 + bh * 0.07, by + bh * 0.12, bh * 1.55, bh),
-           lin(0, by, 0, by + bh, (0, "#3d9bff"), (1, "#1250e0")), False, "TR", QColor("white"), full)
+           lin(0, by, 0, by + bh, (0, "#ff5fa8"), (1, "#ff9a3d")), False, "TR", QColor("white"), full)
 
     if text:
         f = _font(BLACK_IT, 168, letter=2)
         tp = text_path("ALTYAZI", f, S / 2, 832)
-        glow(p, full, lambda q: q.fillPath(tp, QColor(40, 140, 255)), 14, strength=1)
-        p.setPen(QPen(QColor("#0b1c4d"), 14, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        glow(p, full, lambda q: q.fillPath(tp, QColor(255, 80, 165)), 14, strength=1)
+        p.setPen(QPen(QColor("#2a0c33"), 14, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         p.drawPath(tp)
         p.setPen(Qt.NoPen)
         b = tp.boundingRect()
@@ -441,8 +441,8 @@ def icon(size: int = 1024, text: bool = True, frame: bool = True) -> QImage:
         p.fillPath(cap, QColor("#e8eef8"))
         cb = cap.boundingRect()
         for x0, x1 in ((cb.left() - 110, cb.left() - 26), (cb.right() + 26, cb.right() + 110)):
-            p.fillRect(QRectF(x0, 890, x1 - x0, 6), lin(x0, 0, x1, 0, (0, "#1e6bff00"), (0.5, "#3d9bff"), (1, "#1e6bff00"))
-                       if x0 < cb.left() else lin(x0, 0, x1, 0, (0, "#1e6bff00"), (0.5, "#3d9bff"), (1, "#1e6bff00")))
+            p.fillRect(QRectF(x0, 890, x1 - x0, 6), lin(x0, 0, x1, 0, (0, "#ff4fa300"), (0.5, "#ff9f43"), (1, "#ff4fa300"))
+                       if x0 < cb.left() else lin(x0, 0, x1, 0, (0, "#ff4fa300"), (0.5, "#ff9f43"), (1, "#ff4fa300")))
     p.end()
     if size != 1024:
         return img.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -497,11 +497,11 @@ def bot(size: int = 512) -> QImage:
     circle = QPainterPath()
     circle.addEllipse(c, R, R)
     bg = QRadialGradient(QPointF(c.x(), c.y() - R * 0.3), R * 1.2)
-    bg.setColorAt(0, QColor("#1a3f9a"))
-    bg.setColorAt(0.6, QColor("#0a1a45"))
-    bg.setColorAt(1, QColor("#030713"))
+    bg.setColorAt(0, QColor("#4d1a66"))
+    bg.setColorAt(0.6, QColor("#1f0c33"))
+    bg.setColorAt(1, QColor("#0c0614"))
     p.fillPath(circle, bg)
-    p.setPen(QPen(lin(0, c.y() - R, 0, c.y() + R, (0, "#8fd6ff"), (1, "#1747d6")), 10))
+    p.setPen(QPen(lin(0, c.y() - R, 0, c.y() + R, (0, "#ffc27a"), (1, "#a8207a")), 10))
     p.drawPath(circle)
     p.setPen(Qt.NoPen)
     p.save()
@@ -519,7 +519,7 @@ def bot(size: int = 512) -> QImage:
     # kulaklık
     for sx in (-1, 1):
         ear = QRectF(c.x() + sx * 150 - 26, 232, 52, 104)
-        p.fillPath(rrect(ear, 22), lin(0, ear.top(), 0, ear.bottom(), (0, "#4aa8ff"), (1, "#1250e0")))
+        p.fillPath(rrect(ear, 22), lin(0, ear.top(), 0, ear.bottom(), (0, "#ff6aa8"), (1, "#d63a7c")))
     # baş
     head = QRectF(c.x() - 138, 140, 276, 228)
     hp = rrect(head, 78)
@@ -536,12 +536,12 @@ def bot(size: int = 512) -> QImage:
     for sx in (-1, 1):
         eye = QRectF(c.x() + sx * 46 - 17, 222, 34, 46)
         ep = rrect(eye, 17)
-        glow(p, full, lambda q, ep=ep: q.fillPath(ep, QColor(60, 190, 255)), 12, strength=2)
-        p.fillPath(ep, lin(0, eye.top(), 0, eye.bottom(), (0, "#c9f1ff"), (1, "#3fb4ff")))
+        glow(p, full, lambda q, ep=ep: q.fillPath(ep, QColor(255, 150, 70)), 12, strength=2)
+        p.fillPath(ep, lin(0, eye.top(), 0, eye.bottom(), (0, "#fff0dc"), (1, "#ff9f43")))
     # gülümseme
     smile = QPainterPath(QPointF(c.x() - 30, 284))
     smile.quadTo(QPointF(c.x(), 304), QPointF(c.x() + 30, 284))
-    p.setPen(QPen(QColor("#5fc8ff"), 7, Qt.SolidLine, Qt.RoundCap))
+    p.setPen(QPen(QColor("#ff9f43"), 7, Qt.SolidLine, Qt.RoundCap))
     p.drawPath(smile)
     p.setPen(Qt.NoPen)
     # boyun ve gövde
@@ -572,7 +572,7 @@ def logo(dark_text: bool = False) -> QImage:
     f2 = _font(BOLD, 40, letter=14)
     cap = QPainterPath()
     cap.addText(336, 238, f2, "TÜRKÇE ALTYAZI")
-    p.fillPath(cap, QColor("#1769e8") if dark_text else QColor("#5fb0ff"))
+    p.fillPath(cap, QColor("#e0457f") if dark_text else QColor("#ff9f43"))
     p.end()
     return img
 
@@ -581,11 +581,11 @@ def banner(W: int, H: int, line2: str = "Oyunlar artık Türkçe") -> QImage:
     """Simge solda, ad ve alt satır sağda; lacivert zemin (Android TV banner'ı, büyük tanıtım görseli)."""
     img = new(W, H)
     p = painter(img)
-    bg = lin(0, 0, W, H, (0, "#0b1d4f"), (0.55, "#081638"), (1, "#050c24"))
+    bg = lin(0, 0, W, H, (0, "#3d1554"), (0.55, "#1f0c33"), (1, "#0c0614"))
     p.fillRect(QRectF(0, 0, W, H), bg)
     light = QRadialGradient(QPointF(W * 0.28, H * 0.5), H * 0.9)
-    light.setColorAt(0, QColor(40, 110, 255, 90))
-    light.setColorAt(1, QColor(40, 110, 255, 0))
+    light.setColorAt(0, QColor(255, 80, 160, 90))
+    light.setColorAt(1, QColor(255, 80, 160, 0))
     p.fillRect(QRectF(0, 0, W, H), light)
     s = H * 0.76
     ic = icon(1024, text=True)
@@ -607,7 +607,7 @@ def banner(W: int, H: int, line2: str = "Oyunlar artık Türkçe") -> QImage:
     p.fillPath(t1, QColor("white"))
     p.fillPath(t2, QColor("white"))
     t3 = fitted(line2, SEMI, H * 0.072, H * 0.76)
-    p.fillPath(t3, QColor("#8fc2ff"))
+    p.fillPath(t3, QColor("#ffb37a"))
     del sc
     p.end()
     return img
@@ -625,7 +625,7 @@ SCENE = {"w": 1720, "h": 980, **{k: [v + (_DX if i % 2 == 0 else _DY) for i, v i
 def waves(w: int, h: int) -> QImage:
     img = new(w, h)
     p = painter(img)
-    p.fillRect(QRectF(0, 0, w, h), lin(0, 0, w, h, (0, "#020b33"), (0.5, "#03186a"), (1, "#010520")))
+    p.fillRect(QRectF(0, 0, w, h), lin(0, 0, w, h, (0, "#1a0626"), (0.5, "#4a0f45"), (1, "#0a0410")))
     vign = QRadialGradient(QPointF(w * 0.35, h * 0.75), w * 0.8)
     vign.setColorAt(0, QColor(0, 0, 0, 0))
     vign.setColorAt(1, QColor(0, 0, 10, 150))
@@ -643,11 +643,11 @@ def waves(w: int, h: int) -> QImage:
     rev = paths[2].toReversed()
     sheet.connectPath(rev)
     sheet.closeSubpath()
-    p.fillPath(sheet, QColor(40, 110, 255, 28))
+    p.fillPath(sheet, QColor(255, 90, 160, 28))
 
     def strokes(q: QPainter, wmul: float, alpha: int) -> None:
         for i, path in enumerate(paths):
-            pen = QPen(QColor(60, 150, 255, alpha), (3.2 - i * 0.45) * wmul)
+            pen = QPen(QColor(255, 110, 170, alpha), (3.2 - i * 0.45) * wmul)
             pen.setCapStyle(Qt.RoundCap)
             q.strokePath(path, pen)
 
@@ -655,11 +655,11 @@ def waves(w: int, h: int) -> QImage:
     glow(p, (w, h), lambda q: strokes(q, 2, 255), 5, strength=1)
     strokes(p, 1, 255)
     for i, path in enumerate(paths[:3]):
-        p.strokePath(path, QPen(QColor(220, 240, 255, 230 - i * 50), 1.2))
+        p.strokePath(path, QPen(QColor(255, 236, 222, 230 - i * 50), 1.2))
     # parlak düğüm
     hot = QRadialGradient(QPointF(w * 0.24, h * 0.80), w * 0.18)
-    hot.setColorAt(0, QColor(150, 210, 255, 70))
-    hot.setColorAt(1, QColor(60, 150, 255, 0))
+    hot.setColorAt(0, QColor(255, 190, 150, 70))
+    hot.setColorAt(1, QColor(255, 110, 170, 0))
     p.setCompositionMode(QPainter.CompositionMode_Screen)
     p.fillRect(QRectF(0, 0, w, h), hot)
     p.end()
@@ -766,7 +766,7 @@ def scene() -> tuple[QImage, QImage]:
     p.restore()
     core = QRectF(core_l, py0 + 18, core_r - core_l, py1 - py0 - 30)
     p.fillRect(core, lin(core_l, 0, core_r, 0, (0, "#2b2f36"), (0.5, "#0d0f13"), (1, "#1d2026")))
-    p.fillRect(QRectF(core_l + 1, py0 + 40, 2.2, py1 - py0 - 70), QColor(70, 140, 255, 200))   # mavi ışık
+    p.fillRect(QRectF(core_l + 1, py0 + 40, 2.2, py1 - py0 - 70), QColor(235, 235, 255, 200))   # beyaz ışık
     right = QPainterPath(QPointF(core_r - 2, py0 + 20))
     right.lineTo(QPointF(px1 - 22, py0 + 2))
     right.cubicTo(QPointF(px1 - 8, py0 + 2), QPointF(px1 - 4, py0 + 20), QPointF(px1 - 6, py0 + 60))
@@ -813,8 +813,8 @@ def scene() -> tuple[QImage, QImage]:
 
     def back(q: QPainter) -> None:
         q.setPen(Qt.NoPen)
-        q.fillPath(rrect(QRectF(tx0 - 26, ty0 - 26, tx1 - tx0 + 52, ty1 - ty0 + 52), 30), QColor(30, 110, 255))
-        q.fillPath(rrect(QRectF(sx0 + 30, sy1 - 30, sx1 - sx0 - 60, 50), 25), QColor(30, 110, 255))
+        q.fillPath(rrect(QRectF(tx0 - 26, ty0 - 26, tx1 - tx0 + 52, ty1 - ty0 + 52), 30), QColor(255, 60, 150))
+        q.fillPath(rrect(QRectF(sx0 + 30, sy1 - 30, sx1 - sx0 - 60, 50), 25), QColor(255, 60, 150))
 
     lp = painter(light)
     glow(lp, full, back, 40, strength=2, mode=QPainter.CompositionMode_SourceOver)
