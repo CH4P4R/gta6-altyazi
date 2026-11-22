@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<link rel="stylesheet" href="ortak.css">
+<style>
+  :root { --vurgu: #c8ff3d; }
+  .tel .ekran { background: #0e1014; color: #f2f4f8; }
+  .tel .durum b { background: #000; }
+  .bas { padding: 6px 14px 8px; display: flex; align-items: baseline; justify-content: space-between; }
+  .bas .k { font-weight: 900; font-size: 18px; letter-spacing: -0.3px; }
+  .bas small { font-size: 10px; color: var(--vurgu); font-weight: 700; }
+  .ant { margin: 9px 11px 0; background: #1a1d24; border-radius: 14px; padding: 12px 12px 13px; }
+  .ant .k { font-weight: 700; font-size: 15px; display: inline-block; }
+  .ant .sev { margin-top: 12px; display: flex; align-items: center; gap: 8px; }
+  .ant .sev span { font-size: 12.5px; color: #c7ccd8; display: inline-block; }
+  .ant .sev .bar { display: flex; gap: 3px; margin-left: auto; }
+  .ant .sev .bar i { width: 15px; height: 6px; border-radius: 3px; background: #343846; display: block; }
+  .ant .sev .bar i.d { background: var(--vurgu); }
+  .ant .zam { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: #c7ccd8; }
+  .ant .zam span { display: inline-block; white-space: nowrap; }
+  .ant .zam b { color: #0e1014; background: var(--vurgu); border-radius: 6px; padding: 2px 6px; font-size: 10.5px; white-space: nowrap; }
+</style></head>
+<body>
+<script src="ortak.js"></script>
+<script>
+kart({
+  baslik: "Antrenman menüsü Türkçe.",
+  alt: "Seviyeni ve antrenman saatini Türkçe gör.",
+  sehir: { tohum: 44, gunesX: 0.72 },
+  oyun: { tohum: 9, gunesX: 0.5 },
+  ui: `
+  <div class="tel"><div class="ekran">
+    <div class="durum"><span>06:30</span><b></b><span class="pil"></span></div>
+    <div class="bas"><div class="k">Training</div><small>WEEK 2</small></div>
+    <div class="ant"><div class="k" data-tr="Güç Antrenmanı">Strength Workout</div>
+      <div class="sev"><span data-tr="Seviye 3/4">Level 3/4</span><div class="bar"><i class="d"></i><i class="d"></i><i class="d"></i><i></i></div></div>
+      <div class="zam"><span data-tr="Antrenman zamanı">Workout window</span><b>18:00–20:00</b></div></div>
+    <div class="ant"><div class="k" data-tr="Kardiyo Antrenmanı">Cardio Workout</div>
+      <div class="sev"><span data-tr="Seviye 1/4">Level 1/4</span><div class="bar"><i class="d"></i><i></i><i></i><i></i></div></div></div>
+  </div></div>`
+});
+window.hazir = () => cipler("#121419", { kenar: "#c8ff3d", cizgi: "#c8ff3d" });
+</script>
+</body></html>

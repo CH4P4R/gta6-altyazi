@@ -300,6 +300,7 @@ body.band #subtitle-text, body.band #subtitle-prev-text, body.band #subtitle-pre
    konturlu beyaz yazı. Örterken (body.covering) zemini örtü verir: tek koyu yuvarlak kutu, içinde düz yazı. */
 @font-face { font-family: "Altyazi Modern"; src: url("fonts/Barlow-SemiBold.ttf") format("truetype"); font-weight: 600; }
 @font-face { font-family: "Altyazi Rounded"; src: url("fonts/Nunito-Variable.ttf") format("truetype"); font-weight: 200 1000; }
+@font-face { font-family: "Altyazi Condensed"; src: url("fonts/BarlowCondensed-SemiBold.ttf") format("truetype"); font-weight: 600; }
 body.glass #subtitle-cover {
   border: 0; border-radius: 30px;
   background: rgb(10, 10, 10) !important;
@@ -320,10 +321,29 @@ body.glass.band #subtitle-cover, body.glass.band #subtitle-text, body.glass.band
   border-radius: 0;
 }
 
-/* Yazı tipi "Aksiyon (GTA tarzı)": dar, kalın Barlow (Ayarlar › Altyazı görünümü › Yazı tipi) */
+/* Yazı tipleri (Ayarlar › Altyazı görünümü › Yazı tipi): Modern = Barlow, Aksiyon (GTA tarzı) = dar
+   Barlow Condensed, Yuvarlak = Nunito, Sade = TV'nin kendi yazı tipi. Cam stilinden sonra gelir: seçilen tip geçerli. */
 body.font-action #subtitle, body.font-action #subtitle-text, body.font-action #subtitle-prev-text,
 body.font-action #subtitle-prev2-text {
-  font-family: "Altyazi Modern", Roboto, Arial, sans-serif !important; letter-spacing: 0.005em;
+  font-family: "Altyazi Condensed", "Altyazi Modern", Roboto, Arial, sans-serif !important; letter-spacing: 0.01em;
+}
+body.font-modern #subtitle, body.font-modern #subtitle-text, body.font-modern #subtitle-prev-text,
+body.font-modern #subtitle-prev2-text {
+  font-family: "Altyazi Modern", Roboto, Arial, sans-serif !important;
+}
+body.font-round #subtitle, body.font-round #subtitle-text, body.font-round #subtitle-prev-text,
+body.font-round #subtitle-prev2-text {
+  font-family: "Altyazi Rounded", Roboto, Arial, sans-serif !important;
+}
+body.font-plain #subtitle, body.font-plain #subtitle-text, body.font-plain #subtitle-prev-text,
+body.font-plain #subtitle-prev2-text {
+  font-family: "LG Smart UI", "SamsungOne", "Tizen Sans", Roboto, Arial, sans-serif !important;
 }
 /* Konuşana göre renk: ad biraz daha kalın */
 #subtitle-text .speaker, #subtitle-prev-text .speaker, #subtitle-prev2-text .speaker { font-weight: 800; }
+
+/* Sol alt köşede küçük logo (Ayarlar › Altyazı görünümü › Köşede logo); yayında hangi programla çevrildiği görünsün. */
+#watermark { position: absolute; left: 40px; bottom: 26px; z-index: 12; opacity: 0.85; color: #fff;
+  font-size: 26px; font-weight: 800; letter-spacing: 0.5px; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+#watermark img { width: 44px; height: 44px; border-radius: 11px; vertical-align: middle; margin-right: 10px; }
+#watermark.hidden { display: none; }

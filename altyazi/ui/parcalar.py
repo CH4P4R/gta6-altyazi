@@ -466,6 +466,158 @@ TEXT_COLORS = [("white", "#FFFFFF"), ("yellow", "#FFE135"), ("cyan", "#5CE1E6"),
                ("orange", "#FFB347")]
 
 
+# TV uygulamasının yazı tipleri (tv-web/src/fonts; kurulumda tv-web/build/tizen/fonts): önizleme TV'deki gibi görünsün
+TV_FONTS = [("aksiyon", "Aksiyon (GTA tarzı)", "BarlowCondensed-SemiBold.ttf"), ("modern", "Modern", "Barlow-SemiBold.ttf"),
+            ("yuvarlak", "Yuvarlak", "Nunito-Variable.ttf"), ("sade", "Sade", "")]
+_TV_FAMILIES: dict[str, str] = {}
+
+
+def tv_font(key: str, px: int, bold: bool = True) -> QFont:
+    """Altyazı yazı tipinin QFont'u; dosya bulunamazsa uygulamanın yazı tipi (Sade gibi)."""
+    if not _TV_FAMILIES:
+        from PySide6.QtGui import QFontDatabase
+        from ..paths import resource
+        for k, _name, file in TV_FONTS:
+            if not file:
+                continue
+            for d in ("tv-web/src/fonts", "tv-web/build/tizen/fonts"):
+                path = resource(d) / file
+                if path.exists():
+                    fams = QFontDatabase.applicationFontFamilies(QFontDatabase.addApplicationFont(str(path)))
+                    if fams:
+                        _TV_FAMILIES[k] = fams[0]
+                    break
+        _TV_FAMILIES.setdefault("_", "")
+    fam = _TV_FAMILIES.get(key)
+    f = QFont(fam) if fam else T.font(10)
+    f.setWeight(QFont.Bold if bold else QFont.DemiBold)
+    f.setPixelSize(max(1, int(px)))
+    return f
+
+
+class FontChoice(QWidget):
+    """Dört yazı tipi düğmesi (2×2), her biri kendi yazı tipiyle yazılı; seçili olan mavi çerçeveli."""
+    changed = Signal(str)
+
+    def __init__(self, current: str):
+        super().__init__()
+        from PySide6.QtWidgets import QGridLayout
+        grid = QGridLayout(self)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(10)
+        self.buttons: dict[str, QPushButton] = {}
+        self.group = QButtonGroup(self)
+        self.group.setExclusive(True)
+        for i, (key, name, _f) in enumerate(TV_FONTS):
+            b = QPushButton(name)
+            b.setCheckable(True)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setObjectName("fontChoice")
+            fam = tv_font(key, 17, True).family()
+            b.setMinimumHeight(52)
+            # Genel QSS düğmenin yazı tipini ezer: ailesi ve boyutu burada, her düğme kendi yazı tipiyle görünsün
+            b.setStyleSheet("QPushButton#fontChoice { border-radius: 14px; border: 1.5px solid %s; background: %s;"
+                            " padding: 8px 10px; color: %s; font-family: '%s'; font-size: 17px; font-weight: 700; }"
+                            " QPushButton#fontChoice:checked { border: 2px solid #3d8bff; color: #6fb0ff; }"
+                            % (T.BORDER, T.SURFACE2, T.TEXT, fam))
+            b.clicked.connect(lambda _=False, k=key: self._pick(k))
+            self.group.addButton(b)
+            self.buttons[key] = b
+            grid.addWidget(b, i // 2, i % 2)
+        self.setValue(current)
+
+    def value(self) -> str:
+        return next((k for k, b in self.buttons.items() if b.isChecked()), "modern")
+
+    def setValue(self, key: str) -> None:  # noqa: N802
+        (self.buttons.get(key) or self.buttons["modern"]).setChecked(True)
+
+    def _pick(self, key: str) -> None:
+        self.setValue(key)
+        self.changed.emit(key)
+
+
+class ViewChoice(QWidget):
+    """Ana ekranın görünümü (Nino'daki Arayüz seçimi): 'Salon' (TV, sehpa, PS5, fiş) ya da 'Cam düğme'. Küçük resimli
+    iki kart; seçili olan mavi çerçeveli."""
+    changed = Signal(str)
+
+    def __init__(self, current: str):
+        super().__init__()
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(14)
+        self.cards: dict[str, QAbstractButton] = {}
+        for key, name in (("fis", "Salon"), ("dugme", "Cam düğme")):
+            c = _ViewCard(key, name)
+            c.clicked.connect(lambda _=False, k=key: self._pick(k))
+            self.cards[key] = c
+            lay.addWidget(c, 1)
+        self.setValue(current)
+
+    def value(self) -> str:
+        return next((k for k, c in self.cards.items() if c.isChecked()), "fis")
+
+    def setValue(self, key: str) -> None:  # noqa: N802
+        for k, c in self.cards.items():
+            c.setChecked(k == key)
+
+    def _pick(self, key: str) -> None:
+        self.setValue(key)
+        self.changed.emit(key)
+
+
+class _ViewCard(QAbstractButton):
+    def __init__(self, key: str, name: str):
+        super().__init__()
+        self.key, self.name = key, name
+        self.setCheckable(True)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setMinimumHeight(150)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+    def paintEvent(self, _e) -> None:  # noqa: ANN001, N802
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setRenderHint(QPainter.SmoothPixmapTransform)
+        r = QRectF(self.rect()).adjusted(1.5, 1.5, -1.5, -1.5)
+        on = self.isChecked()
+        p.setPen(QPen(QColor("#3d8bff") if on else QColor(T.BORDER), 2.2 if on else 1.2))
+        p.setBrush(QColor(T.SURFACE2))
+        p.drawRoundedRect(r, 18, 18)
+        art = QRectF(r.left() + 14, r.top() + 12, r.width() - 28, r.height() - 52)
+        if self.key == "fis":
+            img = marka_image("sahne.png")
+            if not img.isNull():
+                s = min(art.width() / img.width(), art.height() / img.height())
+                w, h = img.width() * s, img.height() * s
+                p.drawImage(QRectF(art.center().x() - w / 2, art.center().y() - h / 2, w, h), img)
+        else:
+            pill = QRectF(art.center().x() - min(art.width(), 230) / 2, art.center().y() - 24, min(art.width(), 230), 48)
+            g = QLinearGradient(pill.topLeft(), pill.bottomLeft())
+            g.setColorAt(0, QColor("#ff5a66"))
+            g.setColorAt(1, QColor("#c20d1e"))
+            p.setPen(Qt.NoPen)
+            p.setBrush(QBrush(g))
+            p.drawRoundedRect(pill, 24, 24)
+            f = T.font(11, QFont.Black, display=True)
+            f.setPixelSize(16)
+            p.setFont(f)
+            p.setPen(QColor("white"))
+            p.drawText(pill.adjusted(18, 0, 0, 0), Qt.AlignVCenter | Qt.AlignLeft, "Türkçe")
+            k = QRectF(pill.right() - 46, pill.top() + 3, 42, 42)
+            p.setBrush(QColor(255, 255, 255, 60))
+            p.drawEllipse(k)
+            pm = marka_pixmap("rozet.png", 34)
+            if not pm.isNull():
+                p.drawPixmap(k.adjusted(4, 4, -4, -4).toRect(), pm)
+        f = T.font(11, QFont.DemiBold)
+        f.setPixelSize(15)
+        p.setFont(f)
+        p.setPen(QColor("#6fb0ff") if on else QColor(T.TEXT))
+        p.drawText(QRectF(r.left(), r.bottom() - 36, r.width(), 28), Qt.AlignCenter, self.name)
+
+
 class SubtitlePreview(QWidget):
     """TV'deki görünümün önizlemesi: oyun sahnesi, İngilizce altyazının yeri ve seçilen biçimde Türkçesi."""
 
@@ -540,8 +692,7 @@ class SubtitlePreview(QWidget):
         tr_px = max(9, int(s.get("fontSize", 58) * scale * 0.9))
         if s.get("placement") == "cover":
             tr_px = max(9, int(en_px * float(s.get("lineScale", 1.3))))
-        f = T.font(10, QFont.Bold if s.get("bold", True) else QFont.DemiBold)
-        f.setPixelSize(tr_px)
+        f = tv_font(s.get("font", "modern"), tr_px, s.get("bold", True))
         fm = QFontMetricsF(f)
         tw = fm.horizontalAdvance(self.text) + 36 * scale
         th = fm.height() + 16 * scale
@@ -905,6 +1056,7 @@ class PlugScene(QWidget):
         self.counter = ""
         self._drag: QPointF | None = None
         self._plug_pos: QPointF | None = None          # sürüklenirken fişin yeri
+        self.hints = True                               # kırmızı halka ve not (Ayarlar'dan kapatılabilir)
         self._G = _scene_geo()
         self._img = marka_image("sahne.png")
         self._light = marka_image("sahne_isik.png")
@@ -969,10 +1121,13 @@ class PlugScene(QWidget):
         p = e.position()
         if self._near_plug(p):
             self._drag = p - self._plug_at()
+            self._press = p
             self.setCursor(Qt.ClosedHandCursor)
 
     def mouseMoveEvent(self, e) -> None:  # noqa: ANN001, N802
         if self._drag is not None:
+            if (e.position() - getattr(self, "_press", e.position())).manhattanLength() < 6:
+                return                                   # titreme: tıklama sayılsın
             self._plug_pos = e.position() - self._drag
             self.update()
         else:
@@ -984,8 +1139,11 @@ class PlugScene(QWidget):
         self._drag = None
         self.setCursor(Qt.OpenHandCursor)
         g = self._geo()
-        near = (self._plug_pos is not None and
-                (self._plug_pos - g["socket"].center()).manhattanLength() < g["socket"].width() * 1.6)
+        if self._plug_pos is None:                       # sürüklemeden tıklandı: tak / çek (Nino: "fişe dokunun")
+            self.plugged.emit(not self.running)
+            self.update()
+            return
+        near = (self._plug_pos - g["socket"].center()).manhattanLength() < g["socket"].width() * 1.6
         self._plug_pos = None
         if near != self.running:
             self.plugged.emit(near)
@@ -1046,6 +1204,36 @@ class PlugScene(QWidget):
             p.setPen(QColor(150, 150, 160))
             p.drawText(screen, Qt.AlignCenter, "ÇALIŞTIRMAK İÇİN FİŞİ PRİZE SÜRÜKLE")
         self._draw_plug(p, g, s)
+        if self.hints and self._plug_pos is None:
+            self._draw_hint(p, g, s)
+
+    def _draw_hint(self, p: QPainter, g: dict, s: float) -> None:
+        """Fişin çevresinde kırmızı halka ve kısa not: 'Bu fişe tıklayın ↗' / 'Prizde: çeviri açık ✓'."""
+        k = max(0.4, s)
+        c = g["socket"].center() if self.running else self._plug_at() + QPointF(0, 6 * k)
+        r = (g["socket"].width() * 0.95) if self.running else 46 * k
+        p.setBrush(Qt.NoBrush)
+        p.setPen(QPen(QColor(230, 20, 40, 70), 10 * k))
+        p.drawEllipse(c, r, r)
+        p.setPen(QPen(QColor("#e8142a"), 3.2 * k))
+        p.drawEllipse(c, r, r)
+        text = "Prizde: çeviri açık ✓" if self.running else "Bu fişe tıklayın ↗"
+        f = T.font(10, QFont.Black)
+        f.setPixelSize(max(14, int(26 * k)))
+        fm = QFontMetricsF(f)
+        w, h = fm.horizontalAdvance(text) + 26 * k, fm.height() + 12 * k
+        if self.running:
+            box = QRectF(c.x() - w + r * 0.4, c.y() + r + 10 * k, w, h)
+        else:
+            box = QRectF(c.x() - w - r * 0.6, c.y() + r * 0.6, w, h)
+        box.moveLeft(max(4.0, min(box.left(), self.width() - w - 4)))
+        box.moveTop(min(box.top(), self.height() - h - 4))
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor("#e8142a"))
+        p.drawRoundedRect(box, 9 * k, 9 * k)
+        p.setFont(f)
+        p.setPen(QColor("white"))
+        p.drawText(box, Qt.AlignCenter, text)
 
     def _draw_plug(self, p: QPainter, g: dict, s: float) -> None:
         plug = self._plug_at()

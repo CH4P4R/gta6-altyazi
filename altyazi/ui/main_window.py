@@ -12,10 +12,10 @@ import sys
 import time
 import webbrowser
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont, QIcon
-from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QHeaderView, QLineEdit,
-                               QListWidget, QListWidgetItem, QMainWindow, QPlainTextEdit, QSlider, QSpinBox,
+from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QHeaderView, QLabel,
+                               QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QPlainTextEdit, QSlider, QSpinBox,
                                QStackedWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from .. import __version__
@@ -24,7 +24,7 @@ from ..config import BolgeCfg
 from . import theme as T
 from .parcalar import (TEXT_COLORS, Backdrop, Chips, Collapsible, ColorDots, HealthRow, HelpFab, IconTile, Pill,
                        PlugScene, RadioCard, RadioGroup, SectionCard, Segmented, SlideToggle, StyleCard, SubtitlePreview,
-                       Toggle, TvPreview)
+                       Toggle, TvPreview, FontChoice, ViewChoice)
 from .region_editor import PRESETS, RegionCanvas
 from .widgets import Card, Icon, Logo, NavButton, QrCode, Sparkline, Toast, button, hbox, label, scroll_page, vbox
 
@@ -196,9 +196,9 @@ class HomePage(QWidget):
         sv.setContentsMargins(22, 16, 22, 14)
         sv.setSpacing(6)
         self.sub = label("", "eyebrow")                     # kısa durum: HAZIR / ÇEVİRİ ÇALIŞIYOR
-        self.style_sw = Segmented([("fis", "Fiş"), ("dugme", "Düğme")], ctl.cfg.gosterim.ana_ekran
+        self.style_sw = Segmented([("fis", "Salon"), ("dugme", "Cam düğme")], ctl.cfg.gosterim.ana_ekran
                                   if ctl.cfg.gosterim.ana_ekran in ("fis", "dugme") else "fis")
-        self.style_sw.setFixedWidth(170)
+        self.style_sw.setFixedWidth(220)
         self.style_sw.setToolTip("Ana ekranın görünümü: fişi prize sürükle ya da kaydırmalı düğme")
         self.style_sw.changed.connect(self._set_style)
         sv.addLayout(hbox(self.sub, None, self.style_sw, spacing=8))
@@ -382,6 +382,13 @@ class HomePage(QWidget):
 
     def _set_style(self, v: str, save: bool = True) -> None:
         self.stage.setCurrentIndex(1 if v == "dugme" else 0)
+        if self.style_sw.value() != v:
+            self.style_sw.blockSignals(True)
+            self.style_sw.setValue(v)
+            self.style_sw.blockSignals(False)
+        look = getattr(self.window(), "pages", {}).get("look") if save else None
+        if look is not None and look.view.value() != v:
+            look.view.setValue(v)
         if save and v != self.ctl.cfg.gosterim.ana_ekran:
             cfg = self.ctl.edit_config()
             cfg.gosterim.ana_ekran = v
@@ -703,6 +710,12 @@ class AppearancePage(QWidget):
                           "anda kaydedilir; TV bağlıysa hemen orada da görürsün.", "translate")
         t = ctl.cfg.tv
         main = self._main_zone()
+        view = SectionCard("Ana ekran", "Salon: fişi prize takınca çeviri başlar. Cam düğme: düğmeyi sağa kaydırın; canlı "
+                           "TV yukarıda görünür.", "home", margins=16)
+        self.view = ViewChoice(ctl.cfg.gosterim.ana_ekran)
+        self.view.changed.connect(self._view)
+        view.add(self.view)
+        root.addWidget(view)
         self.target = Segmented([("tv", "TV"), ("pc", "Bilgisayar ekranı")], "tv")
         self.target.setMaximumWidth(380)
         self.target.changed.connect(self._target)
@@ -749,9 +762,11 @@ class AppearancePage(QWidget):
         self.shape = combo([("fit", "Yazı kadar"), ("band", "Tam genişlik bant")], t.zemin_sekli)
         self.bold = QCheckBox("Kalın yazı", t.kalin)
         self.fit = QCheckBox("Boyutu oyunun altyazısına uydur", getattr(t, "uydur", True))
-        self.tv_font = combo([("yuvarlak", "Yuvarlak (okunaklı)"), ("aksiyon", "Aksiyon (GTA tarzı)")], t.yazi_tipi)
+        self.tv_font = FontChoice(t.yazi_tipi)
         self.spk_color = QCheckBox("Konuşana göre renk (her karakterin adı ve satırı kendi renginde)", t.konusan_renk)
         self.stack = QCheckBox("Hızlı konuşmada önceki satırları üstte göster", t.onceki_satirlar)
+        self.logo = QCheckBox("Sol alt köşede küçük GTA6 Altyazı logosu (yayın ve ekran görüntüsü için)",
+                              getattr(t, "logo", False))
         self.tv_box.add(field("Yazı rengi", self.colors))
         self.size_row = slider_row("Yazı boyutu (sabit yerde)", self.size, lambda v: f"{v} px")
         self.tv_box.add(self.fit)
@@ -766,6 +781,7 @@ class AppearancePage(QWidget):
         self.tv_box.add(self.bold)
         self.tv_box.add(self.stack)
         self.tv_box.add(self.spk_color)
+        self.tv_box.add(self.logo)
         self.mode = Segmented([("otomatik", "Otomatik"), ("hdmi", "Uygulama içinde"), ("katman", "Katman")],
                               ctl.cfg.tv.mod)
         self.mode.setMaximumWidth(460)
@@ -803,9 +819,10 @@ class AppearancePage(QWidget):
         self._save_timer = QTimer(self, singleShot=True, interval=350, timeout=self.save)
         for w in (self.size, self.scale, self.bg, self.bottom):
             w.valueChanged.connect(self._changed)
-        for w in (self.place, self.shape, self.pc_mode, self.tv_font):
+        for w in (self.place, self.shape, self.pc_mode):
             w.currentIndexChanged.connect(self._changed)
-        for w in (self.bold, self.stack, self.latency, self.spk_color, self.fit):
+        self.tv_font.changed.connect(self._changed)
+        for w in (self.bold, self.stack, self.latency, self.spk_color, self.fit, self.logo):
             w.toggled.connect(self._changed)
         self.colors.changed.connect(self._changed)
         self.mode.changed.connect(self._changed)
@@ -815,6 +832,16 @@ class AppearancePage(QWidget):
 
     def _main_zone(self):  # noqa: ANN202
         return next((b for b in self.ctl.cfg.bolgeler if b.ad == "altyazi"), None)
+
+    def _view(self, v: str) -> None:
+        """Ana ekran görünümü: ana ekranın sağ üstündeki seçimle aynı ayar."""
+        home = self.window().pages.get("home") if hasattr(self.window(), "pages") else None
+        if home is not None:
+            home._set_style(v)
+        else:
+            cfg = self.ctl.edit_config()
+            cfg.gosterim.ana_ekran = v
+            self.ctl.apply_config(cfg)
 
     def _preset(self, key: str) -> None:
         st = next(p[3] for p in self.PRESETS if p[0] == key)
@@ -852,7 +879,8 @@ class AppearancePage(QWidget):
         self.preview.set_style(placement=place, fontSize=self.size.value(), background=self.bg.value(),
                                bold=self.bold.isChecked(), textColor=self.colors.current,
                                bottomPercent=self.bottom.value(), backgroundShape=self.shape.currentData(),
-                               lineScale=self.scale.value() / 100 if self.fit.isChecked() else 0)
+                               lineScale=self.scale.value() / 100 if self.fit.isChecked() else 0,
+                               font=self.tv_font.value())
         if not self.fit.isChecked() and place != "fixed":
             self.preview.set_style(placement="fixed" if place == "cover" else place)
         self._mark_preset()
@@ -867,8 +895,9 @@ class AppearancePage(QWidget):
         t.zemin_sekli = self.shape.currentData()
         t.kalin = self.bold.isChecked()
         t.onceki_satirlar = self.stack.isChecked()
-        t.yazi_tipi = self.tv_font.currentData()
+        t.yazi_tipi = self.tv_font.value()
         t.konusan_renk = self.spk_color.isChecked()
+        t.logo = self.logo.isChecked()
         t.uydur = self.fit.isChecked()
         t.mod = self.mode.value() or t.mod
         main = next((b for b in cfg.bolgeler if b.ad == "altyazi"), None)
@@ -1283,14 +1312,46 @@ class TvPage(QWidget):
                                                                             lambda: webbrowser.open(CHIAKI_DOWNLOAD)))),
                                     spacing=16))
         src.add(self.win_box)
-        self.cap_idx = QSpinBox()
-        self.cap_idx.setRange(0, 9)
-        self.cap_idx.setValue(cfg.kaynak.capture_cihaz)
-        self.video = QLineEdit(cfg.kaynak.dosya)
+        # --- capture kart (Elgato, AVerMedia, USB HDMI): aygıt seçimi, çözünürlük, ses, önizleme
+        k = cfg.kaynak
+        self.cap_idx = QComboBox()
+        self.cap_idx.addItem(f"Aygıt {k.capture_cihaz}", k.capture_cihaz)
+        self.cap_find = button("Aygıtları ara", None, self._find_capture)
+        self.cap_res = combo([("1920x1080x60", "1080p · 60 kare (önerilen)"), ("1920x1080x30", "1080p · 30 kare"),
+                              ("1280x720x60", "720p · 60 kare (eski kartlar)"), ("3840x2160x30", "4K · 30 kare")],
+                             f"{k.capture_genislik}x{k.capture_yukseklik}x{k.capture_fps}")
+        self.cap_sound = QCheckBox("Capture kartın sesini hoparlöre aktar (bilgisayarda oynarken)", k.capture_ses)
+        self.cap_audio = QComboBox()
+        self.cap_audio.addItem("Kendiliğinden bul (Elgato, AVerMedia, USB Video…)", "")
+        if k.capture_ses_cihaz:
+            self.cap_audio.addItem(k.capture_ses_cihaz, k.capture_ses_cihaz)
+            self.cap_audio.setCurrentIndex(1)
+        self.cap_prev = QLabel("Önizleme için Aygıtları ara'ya, sonra Önizle'ye bas.")
+        self.cap_prev.setObjectName("faint")
+        self.cap_prev.setAlignment(Qt.AlignCenter)
+        self.cap_prev.setMinimumHeight(140)
+        self.cap_prev.setStyleSheet(f"background:{T.SURFACE2}; border:1px solid {T.BORDER}; border-radius:12px;")
         self.cap_box = QWidget()
-        self.cap_box.setLayout(hbox(field("Capture kart numarası", self.cap_idx), 16,
-                                    field("Video dosyası", self.video), spacing=0))
+        cl = QVBoxLayout(self.cap_box)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(10)
+        how = label("Bağlantı: PS5 → capture kartın HDMI IN girişi · kartın HDMI OUT'u → TV (görüntü TV'ye gecikmesiz "
+                    "geçer) · kartın USB'si → bilgisayar. Oyunu TV'de oynuyorsan Türkçe TV uygulamasında çıkar; "
+                    "bilgisayarda oynuyorsan görüntü ve Türkçe bu programın penceresinde birlikte görünür.", "faint",
+                    wrap=True)
+        cl.addWidget(how)
+        cl.addLayout(hbox(field("Capture kart", hbox(self.cap_idx, self.cap_find, button("Önizle", None,
+                                                                                         self._preview_capture),
+                                                    spacing=8)), 16, field("Görüntü", self.cap_res), spacing=0))
+        cl.addLayout(hbox(self.cap_sound, None))
+        cl.addLayout(hbox(field("Ses girişi", hbox(self.cap_audio, button("Ses girişlerini ara", None,
+                                                                         self._find_audio), spacing=8)), None))
+        cl.addWidget(self.cap_prev)
+        self.video = QLineEdit(cfg.kaynak.dosya)
+        self.video_box = QWidget()
+        self.video_box.setLayout(hbox(field("Video dosyası", self.video), spacing=0))
         src.add(self.cap_box)
+        src.add(self.video_box)
         src.add(hbox(None, button("Kaydet", "primary", self._save_source)))
         root.addWidget(src)
 
@@ -1409,7 +1470,8 @@ class TvPage(QWidget):
     def _src_vis(self) -> None:
         v = self.src_group.value()
         self.win_box.setVisible(v == "pencere")
-        self.cap_box.setVisible(v in ("capture", "video"))
+        self.cap_box.setVisible(v == "capture")
+        self.video_box.setVisible(v == "video")
         self.ps5_auto.setVisible(v == "remoteplay")
 
     def _ps5_row(self) -> None:
@@ -1454,7 +1516,13 @@ class TvPage(QWidget):
         cfg.ps5.acilinca_baslat = self.ps5_auto.isChecked()
         cfg.kaynak.pencere_adi = self.win_name.text().strip() or "chiaki"
         cfg.kaynak.chiaki_yolu = self.chiaki.text().strip()
-        cfg.kaynak.capture_cihaz = self.cap_idx.value()
+        cfg.kaynak.capture_cihaz = int(self.cap_idx.currentData() or 0)
+        w, h, fps = (int(x) for x in (self.cap_res.currentData() or "1920x1080x60").split("x"))
+        cfg.kaynak.capture_genislik, cfg.kaynak.capture_yukseklik, cfg.kaynak.capture_fps = w, h, fps
+        cfg.kaynak.capture_ses = self.cap_sound.isChecked()
+        cfg.kaynak.capture_ses_cihaz = self.cap_audio.currentData() or ""
+        if cfg.kaynak.tur == "capture" and cfg.gosterim.mod != "pencere" and cfg.kaynak.oyun_yeri != "tv":
+            cfg.gosterim.mod = "pencere"          # capture kartta katmanın altında oyun penceresi yok
         cfg.kaynak.dosya = self.video.text().strip()
         self.ctl.apply_config(cfg)
         self.ctl._check_source()
@@ -1464,6 +1532,72 @@ class TvPage(QWidget):
         from PySide6.QtWidgets import QApplication
         QApplication.clipboard().setText(text)
         self.window().toast.show_text("Adres kopyalandı")
+
+    # --------------------------------------------------------------- capture kart
+    def _find_capture(self) -> None:
+        """Aygıtları arka planda arar (her biri kısa süre açılır); sonuç gelince listeyi doldurur."""
+        import threading
+        from PySide6.QtCore import QMetaObject
+        self.cap_find.setEnabled(False)
+        self.cap_find.setText("Aranıyor…")
+
+        def work() -> None:
+            from ..capture import list_capture_devices
+            try:
+                self._cap_found = list_capture_devices()
+            except Exception:  # noqa: BLE001
+                self._cap_found = []
+            QMetaObject.invokeMethod(self, "_capture_listed", Qt.QueuedConnection)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    @Slot()
+    def _capture_listed(self) -> None:
+        found = getattr(self, "_cap_found", [])
+        cur = int(self.cap_idx.currentData() or 0)
+        self.cap_idx.clear()
+        for d in found:
+            tag = " · capture kart" if d["capture"] else ""
+            self.cap_idx.addItem(f"{d['name']} ({d['width']}×{d['height']}){tag}", d["index"])
+        if not found:
+            self.cap_idx.addItem("Aygıt bulunamadı (kart takılı mı, başka program kullanıyor mu?)", cur)
+        best = next((i for i, d in enumerate(found) if d["capture"]), None)
+        keep = next((i for i, d in enumerate(found) if d["index"] == cur), None)
+        if keep is not None and (found[keep]["capture"] or best is None):
+            self.cap_idx.setCurrentIndex(keep)          # kayıtlı aygıt hâlâ yerinde
+        else:
+            self.cap_idx.setCurrentIndex(best or 0)     # adı capture karta benzeyen ilk aygıt
+        self.cap_find.setEnabled(True)
+        self.cap_find.setText("Aygıtları ara")
+
+    def _preview_capture(self) -> None:
+        from PySide6.QtGui import QImage, QPixmap
+        from ..capture import grab_preview
+        w, h, _fps = (int(x) for x in (self.cap_res.currentData() or "1920x1080x60").split("x"))
+        frame = grab_preview(int(self.cap_idx.currentData() or 0), w, h)
+        if frame is None:
+            self.cap_prev.setText("Kare alınamadı: kart takılı mı, PS5 açık mı? Çeviri sürüyorsa önce durdur.")
+            return
+        import cv2
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img = QImage(rgb.data, rgb.shape[1], rgb.shape[0], rgb.strides[0], QImage.Format_RGB888).copy()
+        self.cap_prev.setPixmap(QPixmap.fromImage(img).scaledToHeight(220, Qt.SmoothTransformation))
+        self.cap_prev.setMinimumHeight(224)
+
+    def _find_audio(self) -> None:
+        try:
+            from ..audio import list_inputs
+            inputs = list_inputs()
+        except Exception as e:  # noqa: BLE001
+            self.window().toast.show_text(f"Ses girişleri okunamadı: {e}")
+            return
+        cur = self.cap_audio.currentData() or ""
+        self.cap_audio.clear()
+        self.cap_audio.addItem("Kendiliğinden bul (Elgato, AVerMedia, USB Video…)", "")
+        for _i, name in inputs:
+            self.cap_audio.addItem(name, name)
+        i = self.cap_audio.findData(cur)
+        self.cap_audio.setCurrentIndex(max(0, i))
 
     # --------------------------------------------------------------- TV
     def _open_guide(self) -> None:

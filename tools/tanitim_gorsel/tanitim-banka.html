@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<link rel="stylesheet" href="ortak.css">
+<style>
+  :root { --vurgu: #6b3df0; }
+  .tel .ekran { background: #f4f2fb; }
+  .tel .durum { color: #fff; background: #5a2fd8; }
+  .ust-b { background: linear-gradient(160deg, #5a2fd8, #8a5cff); color: #fff; padding: 2px 14px 11px; }
+  .ust-b .k { font-size: 13px; font-weight: 700; opacity: .95; display: inline-block; }
+  .ust-b .bakiye { font-weight: 900; font-size: 24px; letter-spacing: -0.5px; margin-top: 3px; }
+  .ust-b .no { font-size: 10px; opacity: .75; }
+  .hedef { margin: 9px 12px 0; background: #fff; border-radius: 13px; padding: 10px 12px; box-shadow: 0 2px 6px rgba(60,30,140,.08); }
+  .hedef .t { display: flex; justify-content: space-between; font-size: 11px; color: #6b6f80; }
+  .hedef .cubuk { margin-top: 7px; height: 8px; border-radius: 6px; background: #ebe6fb; overflow: hidden; }
+  .hedef .cubuk i { display: block; width: 62%; height: 100%; background: var(--vurgu); border-radius: 6px; }
+  .hedef .k { margin-top: 7px; font-size: 13px; font-weight: 700; display: inline-block; }
+  .hesap { margin: 8px 12px 0; background: #fff; border-radius: 13px; padding: 8px 11px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 6px rgba(60,30,140,.08); }
+  .hesap .ik { width: 28px; height: 28px; border-radius: 9px; background: #efe9ff; display: grid; place-items: center; }
+  .hesap .ik i { width: 12px; height: 12px; border-radius: 3px; border: 2.5px solid var(--vurgu); display: block; }
+  .hesap .k { font-size: 13px; font-weight: 700; display: inline-block; white-space: nowrap; }
+  .hesap small { display: block; font-size: 10px; color: #8a8ea0; white-space: nowrap; }
+  .hesap b { margin-left: auto; font-weight: 900; font-size: 13px; }
+  .alt-n { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: #fff; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #ebe8f5; }
+  .alt-n i { width: 18px; height: 18px; border-radius: 6px; background: #d9d3f0; display: block; }
+  .alt-n i:first-child { background: var(--vurgu); }
+</style></head>
+<body>
+<script src="ortak.js"></script>
+<script>
+kart({
+  baslik: "Banka menüsü Türkçe.",
+  alt: "Hesaplar, hedefler, birikimler: hepsi Türkçe.",
+  sehir: { tohum: 21, gunesX: 0.66 },
+  sag: `<img class="simge" src="${MARKA}simge_yazisiz.png">`,
+  ui: `
+  <div class="tel"><div class="ekran">
+    <div class="durum"><span>09:12</span><b></b><span class="pil"></span></div>
+    <div class="ust-b"><div class="k" data-tr="Vadesiz Hesap">Checking Account</div><div class="bakiye">$12,480.25</div><div class="no">•••• 4821</div></div>
+    <div class="hedef"><div class="t"><span>Goal: Boat</span><span>62%</span></div><div class="cubuk"><i></i></div>
+      <div class="k" data-tr="Sonraki hedefe $4.900">$4,900 to next goal</div></div>
+    <div class="hesap"><div class="ik"><i></i></div><div><div class="k" data-tr="Aile Birikimi">Family Savings</div><small>Shared · 3 members</small></div><b>$8,150</b></div>
+    <div class="alt-n"><i></i><i></i><i></i><i></i></div>
+  </div></div>`
+});
+window.hazir = () => cipler("#6b3df0", { cizgi: "#c4b2ff" });
+</script>
+</body></html>

@@ -11,9 +11,17 @@ sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
   ışıkla parlar, ekranda ● CANLI ve Türkçe altyazı çıkar; çekince durur. TV kapalıyken ekranda logo ve "Oyunlarınız artık
   Türkçe".
 - **Kaydırmalı düğme görünümü:** TV önizlemesi (Türkçe altyazı, altında İngilizcesi) ve kırmızı "Türkçe · Altyazı açık"
-  düğmesi; ay yıldızlı topu kaydırarak aç / kapat. Ana ekranın sağ üstünden Fiş / Düğme seçilir.
-- **Telefon kumandası yenilendi:** ilk açılışta tanıtım, "Hazır" kartları (PS5, altyazının gittiği yer, hazır paketler,
-  çeviri, son oturum), Çeviriyi başlat, CANLI önizleme, kaydırmalı düğme ya da fiş sahnesi, geçmiş ve ayarlar.
+  düğmesi; ay yıldızlı topu kaydırarak aç / kapat. Ana ekranın sağ üstünden ya da Altyazı görünümü › Ana ekran'daki
+  resimli kartlardan **Salon / Cam düğme** seçilir.
+- **Fişe tıklamak yeter:** sürüklemeden tıklayınca da çeviri başlar / durur; fişin çevresinde kırmızı halka ve "Bu fişe
+  tıklayın" / "Prizde: çeviri açık ✓" notu.
+- **Dört yazı tipi:** Aksiyon (GTA tarzı, Barlow Condensed), Modern (Barlow), Yuvarlak (Nunito), Sade (TV'nin kendi
+  yazı tipi); düğmeler kendi yazı tipleriyle görünür, önizleme seçilen tiple çizilir.
+- **Capture kart:** aygıtlar adıyla listelenir (capture kart olan kendiliğinden seçilir), çözünürlük / kare hızı seçimi,
+  tek kare önizleme, sesi hoparlöre aktarma ve ses girişi seçimi. Oyun bilgisayardaysa görüntü + Türkçe programın
+  penceresinde açılır; TV'deyse (kartın HDMI çıkışı TV'ye) Türkçe TV uygulamasında çıkar.
+- **Köşede logo** (isteğe bağlı): TV'de sol alt köşede küçük GTA6 Altyazı logosu, yayın ve ekran görüntüsü için.
+- **Telefon kumandası sayfası yenilendi** (tarayıcıda açılan /kumanda; ayrı telefon uygulaması yok).
 - **Kurulum:** hoş geldin sayfasında büyük simge, ad ve örnek çeviri kartı. **Sor:** robot yüzlü yardımcı.
 - **TV bekleme ekranı:** ışıklı halkada logo, "GTA6 Altyazı · Oyunlarınız artık Türkçe" (TV uygulaması 0.6.0).
 

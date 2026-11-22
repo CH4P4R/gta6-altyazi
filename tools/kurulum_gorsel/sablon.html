@@ -1,0 +1,290 @@
+<!doctype html>
+<!--
+  GTA6 Altyazı TV kurulum görselleri: sayfa şablonu ve ekran taklitleri (mock) için yardımcılar.
+  İçerik veri.js'tedir; ciz.js bu sayfayı ?marka=android|lg|samsung ile açıp PNG'ye çevirir.
+  Yeniden üretmek için:  NODE_PATH=$(npm root -g) node tools/kurulum_gorsel/ciz.js
+-->
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: "Inter"; font-weight: 500; src: url("fonts/Inter-Medium.otf"); }
+@font-face { font-family: "Inter"; font-weight: 600; src: url("../marka/fonts/Inter-SemiBold.otf"); }
+@font-face { font-family: "Inter"; font-weight: 700; src: url("../marka/fonts/InterDisplay-Bold.otf"); }
+@font-face { font-family: "InterD"; font-weight: 700; src: url("../marka/fonts/InterDisplay-Bold.otf"); }
+@font-face { font-family: "InterD"; font-weight: 900; src: url("../marka/fonts/InterDisplay-Black.otf"); }
+
+:root {
+  --navy: #0f1b33; --blue: #1769e8; --muted: #56627c; --hl: #2f6fe4; --red: #ff3b4e;
+  --tv: #0d1220; --tvrow: #182035; --tvtext: #cdd6ec; --tvfaint: #7d89a8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1600px; }
+body {
+  font-family: "Inter", sans-serif; font-weight: 500; color: var(--navy);
+  background: linear-gradient(180deg, #eef3fb 0%, #f6f8fc 100%);
+  padding: 56px 64px 64px; -webkit-font-smoothing: antialiased;
+}
+b { font-weight: 600; }
+
+/* ---------- üst kısım */
+.head { display: flex; align-items: center; gap: 24px; }
+.head .logo { width: 78px; height: 78px; flex: none; filter: drop-shadow(0 8px 16px rgba(15, 27, 51, .18)); }
+.head h1 { flex: 1; font-family: "InterD"; font-weight: 900; font-size: 46px; line-height: 1.08; letter-spacing: -0.02em; }
+.head h1 em { font-style: normal; color: var(--blue); }
+.chips { display: flex; gap: 12px; flex: none; }
+.chip {
+  display: flex; align-items: center; gap: 10px; white-space: nowrap;
+  background: #fff; border: 1px solid #e1e8f4; border-radius: 999px; padding: 12px 20px 12px 16px;
+  font-weight: 600; font-size: 18px; color: var(--navy); box-shadow: 0 3px 12px rgba(15, 27, 51, .06);
+}
+.chip svg { width: 24px; height: 24px; color: var(--blue); }
+.intro { margin-top: 26px; font-size: 20px; line-height: 1.6; color: var(--muted); max-width: 1440px; }
+.intro b { color: var(--navy); }
+.intro .brands { color: var(--navy); font-weight: 600; }
+
+/* ---------- adım kartları */
+.grid { margin-top: 46px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 50px 36px; }
+.card {
+  position: relative; background: #fff; border-radius: 28px; padding: 20px 20px 28px;
+  box-shadow: 0 14px 34px rgba(22, 44, 96, .08), 0 2px 6px rgba(22, 44, 96, .05);
+}
+.num {
+  position: absolute; left: -16px; top: -16px; z-index: 5; width: 62px; height: 62px; border-radius: 50%;
+  background: var(--blue); color: #fff; border: 5px solid #f2f6fc; display: grid; place-items: center;
+  font-family: "InterD"; font-weight: 900; font-size: 29px; box-shadow: 0 8px 18px rgba(23, 105, 232, .35);
+}
+.card h3 { margin: 24px 6px 9px; font-family: "InterD"; font-weight: 700; font-size: 24px; line-height: 1.2; letter-spacing: -0.01em; }
+.card p { margin: 0 6px; font-size: 16.5px; line-height: 1.55; color: #5b6780; }
+.card p b { color: #22304d; }
+
+/* ---------- TV ekranı taklidi */
+.screen { position: relative; height: 248px; border-radius: 18px; background: var(--tv); padding: 22px 22px; overflow: hidden; color: var(--tvtext); }
+.screen.glow { background: radial-gradient(120% 90% at 80% 0%, #1a2440 0%, var(--tv) 60%); }
+.crumb { padding-left: 34px; margin-bottom: 14px; font-size: 14px; font-weight: 600; color: var(--tvfaint); white-space: nowrap; }
+.crumb b { color: #eef2fc; }
+.crumb i { font-style: normal; margin: 0 5px; color: #56627f; }
+.row {
+  position: relative; height: 37px; margin-bottom: 9px; padding: 0 14px; border-radius: 10px;
+  display: flex; align-items: center; gap: 10px; background: var(--tvrow); font-size: 15.5px; font-weight: 600; white-space: nowrap;
+}
+.row.dim { color: #6f7b99; }
+.row .sub { margin-left: auto; font-size: 12.5px; color: var(--tvfaint); }
+.hl { background: var(--hl) !important; color: #fff !important; outline: 3px solid var(--red); outline-offset: 4px; }
+.ring { outline: 3px solid var(--red); outline-offset: 4px; }
+.tag {
+  position: absolute; z-index: 4; right: 10px; top: -17px; padding: 4px 11px; border-radius: 999px; white-space: nowrap;
+  background: var(--red); color: #fff; font-size: 13px; font-weight: 700; line-height: 1.25; box-shadow: 0 4px 10px rgba(255, 59, 78, .4);
+}
+.tag.n { right: auto; left: -12px; top: -14px; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 13px; }
+.tg { margin-left: auto; position: relative; width: 44px; height: 24px; border-radius: 12px; background: #3a4560; flex: none; }
+.tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #c8d0e2; }
+.tg.on { background: #36d48f; }
+.tg.on::after { left: 23px; background: #fff; }
+.hl .tg:not(.on) { background: rgba(255, 255, 255, .28); }
+.hl .tg:not(.on)::after { background: #fff; }
+.toast {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); white-space: nowrap;
+  background: #eef2fc; color: #0d1220; border-radius: 999px; padding: 8px 18px; font-size: 14px; font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .4);
+}
+.hint { font-size: 13px; color: var(--tvfaint); font-weight: 600; }
+.hint b { color: #ffb4bc; }
+
+/* TV iletişim kutusu */
+.dlg-bg { position: absolute; inset: 0; background: rgba(4, 7, 14, .55); }
+.dlg { position: absolute; left: 22px; right: 22px; top: 18px; bottom: 18px; background: #1b2337; border-radius: 16px; padding: 18px 20px; border: 1px solid #2a3450; }
+.dlg h4 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+.dlg .small { font-size: 12.5px; color: var(--tvfaint); line-height: 1.45; }
+.cb { width: 20px; height: 20px; border-radius: 5px; background: #fff; display: grid; place-items: center; flex: none; }
+.cb svg { width: 14px; height: 14px; color: var(--hl); }
+.btns { display: flex; justify-content: flex-end; gap: 12px; }
+.btn { position: relative; height: 34px; padding: 0 18px; border-radius: 9px; display: flex; align-items: center; font-size: 14.5px; font-weight: 600; background: #283149; color: #cdd6ec; white-space: nowrap; }
+
+/* rakam şeridi / döşemeler */
+.tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.tiles span { height: 30px; border-radius: 7px; background: #1a2238; }
+.digits { position: relative; display: flex; gap: 6px; padding: 9px; border-radius: 12px; background: #151c2e; border: 1px solid #263049; }
+.digits span { flex: 1; height: 34px; border-radius: 7px; background: #262f47; display: grid; place-items: center; font-size: 16px; font-weight: 600; color: #cdd6ec; }
+.digits span.on { background: var(--hl); color: #fff; }
+.field { position: relative; height: 36px; border-radius: 9px; background: #0f1527; border: 1px solid #2c3754; display: flex; align-items: center; padding: 0 12px; font-size: 15px; font-weight: 600; color: #fff; }
+.seg { display: flex; margin-left: auto; background: #0f1527; border-radius: 8px; padding: 3px; gap: 3px; }
+.seg span { padding: 4px 14px; border-radius: 6px; font-size: 13.5px; font-weight: 600; color: var(--tvfaint); }
+.seg span.on { background: var(--hl); color: #fff; outline: 3px solid var(--red); outline-offset: 3px; }
+
+/* kumanda */
+.remote { position: absolute; width: 104px; border-radius: 52px; background: linear-gradient(180deg, #2b3247, #1d2335); border: 1px solid #39425c; }
+.pwr { position: relative; width: 36px; height: 36px; border-radius: 50%; background: #e2434f; display: grid; place-items: center; margin: 0 auto; }
+.pwr svg { width: 20px; height: 20px; color: #fff; }
+.okring { width: 70px; height: 70px; border-radius: 50%; background: #39425c; margin: 18px auto 0; display: grid; place-items: center; font-size: 13px; font-weight: 600; color: #cdd6ec; }
+.okring span { width: 34px; height: 34px; border-radius: 50%; background: #4a5470; display: grid; place-items: center; }
+.rkeys { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
+.rkeys span { width: 22px; height: 22px; border-radius: 50%; background: #39425c; }
+
+/* tarayıcı (açık) */
+.browser { position: absolute; inset: 0; background: #f4f6fb; color: #1d2433; }
+.browser .bar { height: 42px; background: #e6eaf2; display: flex; align-items: center; gap: 8px; padding: 0 14px 0 64px; }
+.browser .url { flex: 1; height: 26px; border-radius: 13px; background: #fff; display: flex; align-items: center; gap: 6px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #3a4459; }
+.browser .url svg { width: 12px; height: 12px; color: #6b768c; }
+.browser .nav { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #e3e7ef; background: #fff; }
+.browser .brand { font-family: "InterD"; font-weight: 700; font-size: 15px; color: #a50034; }
+.browser .lnk { font-size: 13px; font-weight: 600; color: #4a5468; }
+.browser .su { position: relative; height: 30px; padding: 0 14px; border-radius: 8px; background: var(--hl); color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; }
+.browser .body { padding: 18px; }
+.browser .ln { height: 10px; border-radius: 5px; background: #dfe4ee; margin-bottom: 10px; }
+
+/* ---------- GTA6 Altyazı uygulaması taklidi (açık tema) */
+.app { position: absolute; inset: 0; background: #f6f2f8; display: flex; color: #1c1525; }
+.app .side { width: 64px; flex: none; background: #efe8f3; border-right: 1px solid #e3d9ea; padding-top: 62px; }
+.app .side span { display: block; width: 30px; height: 9px; border-radius: 5px; background: #ddd2e6; margin: 0 auto 16px; }
+.app .side span.on { background: linear-gradient(90deg, #ff4fa3, #ff9f43); }
+.app .main { flex: 1; padding: 13px 14px 0; min-width: 0; }
+.app .pt { display: flex; align-items: center; gap: 8px; font-family: "InterD"; font-weight: 700; font-size: 16px; margin-bottom: 9px; }
+.app .pt small { font-family: "Inter"; font-weight: 600; font-size: 12px; color: #8a809b; }
+.app .crd { background: #fff; border: 1px solid #e3d9ea; border-radius: 12px; padding: 10px 12px 12px; }
+.app .ct { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+.app .ct i { width: 18px; height: 18px; border-radius: 5px; background: linear-gradient(135deg, #ff4fa3, #ff9f43); display: grid; place-items: center; }
+.app .ct i svg { width: 11px; height: 11px; color: #fff; }
+.app .r { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.app .lb { font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.app .in { position: relative; flex: 1; min-width: 0; height: 27px; border-radius: 7px; background: #f3edf6; border: 1px solid #cdbfdb; display: flex; align-items: center; padding: 0 9px; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: visible; }
+.app .in .car { margin-left: auto; color: #8a809b; }
+.app .b { position: relative; height: 27px; padding: 0 10px; border-radius: 7px; background: #fff; border: 1px solid #cdbfdb; display: flex; align-items: center; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.app .b.p { height: 30px; padding: 0 14px; border: 0; color: #fff; font-size: 12.5px; background: linear-gradient(90deg, #ff4fa3, #ff9f43); }
+.app .note { font-size: 11px; color: #5d536e; font-weight: 600; margin-bottom: 8px; white-space: nowrap; }
+.app .note b { color: #1c1525; font-weight: 700; }
+.app .ring { outline-offset: 3px; }
+
+/* ---------- tek tek ekranlara özel parçalar */
+.tag.side { right: auto; top: 50%; left: calc(100% + 16px); transform: translateY(-50%); }
+.hint.sect { padding-left: 2px; margin: -2px 0 9px; text-transform: none; }
+.hint.lbl { margin: 0 0 6px 2px; }
+.field + .hint.lbl { margin-top: 10px; }
+.hint.mid { position: absolute; left: 0; right: 0; top: 74px; text-align: center; font-size: 14px; line-height: 1.5; }
+.hint.below { margin-top: 12px; text-align: center; }
+.row + .hint { margin-top: 12px; padding-left: 2px; line-height: 1.45; }
+.dlgrow { margin: 12px 0 16px; background: #232c44; }
+.dlgrow2 { margin: 6px 0 12px; background: #232c44; }
+.dlg.tight { top: 14px; bottom: 14px; padding: 14px 16px; }
+.dlg.tight .field { margin-bottom: 14px; }
+.btns.left { justify-content: flex-start; margin-top: 14px; }
+.btn.blue { background: var(--hl); color: #fff; }
+.field.search { margin-bottom: 16px; color: #e8eefc; }
+.field svg { width: 16px; height: 16px; margin-right: 9px; color: var(--tvfaint); }
+.store { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 14px; background: var(--tvrow); }
+.store .ico { width: 58px; height: 58px; border-radius: 14px; flex: none; display: grid; place-items: center; background: linear-gradient(135deg, #7b5cff, #c03cff); color: #fff; font-size: 17px; font-weight: 700; }
+.store .nm { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 3px; }
+.store .btn { margin-left: auto; }
+.restart { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 14px 16px; border-radius: 12px; background: #151c2e; border: 1px dashed #34405e; font-size: 14px; line-height: 1.45; color: var(--tvfaint); }
+.restart b { color: #e8eefc; font-size: 15px; }
+.restart svg { width: 30px; height: 30px; color: #5b9bff; flex: none; }
+.info { display: flex; gap: 0; margin-top: 4px; padding: 10px 16px; border-radius: 12px; background: #151c2e; }
+.info div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.info span { font-size: 12.5px; font-weight: 600; color: var(--tvfaint); }
+.info b { font-size: 19px; color: #fff; letter-spacing: .01em; }
+.browser .mail { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 12px; border-radius: 9px; background: #e5f6ec; color: #17784a; font-size: 13px; font-weight: 600; }
+.browser .mail svg { width: 14px; height: 14px; }
+.hbar { position: absolute; left: 22px; right: 22px; bottom: 24px; display: flex; gap: 10px; }
+.tile { position: relative; width: 96px; height: 80px; border-radius: 12px; background: #1a2238; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--tvtext); }
+.tile svg { width: 24px; height: 24px; }
+.tile.e { flex: 1; width: auto; background: #151c2e; }
+.digits .grp { position: relative; flex: 5; display: flex; gap: 6px; border-radius: 9px; }
+.remote { left: 40px; top: 22px; height: 260px; padding-top: 22px; }
+.minitv { position: absolute; left: 178px; right: 24px; top: 104px; height: 116px; border-radius: 12px; border: 3px solid #39425c; background: #0a0f1b; display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--tvtext); }
+.minitv svg { width: 34px; height: 34px; color: #5b9bff; flex: none; }
+
+/* ---------- uyarı ve yardım */
+.warn {
+  margin-top: 44px; display: flex; gap: 18px; align-items: flex-start; padding: 20px 28px;
+  background: #fff7dc; border: 2px solid #f0c64a; border-radius: 20px; color: #7a5a00; font-size: 18px; line-height: 1.55;
+}
+.warn svg { flex: none; width: 30px; height: 30px; margin-top: 1px; color: #d29a00; }
+.warn b { color: #5e4500; }
+.help {
+  margin-top: 28px; display: flex; align-items: center; gap: 30px; padding: 26px 36px 26px 30px;
+  background: #0d1836; border-radius: 28px; color: #fff; overflow: hidden; position: relative;
+}
+.help::before { content: ""; position: absolute; left: -80px; top: -120px; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(40, 130, 255, .35), transparent 65%); }
+.help .bot { position: relative; width: 124px; height: 124px; flex: none; }
+.help .txt { position: relative; flex: 1; }
+.help h2 { font-family: "InterD"; font-weight: 900; font-size: 30px; letter-spacing: -0.01em; margin-bottom: 8px; }
+.help p { font-size: 18px; line-height: 1.55; color: #b8c4df; }
+.help p b { color: #fff; }
+.ask { position: relative; width: 420px; flex: none; background: #15224a; border: 1px solid #263769; border-radius: 18px; padding: 14px; }
+.ask .q { height: 42px; border-radius: 11px; background: #0d1836; border: 1px solid #2b3c70; display: flex; align-items: center; padding: 0 14px; font-size: 14.5px; color: #8494bd; white-space: nowrap; overflow: hidden; }
+.ask .acts { display: flex; gap: 10px; margin-top: 10px; justify-content: flex-end; }
+.ask .acts span { height: 36px; padding: 0 16px; border-radius: 10px; display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; background: #233366; color: #e3e9fb; }
+.ask .acts span svg { width: 17px; height: 17px; }
+.ask .acts span.go { background: linear-gradient(90deg, #ff4fa3, #ff9f43); color: #fff; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* ---- simgeler (emoji yerine) */
+const I = {
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
+  remote: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="5"/><circle cx="12" cy="9" r="2.2"/><path d="M10 14.5h.01M14 14.5h.01M10 17.5h.01M14 17.5h.01"/></svg>',
+  laptop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="11" rx="1.8"/><path d="M2 19.5h20"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.3 3.6a2 2 0 0 1 3.4 0l8.3 14.4A2 2 0 0 1 20.3 21H3.7A2 2 0 0 1 2 18L10.3 3.6z"/><path d="M12 9v5M12 17.2v.1" stroke="#fff7dc" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  power: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.6 6.6a7.5 7.5 0 1 0 10.8 0"/></svg>',
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg>',
+  tv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg>',
+  photo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8.5 5l1.5-2h4l1.5 2"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2.5-6.5L4 12z"/></svg>',
+  apps: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>',
+  input: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M12 8v6M9 11l3 3 3-3"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8" stroke-linecap="round"/></svg>',
+};
+
+/* ---- ekran parçaları: veri.js bunlarla ekranları kurar */
+const tag = (t) => t ? `<span class="tag">${t}</span>` : "";
+const ntag = (n) => `<span class="tag n">${n}</span>`;
+const crumb = (...parts) => `<div class="crumb">${parts.map((p, i) => i === parts.length - 1 ? `<b>${p}</b>` : p).join("<i>›</i>")}</div>`;
+const toggle = (on) => `<span class="tg${on ? " on" : ""}"></span>`;
+function row(text, o = {}) {
+  const cls = ["row", o.hl ? "hl" : "", o.ring ? "ring" : "", o.dim ? "dim" : ""].join(" ");
+  const right = o.toggle !== undefined ? toggle(o.toggle) : (o.sub ? `<span class="sub">${o.sub}</span>` : "");
+  return `<div class="${cls}">${text}${right}${tag(o.tag)}</div>`;
+}
+const screen = (inner, cls = "") => `<div class="screen ${cls}">${inner}</div>`;
+
+/* GTA6 Altyazı › Bağlantı › TV bölümü (açık tema) */
+function appTv(body) {
+  return `<div class="app"><div class="side"><span></span><span></span><span></span><span class="on"></span><span></span><span></span></div>
+    <div class="main"><div class="pt">Bağlantı <small>› TV</small></div>
+    <div class="crd"><div class="ct"><i>${I.tv}</i>TV</div>${body}</div></div></div>`;
+}
+
+/* ---- sayfa */
+function render(d) {
+  const chips = d.chips.map(([ic, t]) => `<span class="chip">${I[ic]}${t}</span>`).join("");
+  const cards = d.steps.map((s, i) => `<div class="card"><div class="num">${i + 1}</div>${s.screen}
+      <h3>${s.title}</h3><p>${s.text}</p></div>`).join("");
+  document.getElementById("root").innerHTML = `
+    <div class="head"><img class="logo" src="../../altyazi/ui/marka/simge_yazisiz.png" alt="">
+      <h1>${d.title}</h1><div class="chips">${chips}</div></div>
+    <p class="intro">${d.intro}</p>
+    <div class="grid">${cards}</div>
+    <div class="warn">${I.warn}<div>${d.warn}</div></div>
+    <div class="help"><img class="bot" src="../../altyazi/ui/marka/bot.png" alt="">
+      <div class="txt"><h2>Takıldınız mı? Yardımcıya sorun.</h2>
+        <p><b>GTA6 Altyazı</b>'da sağ alttaki <b>robot düğmesine</b> basın; TV'nizin markasını ve ekranda ne gördüğünüzü
+        yazın. İsterseniz <b>Fotoğraf ekle</b> ile ekranın fotoğrafını da ekleyebilirsiniz.</p></div>
+      <div class="ask"><div class="q">${d.ask}</div>
+        <div class="acts"><span>${I.photo}Fotoğraf ekle</span><span class="go">${I.send}Gönder</span></div></div>
+    </div>`;
+}
+</script>
+<script src="veri.js"></script>
+<script>
+  const marka = new URLSearchParams(location.search).get("marka") || "android";
+  render(DATA[marka]);
+</script>
+</body>
+</html>

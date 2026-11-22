@@ -802,7 +802,15 @@
       $('subtitle-prev2-text').style.fontWeight = style.bold ? '700' : '600';
     }
     if (typeof style.speakerColors === 'boolean') speakerColors = style.speakerColors;
-    if (style.font === 'aksiyon' || style.font === 'yuvarlak') setBodyClass('font-action', style.font === 'aksiyon');
+    if (typeof style.watermark === 'boolean' && $('watermark')) {
+      $('watermark').className = style.watermark ? '' : 'hidden';
+    }
+    if (style.font === 'aksiyon' || style.font === 'yuvarlak' || style.font === 'modern' || style.font === 'sade') {
+      setBodyClass('font-action', style.font === 'aksiyon');
+      setBodyClass('font-round', style.font === 'yuvarlak');
+      setBodyClass('font-plain', style.font === 'sade');
+      setBodyClass('font-modern', style.font === 'modern');
+    }
     if (TEXT_COLORS[style.textColor]) {
       $('subtitle-text').style.color = TEXT_COLORS[style.textColor];
       $('subtitle-prev-text').style.color = TEXT_COLORS[style.textColor];

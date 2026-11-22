@@ -284,13 +284,26 @@ class AppController(QObject):
             frame_sink = self.window.push_frame
         elif self.tv_only():
             self.window = None            # oyun TV'de: Türkçe yalnız TV'de (bilgisayar ekranına katman açılmaz)
-        elif self.cfg.gosterim.mod == "pencere":
+        elif self.cfg.kaynak.tur == "capture" and self.cfg.kaynak.oyun_yeri == "tv":
+            self.window = None            # capture kart TV'ye aktarıyor (passthrough): Türkçe TV uygulamasında
+        elif self.cfg.gosterim.mod == "pencere" or self.cfg.kaynak.tur == "capture":
+            # Capture kartta oyun bilgisayarda bu pencerede oynanır: görüntü + Türkçe birlikte (katmanın altı boş)
             self.window = VideoWindow(painter, self.bridge, self.cfg.gosterim.tam_ekran)
             frame_sink = self.window.push_frame
         else:
             self.window = OverlayWindow(painter, self.bridge, source.hwnd)
         if self.window is not None:
             self.window.show()
+        self._audio = None
+        k = self.cfg.kaynak
+        if not demo and k.tur == "capture" and k.capture_ses and self.window is not None:
+            try:                         # capture kartın sesi hoparlöre (pencerede oynarken ses gelsin)
+                from .audio import start_passthrough
+                self._audio = start_passthrough(k.capture_ses_cihaz)
+                if self._audio is None:
+                    self._notice("Capture kartın ses girişi bulunamadı; Bağlantı › Görüntü kaynağı'ndan seç")
+            except Exception as e:  # noqa: BLE001
+                log.warning("Ses aktarımı başlatılamadı: %s", e)
         self.pipe = Pipeline(self.cfg, MultiSink(self, self.server), self.rec, self.engine, source,
                              frame_sink=frame_sink)
         self.pipe.notice = self._notice
@@ -397,6 +410,12 @@ class AppController(QObject):
             self.window.close()
             self.window.deleteLater()
             self.window = None
+        if getattr(self, "_audio", None) is not None:
+            try:
+                self._audio.close()
+            except Exception:  # noqa: BLE001
+                pass
+            self._audio = None
         if self.server:
             for z in list(self.server.state):
                 self.server.clear(z)
@@ -633,7 +652,7 @@ class AppController(QObject):
                                  placement=t.yerlesim, fontSize=int(t.yazi_boyutu), textColor=t.yazi_rengi,
                                  bold=bool(t.kalin), stackPrevious=bool(t.onceki_satirlar), bottomPercent=int(t.alttan),
                                  backgroundShape=t.zemin_sekli, font=t.yazi_tipi,
-                                 speakerColors=bool(t.konusan_renk))
+                                 speakerColors=bool(t.konusan_renk), watermark=bool(getattr(t, "logo", False)))
 
     def apply_config(self, cfg: config_mod.Config, explicit_keys: bool = False) -> None:
         old = self.cfg

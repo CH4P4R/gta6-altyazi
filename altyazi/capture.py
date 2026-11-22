@@ -163,6 +163,78 @@ class CaptureCardSource(_ThreadSource):
         self.cap.release()
 
 
+def _os_camera_names() -> list[str]:
+    """İşletim sisteminin bildirdiği görüntü aygıtı adları (sıra OpenCV'nin numarasıyla çoğu zaman aynıdır)."""
+    import subprocess
+    import sys
+    try:
+        if sys.platform == "win32":
+            out = subprocess.run(["powershell", "-NoProfile", "-Command",
+                                  "Get-CimInstance Win32_PnPEntity | Where-Object { $_.PNPClass -in 'Camera','Image' }"
+                                  " | ForEach-Object { $_.Name }"], capture_output=True, text=True, timeout=8,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+            return [x.strip() for x in out.splitlines() if x.strip()]
+        if sys.platform == "darwin":
+            out = subprocess.run(["system_profiler", "SPCameraDataType"], capture_output=True, text=True,
+                                 timeout=10).stdout
+            # "    Elgato HD60 X:" biçimindeki başlık satırları
+            return [ln.strip().rstrip(":") for ln in out.splitlines()
+                    if ln.startswith("    ") and not ln.startswith("      ") and ln.strip().endswith(":")]
+    except Exception:  # noqa: BLE001
+        pass
+    return []
+
+
+CAPTURE_HINTS = ("elgato", "hd60", "cam link", "avermedia", "live gamer", "razer ripsaw", "capture", "usb video",
+                 "hdmi", "magewell", "genki", "ezcap", "4k60", "game capture")
+
+
+def list_capture_devices(max_index: int = 6) -> list[dict]:
+    """Bilgisayardaki görüntü aygıtları: [{index, name, width, height, capture}] (capture: adı capture karta benziyor).
+    Her numara kısa süre açılıp çözünürlüğü okunur; kullanımda olan aygıt atlanabilir."""
+    import sys
+    backend = (cv2.CAP_DSHOW if sys.platform == "win32" else
+               cv2.CAP_AVFOUNDATION if sys.platform == "darwin" else cv2.CAP_ANY)
+    names = _os_camera_names()
+    found = []
+    misses = 0
+    for i in range(max_index):
+        cap = cv2.VideoCapture(i, backend)
+        try:
+            if not cap.isOpened():
+                misses += 1
+                if misses >= 2:
+                    break
+                continue
+            w, h = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        finally:
+            cap.release()
+        name = names[len(found)] if len(found) < len(names) else f"Görüntü aygıtı {i}"
+        found.append({"index": i, "name": name, "width": w, "height": h,
+                      "capture": any(k in name.lower() for k in CAPTURE_HINTS)})
+    return found
+
+
+def grab_preview(index: int, width: int = 1920, height: int = 1080):  # noqa: ANN201
+    """Capture karttan tek kare (önizleme); açılamazsa None."""
+    try:
+        src = CaptureCardSource(index, width, height, 30)
+    except Exception:  # noqa: BLE001
+        return None
+    frame = None
+    try:
+        for _ in range(20):                  # ilk kareler siyah gelebilir
+            ok, f = src.cap.read()
+            if ok and f is not None:
+                frame = f
+                if f.mean() > 3:
+                    break
+            time.sleep(0.03)
+    finally:
+        src.cap.release()
+    return frame
+
+
 class VideoSource(_ThreadSource):
     """Kaydedilmiş oyun videosunu gerçek zamanlı hızında oynatır (ayar ve test için)."""
 

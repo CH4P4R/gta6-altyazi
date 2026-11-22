@@ -245,7 +245,7 @@ test('yazı tipi Aksiyon ve konuşana göre renk', { skip: skip() }, async () =>
       return { family: getComputedStyle(el).fontFamily, speaker: sp ? sp.textContent : null, color: el.style.color,
                body: document.body.className, text: el.textContent };
     });
-    assert.match(look.family, /Altyazi Modern/);
+    assert.match(look.family, /Altyazi Condensed/);
     assert.equal(look.speaker, 'LUCIA: ');
     assert.ok(look.color && look.color !== '', look.color);
     assert.ok(look.text.startsWith('LUCIA: Arabaya'), look.text);
@@ -253,7 +253,15 @@ test('yazı tipi Aksiyon ve konuşana göre renk', { skip: skip() }, async () =>
     await tv.send('subtitle', { text: 'JASON: Tamam.', duration: 60000, box: { left: 0.3, top: 0.85, right: 0.7, bottom: 0.92 }, line: 0.03 });
     const plain = await tv.page.evaluate(() => ({ sp: !!document.querySelector('#subtitle-text .speaker'),
                                                   body: document.body.className }));
-    assert.ok(!plain.sp && !plain.body.includes('font-action'));
+    assert.ok(!plain.sp && !plain.body.includes('font-action') && plain.body.includes('font-round'));
+    await tv.send('style', { font: 'sade' });
+    const sade = await tv.page.evaluate(() => getComputedStyle(document.getElementById('subtitle-text')).fontFamily);
+    assert.match(sade, /LG Smart UI/);
+    await tv.send('style', { font: 'modern' });
+    const modern = await tv.page.evaluate(() => ({ f: getComputedStyle(document.getElementById('subtitle-text')).fontFamily,
+                                                   body: document.body.className }));
+    assert.match(modern.f, /Altyazi Modern/);
+    assert.ok(!/font-(action|round|plain)/.test(modern.body) && modern.body.includes('font-modern'));
     assert.deepEqual(tv.errors, []);
   } finally { await tv.close(); }
 });

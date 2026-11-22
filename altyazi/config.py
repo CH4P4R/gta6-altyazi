@@ -196,6 +196,7 @@ class TvCfg:
     yazi_tipi: str = "yuvarlak"   # yuvarlak (Nunito, okunaklı) | aksiyon (Barlow, GTA tarzı)
     uydur: bool = True            # boyut oyunun altyazısına uysun (kapalıysa sabit yazı boyutu)
     konusan_renk: bool = False    # her konuşanın adı ve satırı kendi renginde
+    logo: bool = False            # sol alt köşede küçük GTA6 Altyazı logosu (yayın / ekran görüntüsü için)
 
 
 @dataclass

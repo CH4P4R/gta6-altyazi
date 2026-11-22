@@ -145,7 +145,7 @@ def test_demo_source_and_new_settings(tmp_path, monkeypatch):
     tr.save()
     assert ctl.cfg.ceviri.konusan_goster is False
     look = win.pages["look"]
-    look.tv_font.setCurrentIndex(look.tv_font.findData("aksiyon"))
+    look.tv_font.setValue("aksiyon")
     look.spk_color.setChecked(True)
     look.save()
     assert ctl.cfg.tv.yazi_tipi == "aksiyon" and ctl.cfg.tv.konusan_renk
@@ -341,4 +341,108 @@ def test_brand_assets_and_home_styles(tmp_path, monkeypatch):
     home.tv_prev.setRunning(True)
     home.tv_prev.setText("Bu iş daha bitmedi.", "This isn't over.")
     assert not home.tv_prev.grab().isNull() and not home.scene.grab().isNull()
+    ctl.shutdown()
+
+
+def test_capture_card_list_and_window(tmp_path, monkeypatch):
+    """Capture kart: aygıtlar adlarıyla listelenir; capture kartta oyun bilgisayardaysa görüntü penceresi açılır,
+    TV'deyse pencere açılmaz; ses aktarımı başlar ve durunca kapanır."""
+    from altyazi import capture
+
+    class FakeCap:
+        def __init__(self, i, _b):
+            self.i = i
+
+        def isOpened(self):  # noqa: N802
+            return self.i < 2
+
+        def get(self, prop):
+            return 1920 if prop == capture.cv2.CAP_PROP_FRAME_WIDTH else 1080
+
+        def release(self):
+            pass
+
+    monkeypatch.setattr(capture.cv2, "VideoCapture", FakeCap)
+    monkeypatch.setattr(capture, "_os_camera_names", lambda: ["FaceTime HD Camera", "Elgato HD60 X"])
+    found = capture.list_capture_devices()
+    assert [d["name"] for d in found] == ["FaceTime HD Camera", "Elgato HD60 X"]
+    assert [d["capture"] for d in found] == [False, True] and found[1]["width"] == 1920
+
+    app, ctl = _app(tmp_path, monkeypatch)
+    from altyazi import app as app_mod
+
+    class FakeSource:
+        hwnd = None
+
+        def start(self, *_a):
+            pass
+
+        def stop(self):
+            pass
+
+    closed = []
+
+    class FakeStream:
+        def close(self):
+            closed.append(True)
+
+    monkeypatch.setattr(capture, "make_source", lambda *a, **k: FakeSource())
+    import altyazi.audio as audio
+    monkeypatch.setattr(audio, "start_passthrough", lambda hint="": FakeStream())
+    started = []
+    monkeypatch.setattr(app_mod.Pipeline, "start", lambda self: started.append(True))
+    monkeypatch.setattr(app_mod.Pipeline, "stop", lambda self: None)
+    ctl.state = "hazir"
+    ctl.cfg.kaynak.tur = "capture"
+    ctl.cfg.kaynak.oyun_yeri = "monitor"
+    ctl.cfg.gosterim.mod = "overlay"
+    assert ctl.start()
+    assert type(ctl.window).__name__ == "VideoWindow" and ctl._audio is not None
+    ctl.stop()
+    assert closed == [True] and ctl.window is None
+    ctl.cfg.kaynak.oyun_yeri = "tv"
+    assert ctl.start()
+    assert ctl.window is None and ctl._audio is None
+    ctl.stop()
+
+    from altyazi.ui.main_window import MainWindow
+    win = MainWindow(ctl)
+    tv = win.pages["tv"]
+    tv._cap_found = found
+    tv._capture_listed()
+    assert tv.cap_idx.currentData() == 1 and "Elgato" in tv.cap_idx.currentText()
+    tv.src_group.set("capture")
+    tv.cap_res.setCurrentIndex(tv.cap_res.findData("1280x720x60"))
+    tv._save_source()
+    k = ctl.cfg.kaynak
+    assert (k.capture_cihaz, k.capture_genislik, k.capture_yukseklik, k.capture_fps) == (1, 1280, 720, 60)
+    ctl.shutdown()
+
+
+def test_fonts_view_choice_and_plug_click(tmp_path, monkeypatch):
+    app, ctl = _app(tmp_path, monkeypatch)
+    from PySide6.QtCore import QEvent, Qt
+    from PySide6.QtGui import QMouseEvent
+    from altyazi.ui.main_window import MainWindow
+    win = MainWindow(ctl)
+    win.resize(1400, 900)
+    win.show()
+    app.processEvents()
+    look = win.pages["look"]
+    assert set(look.tv_font.buttons) == {"aksiyon", "modern", "yuvarlak", "sade"}
+    look.tv_font._pick("sade")
+    look.save()
+    assert ctl.cfg.tv.yazi_tipi == "sade"
+    look.view._pick("dugme")
+    assert win.pages["home"].stage.currentIndex() == 1 and ctl.cfg.gosterim.ana_ekran == "dugme"
+    win.pages["home"]._set_style("fis")
+    assert look.view.value() == "fis"
+    sc = win.pages["home"].scene
+    got = []
+    sc.plugged.disconnect()
+    sc.plugged.connect(got.append)
+    pt = sc._geo()["rest"]
+    sc.mousePressEvent(QMouseEvent(QEvent.MouseButtonPress, pt, pt, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier))
+    sc.mouseReleaseEvent(QMouseEvent(QEvent.MouseButtonRelease, pt, pt, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier))
+    assert got == [True]                                  # sürüklemeden tıklamak da başlatır
     ctl.shutdown()
