@@ -187,6 +187,8 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 | • [TV'de oyna (chiaki'siz, önerilen)](#rehber-tv-arka-plan) | PS5 HDMI ile TV'de; bilgisayar PS5'e arka planda ikinci hesapla bağlanır, Türkçe TV'de çıkar. |
 | 🖥️ [Bilgisayar monitöründe oyna](#rehber-monitor) | chiaki-ng ile PS5'i bilgisayarda oyna; Türkçe chiaki'nin üstünde çıksın. |
 | 📺 [TV'de oyna, bilgisayar izlesin](#rehber-tv-izle) | Sen TV'den HDMI ile oyna; bilgisayar ikinci hesapla izleyip Türkçeyi TV'ye göndersin. |
+| 🎞️ [Capture kart ile oyna](#rehber-capture) | Elgato, AVerMedia ya da USB HDMI kartla: görüntü TV'ye geçer, Türkçe TV'de ya da bilgisayarda. |
+| 🔌 ["Fişi takın" ne demek?](#rehber-fis) | Ana ekrandaki fiş, programın Başlat düğmesidir. |
 | • [Mac'te kullanım (Apple Silicon)](#rehber-mac) | M1 ve sonrası Mac'lerde kurulum, chiaki-ng ve macOS izinleri. |
 | 🤖 [TV uygulaması: Google TV / Android TV](#rehber-google-tv) | TCL, Sony, Philips, Xiaomi, Hisense ve diğer Android TV'ler. |
 | 📺 [TV uygulaması: LG (webOS)](#rehber-lg) | LG Developer Mode ile kurulum. |
@@ -443,6 +445,50 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 3. Oyunda İngilizce altyazıyı aç; yazılar Türkçe görünür.
 
 > Kısayollar: Ctrl+Shift+9 ekranın tamamını çevirir, Ctrl+Shift+0 duraklatır.
+
+</details>
+
+<a name="rehber-capture"></a>
+<details>
+<summary><b>🎞️ Capture kart ile oyna</b> · Elgato, AVerMedia ya da USB HDMI kartla: görüntü TV'ye geçer, Türkçe TV'de ya da bilgisayarda.</summary>
+
+#### Adım 1: Kabloları bağla
+
+1. PS5'in HDMI kablosunu capture kartın **HDMI IN** girişine tak.
+2. Kartın **HDMI OUT** (passthrough) çıkışını TV'ye bağla: görüntü TV'ye gecikmesiz geçer.
+3. Kartın USB kablosunu bilgisayara tak (Elgato HD60 / 4K, AVerMedia Live Gamer, USB HDMI kartlar).
+
+> PS5'te Ayarlar › Sistem › HDMI › **HDCP'yi Etkinleştir**'i kapat; açıkken capture kart görüntüyü siyah verir.
+
+#### Adım 2: Programda kartı seç
+
+1. **Bağlantı › Görüntü kaynağı**'nda **Yakalama kartı**'nı seç.
+2. **Aygıtları ara**'ya bas: kartlar adıyla listelenir, capture kart olan kendiliğinden seçilir.
+3. **Önizle** ile oyunun görüntüsünün geldiğini gör. Görüntü: 1080p · 60 kare (eski kartta 720p).
+
+#### Adım 3: Oyunu nerede oynayacaksın
+
+1. **TV'de oynuyorum:** görüntü TV'ye kartın HDMI çıkışından gider; Türkçe TV uygulamasında oyunun üstünde çıkar (Rehber › TV uygulaması).
+2. **Bilgisayar ekranında:** görüntü ve Türkçe bu programın penceresinde birlikte açılır. **Capture kartın sesini hoparlöre aktar** açıkken oyunun sesi bilgisayardan gelir; ses gelmezse **Ses girişlerini ara**'dan kartın girişini seç.
+
+#### Adım 4: Kaydet ve başlat
+
+1. **Kaydet**'e bas, sonra ana ekranda fişi prize tak (ya da Çeviriyi Başlat).
+2. İlk açılışta macOS kamera ve mikrofon izni ister: capture kartın görüntüsü ve sesi için **İzin Ver**.
+
+</details>
+
+<a name="rehber-fis"></a>
+<details>
+<summary><b>🔌 "Fişi takın" ne demek?</b> · Ana ekrandaki fiş, programın Başlat düğmesidir.</summary>
+
+#### Adım 1: "Fişi takın" ne demek?
+
+1. Ana ekrandaki TV, PS5 ve küçük fiş çizimi programın **Başlat düğmesidir**.
+2. **Fişe tıkla** ya da prize sürükle: çeviri başlar, TV'nin arkası mavi yanar, ekranda ● CANLI çıkar.
+3. Durdurmak için fişi çek (ya da yeniden tıkla). İstersen Altyazı görünümü › Ana ekran'dan **Cam düğme**'ye geç: kırmızı düğmeyi sağa kaydırınca açılır.
+
+> PS5'in ya da TV'nin gerçek elektrik fişine dokunma; konsol her zamanki gibi açık kalsın.
 
 </details>
 

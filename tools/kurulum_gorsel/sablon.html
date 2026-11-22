@@ -23,7 +23,7 @@ html, body { width: 1600px; }
 body {
   font-family: "Inter", sans-serif; font-weight: 500; color: var(--navy);
   background: linear-gradient(180deg, #eef3fb 0%, #f6f8fc 100%);
-  padding: 56px 64px 64px; -webkit-font-smoothing: antialiased;
+  padding: 48px 64px 52px; -webkit-font-smoothing: antialiased;
 }
 b { font-weight: 600; }
 
@@ -44,7 +44,7 @@ b { font-weight: 600; }
 .intro .brands { color: var(--navy); font-weight: 600; }
 
 /* ---------- adım kartları */
-.grid { margin-top: 46px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 50px 36px; }
+.grid { margin-top: 42px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 46px 36px; }
 .card {
   position: relative; background: #fff; border-radius: 28px; padding: 20px 20px 28px;
   box-shadow: 0 14px 34px rgba(22, 44, 96, .08), 0 2px 6px rgba(22, 44, 96, .05);
@@ -54,18 +54,18 @@ b { font-weight: 600; }
   background: var(--blue); color: #fff; border: 5px solid #f2f6fc; display: grid; place-items: center;
   font-family: "InterD"; font-weight: 900; font-size: 29px; box-shadow: 0 8px 18px rgba(23, 105, 232, .35);
 }
-.card h3 { margin: 24px 6px 9px; font-family: "InterD"; font-weight: 700; font-size: 24px; line-height: 1.2; letter-spacing: -0.01em; }
-.card p { margin: 0 6px; font-size: 16.5px; line-height: 1.55; color: #5b6780; }
+.card h3 { margin: 20px 6px 8px; font-family: "InterD"; font-weight: 700; font-size: 24px; line-height: 1.2; letter-spacing: -0.01em; }
+.card p { margin: 0 6px; font-size: 16px; line-height: 1.55; color: #5b6780; }
 .card p b { color: #22304d; }
 
 /* ---------- TV ekranı taklidi */
-.screen { position: relative; height: 248px; border-radius: 18px; background: var(--tv); padding: 22px 22px; overflow: hidden; color: var(--tvtext); }
+.screen { position: relative; height: 228px; border-radius: 18px; background: var(--tv); padding: 20px 22px; overflow: hidden; color: var(--tvtext); }
 .screen.glow { background: radial-gradient(120% 90% at 80% 0%, #1a2440 0%, var(--tv) 60%); }
 .crumb { padding-left: 34px; margin-bottom: 14px; font-size: 14px; font-weight: 600; color: var(--tvfaint); white-space: nowrap; }
 .crumb b { color: #eef2fc; }
 .crumb i { font-style: normal; margin: 0 5px; color: #56627f; }
 .row {
-  position: relative; height: 37px; margin-bottom: 9px; padding: 0 14px; border-radius: 10px;
+  position: relative; height: 35px; margin-bottom: 9px; padding: 0 14px; border-radius: 10px;
   display: flex; align-items: center; gap: 10px; background: var(--tvrow); font-size: 15.5px; font-weight: 600; white-space: nowrap;
 }
 .row.dim { color: #6f7b99; }
@@ -84,7 +84,7 @@ b { font-weight: 600; }
 .hl .tg:not(.on) { background: rgba(255, 255, 255, .28); }
 .hl .tg:not(.on)::after { background: #fff; }
 .toast {
-  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); white-space: nowrap;
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); white-space: nowrap;
   background: #eef2fc; color: #0d1220; border-radius: 999px; padding: 8px 18px; font-size: 14px; font-weight: 600;
   box-shadow: 0 6px 18px rgba(0, 0, 0, .4);
 }
@@ -93,21 +93,23 @@ b { font-weight: 600; }
 
 /* TV iletişim kutusu */
 .dlg-bg { position: absolute; inset: 0; background: rgba(4, 7, 14, .55); }
-.dlg { position: absolute; left: 22px; right: 22px; top: 18px; bottom: 18px; background: #1b2337; border-radius: 16px; padding: 18px 20px; border: 1px solid #2a3450; }
+.dlg { position: absolute; left: 22px; right: 22px; top: 14px; bottom: 14px; background: #1b2337; border-radius: 16px; padding: 16px 20px; border: 1px solid #2a3450; }
 .dlg h4 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 6px; }
 .dlg .small { font-size: 12.5px; color: var(--tvfaint); line-height: 1.45; }
 .cb { width: 20px; height: 20px; border-radius: 5px; background: #fff; display: grid; place-items: center; flex: none; }
 .cb svg { width: 14px; height: 14px; color: var(--hl); }
 .btns { display: flex; justify-content: flex-end; gap: 12px; }
-.btn { position: relative; height: 34px; padding: 0 18px; border-radius: 9px; display: flex; align-items: center; font-size: 14.5px; font-weight: 600; background: #283149; color: #cdd6ec; white-space: nowrap; }
+.btn { position: relative; height: 32px; padding: 0 18px; border-radius: 9px; display: flex; align-items: center; font-size: 14.5px; font-weight: 600; background: #283149; color: #cdd6ec; white-space: nowrap; }
 
 /* rakam şeridi / döşemeler */
 .tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .tiles span { height: 30px; border-radius: 7px; background: #1a2238; }
 .digits { position: relative; display: flex; gap: 6px; padding: 9px; border-radius: 12px; background: #151c2e; border: 1px solid #263049; }
-.digits span { flex: 1; height: 34px; border-radius: 7px; background: #262f47; display: grid; place-items: center; font-size: 16px; font-weight: 600; color: #cdd6ec; }
-.digits span.on { background: var(--hl); color: #fff; }
-.field { position: relative; height: 36px; border-radius: 9px; background: #0f1527; border: 1px solid #2c3754; display: flex; align-items: center; padding: 0 12px; font-size: 15px; font-weight: 600; color: #fff; }
+.digits > span, .grp > span:not(.tag) { flex: 1; height: 34px; border-radius: 7px; background: #262f47; display: grid; place-items: center; font-size: 16px; font-weight: 600; color: #cdd6ec; }
+.grp > span.on { background: var(--hl); color: #fff; }
+.field { position: relative; height: 34px; border-radius: 9px; background: #0f1527; border: 1px solid #2c3754; display: flex; align-items: center; padding: 0 12px; font-size: 15px; font-weight: 600; color: #fff; }
+.dh { position: relative; display: flex; align-items: center; margin-bottom: 12px; }
+.dh h4 { margin: 0; }
 .seg { display: flex; margin-left: auto; background: #0f1527; border-radius: 8px; padding: 3px; gap: 3px; }
 .seg span { padding: 4px 14px; border-radius: 6px; font-size: 13.5px; font-weight: 600; color: var(--tvfaint); }
 .seg span.on { background: var(--hl); color: #fff; outline: 3px solid var(--red); outline-offset: 3px; }
@@ -127,7 +129,7 @@ b { font-weight: 600; }
 .browser .url { flex: 1; height: 26px; border-radius: 13px; background: #fff; display: flex; align-items: center; gap: 6px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #3a4459; }
 .browser .url svg { width: 12px; height: 12px; color: #6b768c; }
 .browser .nav { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #e3e7ef; background: #fff; }
-.browser .brand { font-family: "InterD"; font-weight: 700; font-size: 15px; color: #a50034; }
+.browser .brand { font-family: "InterD"; font-weight: 700; font-size: 15px; color: #1d2433; }
 .browser .lnk { font-size: 13px; font-weight: 600; color: #4a5468; }
 .browser .su { position: relative; height: 30px; padding: 0 14px; border-radius: 8px; background: var(--hl); color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; }
 .browser .body { padding: 18px; }
@@ -135,35 +137,38 @@ b { font-weight: 600; }
 
 /* ---------- GTA6 Altyazı uygulaması taklidi (açık tema) */
 .app { position: absolute; inset: 0; background: #f6f2f8; display: flex; color: #1c1525; }
-.app .side { width: 64px; flex: none; background: #efe8f3; border-right: 1px solid #e3d9ea; padding-top: 62px; }
-.app .side span { display: block; width: 30px; height: 9px; border-radius: 5px; background: #ddd2e6; margin: 0 auto 16px; }
+.app .side { width: 46px; flex: none; background: #efe8f3; border-right: 1px solid #e3d9ea; padding-top: 60px; }
+.app .side span { display: block; width: 22px; height: 8px; border-radius: 4px; background: #ddd2e6; margin: 0 auto 15px; }
 .app .side span.on { background: linear-gradient(90deg, #ff4fa3, #ff9f43); }
-.app .main { flex: 1; padding: 13px 14px 0; min-width: 0; }
-.app .pt { display: flex; align-items: center; gap: 8px; font-family: "InterD"; font-weight: 700; font-size: 16px; margin-bottom: 9px; }
-.app .pt small { font-family: "Inter"; font-weight: 600; font-size: 12px; color: #8a809b; }
-.app .crd { background: #fff; border: 1px solid #e3d9ea; border-radius: 12px; padding: 10px 12px 12px; }
-.app .ct { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+.app .main { flex: 1; padding: 11px 14px 0; min-width: 0; }
+.app .pt { display: flex; align-items: baseline; gap: 6px; height: 18px; margin-bottom: 7px; font-family: "InterD"; font-weight: 700; font-size: 16px; }
+.app .pt small { font-family: "Inter"; font-weight: 600; font-size: 12.5px; color: #8a809b; }
+.app .crd { background: #fff; border: 1px solid #e3d9ea; border-radius: 12px; padding: 9px 12px 10px; box-shadow: 0 2px 8px rgba(40, 20, 60, .05); }
+.app .ct { display: flex; align-items: center; gap: 7px; height: 16px; margin-bottom: 8px; font-weight: 700; font-size: 13.5px; }
 .app .ct i { width: 18px; height: 18px; border-radius: 5px; background: linear-gradient(135deg, #ff4fa3, #ff9f43); display: grid; place-items: center; }
 .app .ct i svg { width: 11px; height: 11px; color: #fff; }
-.app .r { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
-.app .lb { font-size: 11.5px; font-weight: 700; white-space: nowrap; }
-.app .in { position: relative; flex: 1; min-width: 0; height: 27px; border-radius: 7px; background: #f3edf6; border: 1px solid #cdbfdb; display: flex; align-items: center; padding: 0 9px; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: visible; }
-.app .in .car { margin-left: auto; color: #8a809b; }
-.app .b { position: relative; height: 27px; padding: 0 10px; border-radius: 7px; background: #fff; border: 1px solid #cdbfdb; display: flex; align-items: center; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
-.app .b.p { height: 30px; padding: 0 14px; border: 0; color: #fff; font-size: 12.5px; background: linear-gradient(90deg, #ff4fa3, #ff9f43); }
-.app .note { font-size: 11px; color: #5d536e; font-weight: 600; margin-bottom: 8px; white-space: nowrap; }
+.app .r { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.app .r:last-child { margin-bottom: 0; }
+.app .lb { font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.app .in { position: relative; flex: 1; min-width: 0; height: 28px; border-radius: 7px; background: #f3edf6; border: 1px solid #cdbfdb; display: flex; align-items: center; gap: 6px; padding: 0 9px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.app .in .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.app .in .car { margin-left: auto; color: #8a809b; font-size: 11px; }
+.app .b { position: relative; flex: none; height: 28px; padding: 0 11px; border-radius: 7px; background: #fff; border: 1px solid #cdbfdb; display: flex; align-items: center; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.app .b.p { height: 32px; padding: 0 18px; border: 0; color: #fff; font-size: 13.5px; background: linear-gradient(90deg, #ff4fa3, #ff9f43); box-shadow: 0 4px 12px rgba(255, 79, 163, .3); }
+.app .note { height: 15px; margin-bottom: 8px; font-size: 12px; color: #5d536e; font-weight: 600; white-space: nowrap; }
 .app .note b { color: #1c1525; font-weight: 700; }
 .app .ring { outline-offset: 3px; }
+.app .hintr { font-size: 12px; font-weight: 600; color: #8a809b; }
 
 /* ---------- tek tek ekranlara özel parçalar */
 .tag.side { right: auto; top: 50%; left: calc(100% + 16px); transform: translateY(-50%); }
 .hint.sect { padding-left: 2px; margin: -2px 0 9px; text-transform: none; }
 .hint.lbl { margin: 0 0 6px 2px; }
 .field + .hint.lbl { margin-top: 10px; }
-.hint.mid { position: absolute; left: 0; right: 0; top: 74px; text-align: center; font-size: 14px; line-height: 1.5; }
+.hint.mid { position: absolute; left: 0; right: 0; top: 56px; text-align: center; font-size: 14px; line-height: 1.5; }
 .hint.below { margin-top: 12px; text-align: center; }
 .row + .hint { margin-top: 12px; padding-left: 2px; line-height: 1.45; }
-.dlgrow { margin: 12px 0 16px; background: #232c44; }
+.dlgrow { margin: 11px 0 13px; background: #232c44; }
 .dlgrow2 { margin: 6px 0 12px; background: #232c44; }
 .dlg.tight { top: 14px; bottom: 14px; padding: 14px 16px; }
 .dlg.tight .field { margin-bottom: 14px; }
@@ -175,7 +180,7 @@ b { font-weight: 600; }
 .store .ico { width: 58px; height: 58px; border-radius: 14px; flex: none; display: grid; place-items: center; background: linear-gradient(135deg, #7b5cff, #c03cff); color: #fff; font-size: 17px; font-weight: 700; }
 .store .nm { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 3px; }
 .store .btn { margin-left: auto; }
-.restart { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 14px 16px; border-radius: 12px; background: #151c2e; border: 1px dashed #34405e; font-size: 14px; line-height: 1.45; color: var(--tvfaint); }
+.restart { display: flex; align-items: center; gap: 14px; margin-top: 10px; padding: 14px 16px; border-radius: 12px; background: #151c2e; border: 1px dashed #34405e; font-size: 14px; line-height: 1.45; color: var(--tvfaint); }
 .restart b { color: #e8eefc; font-size: 15px; }
 .restart svg { width: 30px; height: 30px; color: #5b9bff; flex: none; }
 .info { display: flex; gap: 0; margin-top: 4px; padding: 10px 16px; border-radius: 12px; background: #151c2e; }
@@ -190,22 +195,22 @@ b { font-weight: 600; }
 .tile.e { flex: 1; width: auto; background: #151c2e; }
 .digits .grp { position: relative; flex: 5; display: flex; gap: 6px; border-radius: 9px; }
 .remote { left: 40px; top: 22px; height: 260px; padding-top: 22px; }
-.minitv { position: absolute; left: 178px; right: 24px; top: 104px; height: 116px; border-radius: 12px; border: 3px solid #39425c; background: #0a0f1b; display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--tvtext); }
+.minitv { position: absolute; left: 178px; right: 24px; top: 98px; height: 108px; border-radius: 12px; border: 3px solid #39425c; background: #0a0f1b; display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--tvtext); }
 .minitv svg { width: 34px; height: 34px; color: #5b9bff; flex: none; }
 
 /* ---------- uyarı ve yardım */
 .warn {
-  margin-top: 44px; display: flex; gap: 18px; align-items: flex-start; padding: 20px 28px;
+  margin-top: 38px; display: flex; gap: 18px; align-items: flex-start; padding: 20px 28px;
   background: #fff7dc; border: 2px solid #f0c64a; border-radius: 20px; color: #7a5a00; font-size: 18px; line-height: 1.55;
 }
 .warn svg { flex: none; width: 30px; height: 30px; margin-top: 1px; color: #d29a00; }
 .warn b { color: #5e4500; }
 .help {
-  margin-top: 28px; display: flex; align-items: center; gap: 30px; padding: 26px 36px 26px 30px;
+  margin-top: 26px; display: flex; align-items: center; gap: 30px; padding: 22px 32px 22px 28px;
   background: #0d1836; border-radius: 28px; color: #fff; overflow: hidden; position: relative;
 }
 .help::before { content: ""; position: absolute; left: -80px; top: -120px; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(40, 130, 255, .35), transparent 65%); }
-.help .bot { position: relative; width: 124px; height: 124px; flex: none; }
+.help .bot { position: relative; width: 116px; height: 116px; flex: none; }
 .help .txt { position: relative; flex: 1; }
 .help h2 { font-family: "InterD"; font-weight: 900; font-size: 30px; letter-spacing: -0.01em; margin-bottom: 8px; }
 .help p { font-size: 18px; line-height: 1.55; color: #b8c4df; }

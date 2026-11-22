@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<link rel="stylesheet" href="ortak.css">
+<style>
+  .ui { background: transparent; overflow: visible; }
+  .sahne { position: absolute; left: 0; right: 0; top: 0; height: 248px; border-radius: 18px; overflow: hidden; }
+  .sahne .golge { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 40%, rgba(0,0,0,0) 50%, rgba(0,0,0,.45) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,.35)); }
+  .arama { position: absolute; left: 18px; top: 16px; display: flex; align-items: center; gap: 10px; padding: 7px 14px 7px 7px;
+    border-radius: 999px; background: rgba(12,12,18,.78); color: #fff; box-shadow: 0 8px 20px rgba(0,0,0,.35); }
+  .arama .ik { width: 30px; height: 30px; border-radius: 50%; background: #34c759; display: grid; place-items: center; }
+  .arama b { font-weight: 900; font-size: 16px; }
+  .arama span { font-size: 14px; color: #c9cdd8; font-variant-numeric: tabular-nums; }
+  .alty { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); width: max-content; max-width: 640px;
+    background: rgba(8,8,12,.80); color: #fff; border-radius: 14px; padding: 12px 22px 13px; text-align: center;
+    font-weight: 700; font-size: 25px; line-height: 1.28; letter-spacing: -0.2px; box-shadow: 0 10px 26px rgba(0,0,0,.4); }
+  .alty .kim { color: #ffd34d; }
+  .aciklama { position: absolute; left: 6px; right: 6px; top: 262px; display: flex; align-items: center; gap: 12px; }
+  .aciklama .et { flex: none; background: #eef2fb; color: #1f6fe5; font-weight: 900; font-size: 15px; padding: 8px 12px; border-radius: 10px; }
+  .aciklama p { font-size: 16px; line-height: 1.3; color: #3c4560; }
+</style></head>
+<body>
+<script src="ortak.js"></script>
+<script>
+const tel = `<svg width="16" height="16" viewBox="0 0 24 24"><path fill="#fff" d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>`;
+kart({
+  baslik: "Yeni altyazı stili.",
+  alt: "Büyük, okunaklı, iki satır. Oyunun üstünde.",
+  sehir: { tohum: 88, gunesX: 0.7 },
+  sag: `<img class="simge" src="${MARKA}simge_yazisiz.png">`,
+  oyunArka: false,
+  ui: `<div class="sahne">${sehir(700, 248, { tohum: 19, gunesX: 0.42, ufuk: 0.62, palmiyeler: [[0.06, 1.02, 0.95, 0.12], [0.9, 1.02, 0.85, -0.1]] })}
+      <div class="golge"></div>
+      <div class="arama"><div class="ik">${tel}</div><b>Ramon</b><span>00:01</span></div>
+      <div class="alty"><span class="kim">Ramon:</span> Paketi marinaya bırak, sonra beni ara.<br>Kimseye tek kelime etme, anladın mı?</div>
+    </div>
+    <div class="aciklama"><div class="et">Telefon görüşmeleri</div><p>Konuşmaları Türkçe altyazıyla oyun ekranında takip et.</p></div>`
+});
+</script>
+</body></html>

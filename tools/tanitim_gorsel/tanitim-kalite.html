@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<link rel="stylesheet" href="ortak.css">
+<style>
+  .tel .ekran { background: #f2f3f7; }
+  .bas { display: flex; align-items: center; gap: 9px; padding: 6px 12px 9px; background: #fff; border-bottom: 1px solid #e3e5ec; }
+  .av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#ff9a5a,#d6457f); color: #fff;
+    font-weight: 900; font-size: 14px; display: grid; place-items: center; }
+  .bas .ad { font-weight: 900; font-size: 14px; }
+  .bas small { display: block; font-size: 10px; color: #34a853; }
+  .akis { padding: 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .bal { max-width: 86%; padding: 8px 11px; border-radius: 14px; font-size: 12px; line-height: 1.25; align-self: flex-start;
+    background: #fff; border-bottom-left-radius: 4px; box-shadow: 0 1px 1px rgba(0,0,0,.06); }
+  .bal.buyuk { font-weight: 900; font-size: 17px; line-height: 1.15; outline: 2px solid #1f6fe5; outline-offset: 2px; }
+  .ui .panel { left: 318px; right: 16px; padding: 16px 20px; }
+  .k1 { top: 16px; height: 120px; background: rgba(30,30,40,.62); box-shadow: 0 16px 40px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.18); }
+  .k2 { top: 150px; bottom: 16px; }
+  .panel .etk { font-size: 13px; font-weight: 700; letter-spacing: .4px; }
+  .k1 .etk { color: #c9cde0; }
+  .k2 .etk { color: #1f6fe5; }
+  .panel .metin { margin-top: 8px; font-weight: 900; font-size: 27px; line-height: 1.12; letter-spacing: -0.4px; }
+  .k1 .metin { color: #fff; }
+  .k2 .metin { color: #0f1a33; }
+  .ok { position: absolute; left: 488px; top: 128px; width: 30px; height: 30px; border-radius: 50%; background: #1f6fe5; z-index: 2;
+    display: grid; place-items: center; box-shadow: 0 0 0 4px rgba(255,255,255,.9); }
+</style></head>
+<body>
+<script src="ortak.js"></script>
+<script>
+kart({
+  baslik: "Daha kaliteli çeviri.",
+  alt: "Kelimesi kelimesine değil, anlamıyla.",
+  sehir: { tohum: 66, gunesX: 0.68 },
+  oyun: { tohum: 14, gunesX: 0.55 },
+  ui: `
+  <div class="tel"><div class="ekran">
+    <div class="durum"><span>23:17</span><b></b><span class="pil"></span></div>
+    <div class="bas"><div class="av">R</div><div><div class="ad">Ramon</div><small>online</small></div></div>
+    <div class="akis">
+      <div class="bal">Job's done. Get out of there, now.</div>
+      <div class="bal buyuk">TO MY TRAILER! Comprendo?</div>
+    </div>
+  </div></div>
+  <div class="panel k1"><div class="etk">Oyundaki mesaj:</div><div class="metin">TO MY TRAILER! Comprendo?</div></div>
+  <div class="ok"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 2v10M2.5 7.5 7 12l4.5-4.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="panel k2"><div class="etk">Türkçesi:</div><div class="metin">KARAVANIMA! Anladın mı?</div>
+    <div class="imza"><img src="${MARKA}simge_yazisiz.png">GTA6 Altyazı</div></div>`
+});
+</script>
+</body></html>

@@ -19,7 +19,7 @@ const DATA = {
     steps: [
       {
         screen: screen(crumb("Ayarlar") + row("Ağ ve İnternet") + row("Hesaplar ve oturum açma") + row("Uygulamalar") +
-          row("Sistem", { hl: true, tag: "OK'e basın" }), "glow"),
+          row("Sistem", { hl: true, tag: "OK'a basın" }), "glow"),
         title: "Ayarlar › Sistem › Hakkında",
         text: "Kumandayla <b>Ayarlar</b>'ı açın; <b>Sistem</b>'e, oradan da <b>Hakkında</b>'ya girin.",
       },
@@ -28,12 +28,12 @@ const DATA = {
           row("Android TV OS derlemesi", { hl: true, tag: "OK × 7 kez" }) +
           '<div class="toast">Artık geliştiricisiniz!</div>', "glow"),
         title: "Derleme satırına 7 kez basın",
-        text: "<b>Android TV OS derlemesi</b> satırında <b>OK</b>'e arka arkaya 7 kez basın. TCL'de adı " +
+        text: "<b>Android TV OS derlemesi</b> satırında <b>OK</b>'a arka arkaya 7 kez basın. TCL'de adı " +
           "<b>Derleme / Yapı numarası</b> olabilir.",
       },
       {
         screen: screen(crumb("Ayarlar", "Sistem") + row("Hakkında") + row("Tarih ve saat") + row("Dil") +
-          row("Geliştirici seçenekleri", { hl: true, tag: "OK'e basın" }), "glow"),
+          row("Geliştirici seçenekleri", { hl: true, tag: "OK'a basın" }), "glow"),
         title: "Geliştirici seçeneklerine girin",
         text: "Geri tuşuyla <b>Sistem</b>'e dönün. Listede artık <b>Geliştirici seçenekleri</b> var; içine girin.",
       },
@@ -47,11 +47,11 @@ const DATA = {
       },
       {
         screen: screen(appTv(
-          `<div class="r"><span class="lb">TV markası</span><span class="in">Google TV / Android TV${caret}</span>` +
+          `<div class="r"><span class="lb">TV markası</span><span class="in"><span class="t">Google TV / Android TV (TCL, Sony, Philips, Xiaomi, Hisense...)</span>${caret}</span>` +
           `<span class="b">Resimli anlat</span></div>` +
           `<div class="r"><span class="in">192.168.1.40</span><span class="b ring">Ağda ara${ntag(1)}</span></div>` +
           `<div class="r"><span class="b p ring">Bağlan, kur ve başlat${ntag(2)}</span>` +
-          `<span class="b">Deneme altyazısı gönder</span></div>`)),
+          `</div>`)),
         title: "Programda bulun ve kurun",
         text: "GTA6 Altyazı'da <b>Bağlantı › TV</b> bölümünde markayı seçin. <b>Ağda ara</b>'ya basıp TV'yi seçin, " +
           "sonra <b>Bağlan, kur ve başlat</b>'a basın.",
@@ -96,7 +96,7 @@ const DATA = {
         screen: screen(crumb("LG Content Store") +
           `<div class="field search">${I.search}Developer Mode</div>
           <div class="store"><span class="ico">&lt;/&gt;</span><div><div class="nm">Developer Mode</div>
-            <div class="hint">Ücretsiz</div></div><span class="btn hl">Yükle${tag("OK'e basın")}</span></div>`, "glow"),
+            <div class="hint">Ücretsiz</div></div><span class="btn hl">Yükle${tag("OK'a basın")}</span></div>`, "glow"),
         title: "Developer Mode'u yükleyin",
         text: "TV'de <b>LG Content Store</b>'u (Uygulamalar) açın, <b>Developer Mode</b> diye aratın ve ücretsiz " +
           "uygulamada <b>Yükle</b>'ye basın.",
@@ -105,7 +105,7 @@ const DATA = {
         screen: screen(crumb("Developer Mode") +
           `<div class="hint lbl">ID</div><div class="field">gelistirici_adiniz</div>
           <div class="hint lbl">Password</div><div class="field">••••••••••</div>
-          <div class="btns left"><span class="btn hl">SIGN IN${sideTag("OK'e basın")}</span></div>`, "glow"),
+          <div class="btns left"><span class="btn hl">SIGN IN${sideTag("OK'a basın")}</span></div>`, "glow"),
         title: "Geliştirici hesabıyla girin",
         text: "<b>Developer Mode</b> uygulamasını açın ve 1. adımda açtığınız kullanıcı adı ve şifreyle girin.",
       },
@@ -128,12 +128,12 @@ const DATA = {
       },
       {
         screen: screen(appTv(
-          `<div class="r"><span class="lb">TV markası</span><span class="in">LG (webOS)${caret}</span>` +
+          `<div class="r"><span class="lb">TV markası</span><span class="in"><span class="t">LG (webOS)</span>${caret}</span>` +
           `<span class="b">Resimli anlat</span></div>` +
           `<div class="r"><span class="in ring">192.168.1.40${ntag(1)}</span><span class="b">Ağda ara</span></div>` +
           `<div class="r"><span class="lb">LG parola (passphrase)</span><span class="in ring">A1B2C3${ntag(2)}</span></div>` +
           `<div class="r"><span class="b p ring">Bağlan, kur ve başlat${ntag(3)}</span>` +
-          `<span class="b">Deneme altyazısı gönder</span></div>`)),
+          `</div>`)),
         title: "IP ve Passphrase'i yazıp kurun",
         text: "GTA6 Altyazı'da <b>Bağlantı › TV</b> bölümünde <b>LG (webOS)</b>'u seçin, IP'yi ve Passphrase'i " +
           "yazın, <b>Bağlan, kur ve başlat</b>'a basın.",
@@ -155,13 +155,13 @@ const DATA = {
     steps: [
       {
         screen: screen(`<div class="crumb">Kumandada <b>ev tuşu</b></div>
-          <div class="hint mid">Uygulamalar'ın üstünde durmak yetmez:<br>OK'e basıp sayfayı açın.</div>
+          <div class="hint mid">Uygulamalar'ın üstünde durmak yetmez:<br>OK'a basıp sayfayı açın.</div>
           <div class="hbar"><span class="tile">${I.input}Kaynaklar</span>
-            <span class="tile hl">${I.apps}Uygulamalar${tag("OK'e basın")}</span>
+            <span class="tile hl">${I.apps}Uygulamalar${tag("OK'a basın")}</span>
             <span class="tile">${I.gear}Ayarlar</span><span class="tile e"></span><span class="tile e"></span></div>`,
           "glow"),
         title: "Uygulamalar sayfasını açın",
-        text: "Kumandada <b>ev</b> tuşuna basın, alttaki şeritte <b>Uygulamalar</b>'a gelip <b>OK</b>'e basın. " +
+        text: "Kumandada <b>ev</b> tuşuna basın, alttaki şeritte <b>Uygulamalar</b>'a gelip <b>OK</b>'a basın. " +
           "Uygulamaların kareler halinde dizildiği tam sayfa açılmalı.",
       },
       {
@@ -171,18 +171,17 @@ const DATA = {
           <div class="hint below">Rakam tuşu yoksa: <b>123</b> / renkli nokta tuşu</div>`, "glow"),
         title: "1 2 3 4 5 yazın",
         text: "Sırayla <b>1 2 3 4 5</b>'e basın. İnce kumandada <b>123</b> ya da 4 renkli nokta tuşu ekranda " +
-          "rakamları açar: her rakama gelip <b>OK</b>'e basın.",
+          "rakamları açar: her rakama gelip <b>OK</b>'a basın.",
       },
       {
-        screen: screen(`<div class="dlg tight"><h4>Developer mode</h4>
-          <div class="row dlgrow2">Developer mode<div class="seg"><span class="on">On</span><span>Off</span></div>
-            ${tag("On yapın")}</div>
+        screen: screen(`<div class="dlg tight"><div class="dh"><h4>Developer mode</h4>
+            <div class="seg"><span class="on">On</span><span>Off</span></div>${tag("On yapın")}</div>
           <div class="hint lbl">Host PC IP</div>
           <div class="field ring">192.168.1.25${tag("Bu bilgisayarın IP'si")}</div>
           <div class="btns"><span class="btn blue">OK</span><span class="btn">Cancel</span></div></div>`),
         title: "Developer mode'u açın",
         text: "<b>Developer mode</b>'u <b>On</b> yapın, <b>Host PC IP</b>'ye bu bilgisayarın IP'sini yazıp " +
-          "<b>OK</b>'e basın. IP, programda <b>Bağlantı › TV</b> bölümünde yazar.",
+          "<b>OK</b>'a basın. IP, programda <b>Bağlantı › TV</b> bölümünde yazar.",
       },
       {
         screen: screen(`<div class="remote"><div class="pwr ring">${I.power}${sideTag("2 sn basılı tutun")}</div>
@@ -205,12 +204,12 @@ const DATA = {
       },
       {
         screen: screen(appTv(
-          `<div class="r"><span class="lb">TV markası</span><span class="in">Samsung (Tizen)${caret}</span>` +
+          `<div class="r"><span class="lb">TV markası</span><span class="in"><span class="t">Samsung (Tizen)</span>${caret}</span>` +
           `<span class="b">Resimli anlat</span></div>` +
           `<div class="note">Bu bilgisayarın IP'si (Host PC IP): <b>192.168.1.25</b></div>` +
           `<div class="r"><span class="in">192.168.1.50</span><span class="b ring">Ağda ara${ntag(1)}</span></div>` +
           `<div class="r"><span class="b p ring">Bağlan, kur ve başlat${ntag(2)}</span>` +
-          `<span class="b">Deneme altyazısı gönder</span></div>`)),
+          `</div>`)),
         title: "Programdan kurun",
         text: "<b>Ağda ara</b>'ya basıp TV'yi seçin, <b>Bağlan, kur ve başlat</b>'a basın. İlk seferde tarayıcıda " +
           "Samsung hesabınızla girin; program uygulamayı bu TV'ye özel imzalatıp kurar.",

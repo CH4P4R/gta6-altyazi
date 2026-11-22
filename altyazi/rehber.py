@@ -397,6 +397,37 @@ TV_ARKA_PLAN = [
               "kabloyla bağlamak."),
 ]
 
+CAPTURE = [
+    step("Kabloları bağla",
+         ["PS5'in HDMI kablosunu capture kartın **HDMI IN** girişine tak.",
+          "Kartın **HDMI OUT** (passthrough) çıkışını TV'ye bağla: görüntü TV'ye gecikmesiz geçer.",
+          "Kartın USB kablosunu bilgisayara tak (Elgato HD60 / 4K, AVerMedia Live Gamer, USB HDMI kartlar)."],
+         note="PS5'te Ayarlar › Sistem › HDMI › **HDCP'yi Etkinleştir**'i kapat; açıkken capture kart görüntüyü siyah "
+              "verir."),
+    step("Programda kartı seç",
+         ["**Bağlantı › Görüntü kaynağı**'nda **Yakalama kartı**'nı seç.",
+          "**Aygıtları ara**'ya bas: kartlar adıyla listelenir, capture kart olan kendiliğinden seçilir.",
+          "**Önizle** ile oyunun görüntüsünün geldiğini gör. Görüntü: 1080p · 60 kare (eski kartta 720p)."]),
+    step("Oyunu nerede oynayacaksın",
+         ["**TV'de oynuyorum:** görüntü TV'ye kartın HDMI çıkışından gider; Türkçe TV uygulamasında oyunun üstünde "
+          "çıkar (Rehber › TV uygulaması).",
+          "**Bilgisayar ekranında:** görüntü ve Türkçe bu programın penceresinde birlikte açılır. **Capture kartın "
+          "sesini hoparlöre aktar** açıkken oyunun sesi bilgisayardan gelir; ses gelmezse **Ses girişlerini ara**'dan "
+          "kartın girişini seç."]),
+    step("Kaydet ve başlat",
+         ["**Kaydet**'e bas, sonra ana ekranda fişi prize tak (ya da Çeviriyi Başlat).",
+          "İlk açılışta macOS kamera ve mikrofon izni ister: capture kartın görüntüsü ve sesi için **İzin Ver**."]),
+]
+
+FIS = [
+    step("\"Fişi takın\" ne demek?",
+         ["Ana ekrandaki TV, PS5 ve küçük fiş çizimi programın **Başlat düğmesidir**.",
+          "**Fişe tıkla** ya da prize sürükle: çeviri başlar, TV'nin arkası mavi yanar, ekranda ● CANLI çıkar.",
+          "Durdurmak için fişi çek (ya da yeniden tıkla). İstersen Altyazı görünümü › Ana ekran'dan **Cam düğme**'ye "
+          "geç: kırmızı düğmeyi sağa kaydırınca açılır."],
+         note="PS5'in ya da TV'nin gerçek elektrik fişine dokunma; konsol her zamanki gibi açık kalsın."),
+]
+
 GUIDES: list[dict] = [
     {"key": "tv-arka-plan", "icon": "tv", "title": "TV'de oyna (chiaki'siz, önerilen)",
      "summary": "PS5 HDMI ile TV'de; bilgisayar PS5'e arka planda ikinci hesapla bağlanır, Türkçe TV'de çıkar.",
@@ -407,6 +438,11 @@ GUIDES: list[dict] = [
     {"key": "tv-izle", "icon": "tv", "title": "TV'de oyna, bilgisayar izlesin",
      "summary": "Sen TV'den HDMI ile oyna; bilgisayar ikinci hesapla izleyip Türkçeyi TV'ye göndersin.",
      "steps": chiaki_steps("tv") + [START_STEP]},
+    {"key": "capture", "icon": "monitor", "title": "Capture kart ile oyna",
+     "summary": "Elgato, AVerMedia ya da USB HDMI kartla: görüntü TV'ye geçer, Türkçe TV'de ya da bilgisayarda.",
+     "steps": CAPTURE},
+    {"key": "fis", "icon": "play", "title": "\"Fişi takın\" ne demek?",
+     "summary": "Ana ekrandaki fiş, programın Başlat düğmesidir.", "steps": FIS},
     {"key": "mac", "icon": "ps", "title": "Mac'te kullanım (Apple Silicon)",
      "summary": "M1 ve sonrası Mac'lerde kurulum, chiaki-ng ve macOS izinleri.", "steps": MAC},
     {"key": "google-tv", "icon": "tv", "title": "TV uygulaması: Google TV / Android TV",
