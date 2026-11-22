@@ -34,7 +34,7 @@ function palmiye(x, y, H, egim, renk, r) {
     const ex = tx + Math.cos(a) * L, ey = ty + Math.sin(a) * L + L * 0.42;
     const mx = tx + Math.cos(a) * L * 0.55, my = ty + Math.sin(a) * L * 0.55 - L * 0.16;
     // orta damar boyunca yaprakçıklar
-    const n = 11;
+    const n = 17;
     let pts1 = [], pts2 = [];
     for (let i = 0; i <= n; i++) {
       const t = i / n;
@@ -44,7 +44,7 @@ function palmiye(x, y, H, egim, renk, r) {
       const dy = 2 * (1 - t) * (my - ty) + 2 * t * (ey - my);
       const d = Math.hypot(dx, dy) || 1;
       const nx = -dy / d, ny = dx / d;
-      const g = L * 0.16 * Math.sin(Math.PI * Math.min(1, t * 1.15)) * (i % 2 ? 1 : 0.55);
+      const g = L * 0.15 * Math.sin(Math.PI * Math.min(1, t * 1.12)) * (i % 2 ? 1 : 0.3);
       pts1.push([px + nx * g + L * 0.03 * t, py + ny * g + g * 0.6]);
       pts2.push([px - nx * g + L * 0.03 * t, py - ny * g + g * 0.6]);
     }

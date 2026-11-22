@@ -8,17 +8,17 @@
     background: radial-gradient(closest-side, rgba(10,20,50,.42), rgba(10,20,50,0)); filter: blur(6px); }
   .sahne { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 50% 42%; }
   .kutu { position: absolute; left: 270px; top: 130px; width: 740px; height: 960px; transform-style: preserve-3d;
-    transform: rotateY(24deg) rotateX(-3deg); }
+    transform: rotateY(30deg) rotateX(-4deg); }
   .yuz { position: absolute; backface-visibility: hidden; }
-  .on { inset: 0; transform: translateZ(34px); border-radius: 14px;
+  .on { inset: 0; transform: translateZ(40px); border-radius: 14px;
     background: linear-gradient(90deg, #0b3fa8 0, #1659d6 3%, #1e66e8 50%, #1a5edc 100%); }
-  .sirt { top: 0; left: 336px; width: 68px; height: 960px; transform: rotateY(-90deg) translateZ(370px);
+  .sirt { top: 0; left: 330px; width: 80px; height: 960px; transform: rotateY(-90deg) translateZ(370px);
     background: linear-gradient(90deg, #08329a 0%, #1452cc 22%, #2a74ef 46%, #1452cc 70%, #0a3aa8 100%); border-radius: 6px; overflow: hidden; }
   .sirt .bant { position: absolute; left: 0; right: 0; top: 0; height: 128px; background: linear-gradient(90deg,#dfe4ee,#ffffff 46%,#dfe4ee); }
   .sirt .yazi { position: absolute; left: 50%; top: 520px; transform: translate(-50%,-50%) rotate(90deg); white-space: nowrap;
     color: #fff; font-weight: 900; font-size: 34px; letter-spacing: -0.4px; text-shadow: 0 1px 2px rgba(0,0,0,.3); }
   .sirt .cizgi { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.18); }
-  .ustyuz { left: 0; top: 446px; width: 740px; height: 68px; transform: rotateX(90deg) translateZ(480px);
+  .ustyuz { left: 0; top: 440px; width: 740px; height: 80px; transform: rotateX(90deg) translateZ(480px);
     background: linear-gradient(180deg, #2c78f2, #1a5edc); border-radius: 6px; }
   /* kapak */
   .kapak { position: absolute; left: 30px; top: 12px; right: 12px; bottom: 12px; border-radius: 6px; overflow: hidden; background: #22195a; }
@@ -55,7 +55,7 @@ const W = 698, H = 936;
 const U = 240;
 document.getElementById("kapak").innerHTML = `
   <div class="sanat">${sehir(W, H - 140, { tohum: 5, gunesX: 0.5, gunesR: 150, ufuk: 0.5, kum: 0.97,
-      palmiyeler: [[0.05, 0.86, 0.62, 0.16], [0.16, 0.9, 0.46, 0.08], [0.94, 0.86, 0.58, -0.15], [0.84, 0.9, 0.4, -0.06]] })}</div>
+      palmiyeler: [[0.04, 0.9, 0.5, 0.16], [0.15, 0.93, 0.36, 0.08], [0.95, 0.9, 0.46, -0.15]] })}</div>
   <div class="karartma"></div>
   <div class="bant"></div>
   <div class="ad">GTA6 Altyazı</div>
