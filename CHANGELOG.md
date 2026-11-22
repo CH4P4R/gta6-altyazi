@@ -10,7 +10,7 @@ sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 - **Ana ekran (Nino):** lacivert duvarda gerçekçi TV, metal sehpa, PS5 ve priz. Fişi prize takınca TV'nin arkası mavi
   ışıkla parlar, ekranda ● CANLI ve Türkçe altyazı çıkar; çekince durur. TV kapalıyken ekranda logo ve "Oyunlarınız artık
   Türkçe".
-- **Kaydırmalı düğme görünümü:** TV önizlemesi (Türkçe altyazı, altında İngilizcesi) ve kırmızı "Türkçe · Altyazı açık"
+- **Kaydırmalı düğme görünümü:** TV önizlemesi (Türkçe altyazı, altında İngilizcesi) ve pembe-turuncu "Türkçe · Altyazı açık"
   düğmesi; ay yıldızlı topu kaydırarak aç / kapat. Ana ekranın sağ üstünden ya da Altyazı görünümü › Ana ekran'daki
   resimli kartlardan **Salon / Cam düğme** seçilir.
 - **Fişe tıklamak yeter:** sürüklemeden tıklayınca da çeviri başlar / durur; fişin çevresinde kırmızı halka ve "Bu fişe
@@ -22,6 +22,9 @@ sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
   penceresinde açılır; TV'deyse (kartın HDMI çıkışı TV'ye) Türkçe TV uygulamasında çıkar.
 - **Rehber:** "Capture kart ile oyna" ve "Fişi takın ne demek?" eklendi; Android TV, LG ve Samsung kurulumu tek resimde
   özet görselle. README'de ekran yazılarının tanıtım kartları.
+- **Kendi renklerimiz:** simge, logo, robot, banner'lar, ana ekran sahnesi (pembe arka ışık, gün batımı duvar kağıdı),
+  kaydırmalı düğme, TV bekleme ekranı, telefon kumandası, kurulum ve tanıtım görselleri mor zemin ve pembe → turuncu
+  vurguyla.
 - **Köşede logo** (isteğe bağlı): TV'de sol alt köşede küçük GTA6 Altyazı logosu, yayın ve ekran görüntüsü için.
 - **Telefon kumandası sayfası yenilendi** (tarayıcıda açılan /kumanda; ayrı telefon uygulaması yok).
 - **Kurulum:** hoş geldin sayfasında büyük simge, ad ve örnek çeviri kartı. **Sor:** robot yüzlü yardımcı.

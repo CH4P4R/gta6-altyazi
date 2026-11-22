@@ -2,34 +2,34 @@
 <html lang="tr"><head><meta charset="utf-8">
 <link rel="stylesheet" href="ortak.css">
 <style>
-  .ui { background: linear-gradient(180deg, #eef1fa 0%, #dde3f2 100%); }
-  .ui::after { content: ""; position: absolute; left: 0; right: 0; top: 232px; height: 1px; background: rgba(15,26,51,.10); }
+  .ui { background: linear-gradient(180deg, #f7eff7 0%, #ece0ee 100%); }
+  .ui::after { content: ""; position: absolute; left: 0; right: 0; top: 232px; height: 1px; background: rgba(61,21,84,.10); }
   .cihaz { position: absolute; bottom: 86px; }
   .ekr { position: relative; overflow: hidden; }
   .ekr svg { display: block; }
   /* Windows masaüstü */
   .pc { left: 22px; width: 186px; }
-  .pc .cerceve { background: #15171d; border-radius: 9px; padding: 6px; box-shadow: 0 12px 24px rgba(15,26,51,.25); }
+  .pc .cerceve { background: #15171d; border-radius: 9px; padding: 6px; box-shadow: 0 12px 24px rgba(61,21,84,.25); }
   .pc .ekr { height: 104px; border-radius: 3px; }
   .pc .gorev { position: absolute; left: 0; right: 0; bottom: 0; height: 13px; background: rgba(20,22,30,.82); display: flex; justify-content: center; gap: 4px; align-items: center; }
   .pc .gorev i { width: 7px; height: 7px; border-radius: 2px; background: rgba(255,255,255,.75); display: block; }
-  .pc .gorev i:nth-child(3) { background: #4aa3ff; }
+  .pc .gorev i:nth-child(3) { background: #ff4fa3; }
   .pc .boyun { width: 26px; height: 22px; margin: 0 auto; background: linear-gradient(90deg,#9aa1b2,#c9ceda,#9aa1b2); }
   .pc .ayak { width: 86px; height: 7px; margin: 0 auto; border-radius: 4px 4px 2px 2px; background: #a9b0c0; }
   /* Mac dizüstü */
   .mac { left: 232px; width: 226px; }
-  .mac .kapak { width: 196px; margin: 0 auto; background: #1a1b20; border-radius: 10px 10px 0 0; padding: 6px 6px 7px; box-shadow: 0 10px 22px rgba(15,26,51,.22); }
+  .mac .kapak { width: 196px; margin: 0 auto; background: #1a1b20; border-radius: 10px 10px 0 0; padding: 6px 6px 7px; box-shadow: 0 10px 22px rgba(61,21,84,.22); }
   .mac .ekr { height: 118px; border-radius: 3px; }
   .mac .menu { position: absolute; left: 0; right: 0; top: 0; height: 8px; background: rgba(255,255,255,.55); }
   .mac .dock { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); height: 12px; padding: 0 4px; border-radius: 5px;
     background: rgba(255,255,255,.4); display: flex; gap: 3px; align-items: center; }
   .mac .dock i { width: 7px; height: 7px; border-radius: 2px; background: rgba(255,255,255,.9); display: block; }
-  .mac .dock i:nth-child(2) { background: #4aa3ff; }
+  .mac .dock i:nth-child(2) { background: #ff4fa3; }
   .mac .govde { height: 10px; border-radius: 2px 2px 10px 10px; background: linear-gradient(180deg,#d9dde6,#aab1c0); position: relative; }
   .mac .govde::before { content: ""; position: absolute; left: 50%; top: 0; width: 40px; height: 4px; transform: translateX(-50%); border-radius: 0 0 5px 5px; background: #9aa1b2; }
   /* TV */
   .tv { left: 480px; width: 200px; }
-  .tv .cerceve { background: #0d0e12; border-radius: 6px; padding: 4px; box-shadow: 0 12px 24px rgba(15,26,51,.28); }
+  .tv .cerceve { background: #0d0e12; border-radius: 6px; padding: 4px; box-shadow: 0 12px 24px rgba(61,21,84,.28); }
   .tv .ekr { height: 112px; border-radius: 2px; }
   .tv .alty { position: absolute; left: 50%; bottom: 9px; transform: translateX(-50%); width: max-content; background: rgba(0,0,0,.78); color: #fff;
     font-size: 10.5px; font-weight: 700; line-height: 1.25; text-align: center; padding: 4px 8px; border-radius: 5px; }
@@ -37,11 +37,11 @@
   .tv .ayaklar i { width: 6px; height: 14px; background: #2a2c33; display: block; border-radius: 0 0 3px 3px; }
   .tv .ayaklar i:first-child { transform: skewX(18deg); } .tv .ayaklar i:last-child { transform: skewX(-18deg); }
   .etiket { position: absolute; top: 246px; text-align: center; }
-  .etiket b { display: block; font-weight: 900; font-size: 21px; color: #0f1a33; letter-spacing: -0.3px; }
-  .etiket span { display: block; margin-top: 3px; font-size: 13px; color: #5b6478; }
-  .ui .bot2 { position: absolute; right: 8px; top: 12px; width: 76px; height: 76px; filter: drop-shadow(0 8px 14px rgba(15,26,51,.3)); }
-  .balon { position: absolute; right: 90px; top: 26px; background: #fff; color: #0f1a33; font-weight: 700; font-size: 14px; padding: 8px 12px;
-    border-radius: 12px 12px 4px 12px; box-shadow: 0 6px 16px rgba(15,26,51,.15); }
+  .etiket b { display: block; font-weight: 900; font-size: 21px; color: #1d1028; letter-spacing: -0.3px; }
+  .etiket span { display: block; margin-top: 3px; font-size: 13px; color: #6e5f7d; }
+  .ui .bot2 { position: absolute; right: 8px; top: 12px; width: 76px; height: 76px; filter: drop-shadow(0 8px 14px rgba(61,21,84,.3)); }
+  .balon { position: absolute; right: 90px; top: 26px; background: #fff; color: #1d1028; font-weight: 700; font-size: 14px; padding: 8px 12px;
+    border-radius: 12px 12px 4px 12px; box-shadow: 0 6px 16px rgba(61,21,84,.15); }
 </style></head>
 <body>
 <script src="ortak.js"></script>

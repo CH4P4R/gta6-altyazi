@@ -5,16 +5,19 @@
 @font-face { font-family: "Inter"; font-weight: 900; font-style: italic; src: url("../marka/fonts/InterDisplay-BlackItalic.otf"); }
 
 :root {
-  --zemin: #f5f6f8;
-  --koyu: #0f1a33;
-  --gri: #5b6478;
-  --kirmizi: #e30a17;
-  --mavi: #1f6fe5;
+  --zemin: #f9f3f7;
+  --koyu: #1d1028;
+  --gri: #6e5f7d;
+  --kirmizi: #e30a17;   /* yalnız bayrak */
+  --mavi: #e0457f;      /* eski adı korunur: vurgu (koyu pembe) */
+  --pembe: #ff4fa3;
+  --turuncu: #ff9f43;
+  --gecis: linear-gradient(135deg, #ff4fa3, #ff9f43);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: 800px; height: 1000px; overflow: hidden; }
 body {
-  background: var(--zemin);
+  background: linear-gradient(180deg, #f7f2fa 0%, #fdf6f1 100%);
   font-family: "Inter", sans-serif; font-weight: 600;
   color: var(--koyu);
   -webkit-font-smoothing: antialiased;
@@ -24,17 +27,17 @@ body {
 /* ---- üst satır ---- */
 .ust { position: absolute; left: 36px; right: 36px; top: 30px; height: 60px;
   display: flex; align-items: center; gap: 14px; }
-.ust img { width: 56px; height: 56px; filter: drop-shadow(0 4px 8px rgba(15,26,51,.18)); }
+.ust img { width: 56px; height: 56px; filter: drop-shadow(0 4px 8px rgba(61,21,84,.22)); }
 .ust .ad { font-weight: 900; font-size: 30px; letter-spacing: -0.6px; }
-.ust .surum { margin-left: auto; background: var(--kirmizi); color: #fff; font-weight: 700;
+.ust .surum { margin-left: auto; background: var(--gecis); color: #fff; font-weight: 700;
   font-size: 17px; padding: 9px 16px 9px 14px; border-radius: 999px; display: flex; align-items: center; gap: 8px;
-  box-shadow: 0 6px 16px rgba(227,10,23,.28); }
+  box-shadow: 0 6px 16px rgba(255,79,163,.38); }
 .ust .surum i { width: 8px; height: 8px; border-radius: 50%; background: #fff; display: block; }
 
 /* ---- büyük beyaz kart ---- */
 .kart { position: absolute; left: 36px; right: 36px; top: 112px; height: 678px;
   background: #fff; border-radius: 26px; padding: 14px;
-  box-shadow: 0 18px 44px rgba(15,26,51,.10), 0 2px 6px rgba(15,26,51,.06); }
+  box-shadow: 0 18px 44px rgba(61,21,84,.10), 0 2px 6px rgba(61,21,84,.06); }
 .kahraman { position: relative; height: 318px; border-radius: 18px; overflow: hidden; }
 .kahraman .arka { position: absolute; inset: 0; }
 .kahraman .arka svg { display: block; }
@@ -77,10 +80,10 @@ body {
 
 /* ---- buzlu yan panel ---- */
 .panel { position: absolute; border-radius: 18px;
-  background: rgba(248,249,252,.80); backdrop-filter: blur(18px) saturate(1.3);
+  background: rgba(252,248,251,.82); backdrop-filter: blur(18px) saturate(1.3);
   box-shadow: 0 16px 40px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.6); }
 .panel .imza { position: absolute; right: 14px; bottom: 11px; display: flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 700; color: #3a4460; }
+  font-size: 12px; font-weight: 700; color: #4a3a5c; }
 .panel .imza img { width: 20px; height: 20px; }
 
 /* ---- alt bilgi ---- */

@@ -516,7 +516,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 
 1. Ana ekrandaki TV, PS5 ve küçük fiş çizimi programın **Başlat düğmesidir**.
 2. **Fişe tıkla** ya da prize sürükle: çeviri başlar, TV'nin arkası mavi yanar, ekranda ● CANLI çıkar.
-3. Durdurmak için fişi çek (ya da yeniden tıkla). İstersen Altyazı görünümü › Ana ekran'dan **Cam düğme**'ye geç: kırmızı düğmeyi sağa kaydırınca açılır.
+3. Durdurmak için fişi çek (ya da yeniden tıkla). İstersen Altyazı görünümü › Ana ekran'dan **Cam düğme**'ye geç: pembe-turuncu düğmeyi sağa kaydırınca açılır.
 
 > PS5'in ya da TV'nin gerçek elektrik fişine dokunma; konsol her zamanki gibi açık kalsın.
 

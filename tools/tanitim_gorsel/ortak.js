@@ -67,7 +67,7 @@ function sehir(w, h, o = {}) {
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice">
   <defs>
     <linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${o.gok0 || "#22195a"}"/><stop offset=".32" stop-color="#55278a"/>
+      <stop offset="0" stop-color="${o.gok0 || "#1f0c33"}"/><stop offset=".32" stop-color="#55278a"/>
       <stop offset=".6" stop-color="#c2468f"/><stop offset=".82" stop-color="#ff7a68"/><stop offset="1" stop-color="#ffc47a"/>
     </linearGradient>
     <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1">
