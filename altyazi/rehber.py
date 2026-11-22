@@ -434,6 +434,7 @@ FIS = [
           "**Fişe tıkla** ya da prize sürükle: çeviri başlar, TV'nin arkası mavi yanar, ekranda ● CANLI çıkar.",
           "Durdurmak için fişi çek (ya da yeniden tıkla). İstersen Altyazı görünümü › Ana ekran'dan **Cam düğme**'ye "
           "geç: kırmızı düğmeyi sağa kaydırınca açılır."],
+         img="fis-nedir",
          note="PS5'in ya da TV'nin gerçek elektrik fişine dokunma; konsol her zamanki gibi açık kalsın."),
 ]
 

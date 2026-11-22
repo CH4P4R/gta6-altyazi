@@ -141,7 +141,8 @@ function sehir(w, h, o = {}) {
 /* Türk bayrağı ay-yıldızı. G = bayrak yüksekliği; (x0,y0) = dış ay dairesinin merkezi. */
 function ayYildiz(x0, y0, G, renk = "#fff") {
   const R1 = G / 4, R2 = G * 0.2, d = G / 16;
-  const xs = x0 + d + R2 + G / 3 + G / 8, Rs = G / 8, rs = Rs * 0.381966;
+  // E = G/3: iç dairenin sol kenarından yıldızı çevreleyen dairenin sol kenarına (bayrak kanunu ölçüleri)
+  const xs = x0 + d - R2 + G / 3 + G / 8, Rs = G / 8, rs = Rs * 0.381966;
   let p = "";
   for (let i = 0; i < 10; i++) {
     const a = Math.PI + i * Math.PI / 5;            // bir uç bayrak direğine (sola) bakar

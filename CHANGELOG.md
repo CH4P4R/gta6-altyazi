@@ -20,6 +20,8 @@ sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 - **Capture kart:** aygıtlar adıyla listelenir (capture kart olan kendiliğinden seçilir), çözünürlük / kare hızı seçimi,
   tek kare önizleme, sesi hoparlöre aktarma ve ses girişi seçimi. Oyun bilgisayardaysa görüntü + Türkçe programın
   penceresinde açılır; TV'deyse (kartın HDMI çıkışı TV'ye) Türkçe TV uygulamasında çıkar.
+- **Rehber:** "Capture kart ile oyna" ve "Fişi takın ne demek?" eklendi; Android TV, LG ve Samsung kurulumu tek resimde
+  özet görselle. README'de ekran yazılarının tanıtım kartları.
 - **Köşede logo** (isteğe bağlı): TV'de sol alt köşede küçük GTA6 Altyazı logosu, yayın ve ekran görüntüsü için.
 - **Telefon kumandası sayfası yenilendi** (tarayıcıda açılan /kumanda; ayrı telefon uygulaması yok).
 - **Kurulum:** hoş geldin sayfasında büyük simge, ad ve örnek çeviri kartı. **Sor:** robot yüzlü yardımcı.

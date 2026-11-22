@@ -36,6 +36,34 @@ Altta görev yazısı ("Go to the car.") dururken diyalog onun üstüne çıksa 
 
 <sub>Sahne bir çizimdir, oyun görüntüsü değildir. Yazıların yeri uygulamanın gerçek okuma koduyla bulundu, Türkçesi uygulamanın kendi çizim koduyla basıldı.</sub>
 
+## 📱 Ekrandaki her yazı Türkçe
+
+Yalnız altyazı değil: oyundaki telefonun mesajları, araç çağırma, banka ve antrenman uygulamaları, haberler, harita görev kartları ve telefon görüşmeleri de Türkçe olur. Uygulamanın rengini alan etiketler yazının hizasında, mesajlar telefonun yanında bir panelde sırayla görünür.
+
+<table>
+<tr>
+<td width="33%"><img src="docs/tanitim/tanitim-telefon.png" alt="Oyundaki telefon artık Türkçe"></td>
+<td width="33%"><img src="docs/tanitim/tanitim-arac.png" alt="Aracını Türkçe çağır"></td>
+<td width="33%"><img src="docs/tanitim/tanitim-banka.png" alt="Banka menüsü Türkçe"></td>
+</tr>
+<tr>
+<td><img src="docs/tanitim/tanitim-antrenman.png" alt="Antrenman menüsü Türkçe"></td>
+<td><img src="docs/tanitim/tanitim-haber.png" alt="Oyun içi haberler Türkçe"></td>
+<td><img src="docs/tanitim/tanitim-harita.png" alt="Harita görevleri Türkçe"></td>
+</tr>
+<tr>
+<td><img src="docs/tanitim/tanitim-altyazi.png" alt="Yeni altyazı stili"></td>
+<td><img src="docs/tanitim/tanitim-kalite.png" alt="Daha kaliteli çeviri"></td>
+<td><img src="docs/tanitim/tanitim-platformlar.png" alt="Windows ve Mac'te"></td>
+</tr>
+</table>
+
+<sub>Tanıtım kartlarındaki oyun ekranları çizimdir; oyun görüntüsü ya da oyunun görselleri kullanılmadı.</sub>
+
+## 🔌 "Fişi takın" ne demek?
+
+<p align="center"><img src="docs/tanitim/fis-nedir.png" alt="Fişi takın ne demek: GTA6 Altyazı'daki Başlat düğmesi" width="100%"></p>
+
 ## ✨ Öne çıkanlar
 
 <table>
@@ -483,6 +511,8 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 <summary><b>🔌 "Fişi takın" ne demek?</b> · Ana ekrandaki fiş, programın Başlat düğmesidir.</summary>
 
 #### Adım 1: "Fişi takın" ne demek?
+
+<img src="altyazi/ui/rehber/fis-nedir.png" alt=""Fişi takın" ne demek?" width="640">
 
 1. Ana ekrandaki TV, PS5 ve küçük fiş çizimi programın **Başlat düğmesidir**.
 2. **Fişe tıkla** ya da prize sürükle: çeviri başlar, TV'nin arkası mavi yanar, ekranda ● CANLI çıkar.
