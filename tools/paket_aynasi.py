@@ -40,10 +40,28 @@ def get(url: str, tries: int = 3) -> bytes:
     raise RuntimeError(url)
 
 
-def without_bom(gz: bytes) -> bytes:
-    """Bazı paketler (GameTranslator: final-fantasy-vii-rebirth) UTF-8 BOM ile başlıyor; BOM'suz yeniden sıkıştırılır."""
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+
+def without_bom(gz: bytes, pid: str = "") -> bytes:
+    """Paketi uygulamanın biçimine getirir. Bazı GameTranslator paketleri (final-fantasy-vii-rebirth) UTF-8 BOM ile
+    başlıyor ve düz {"İngilizce": "Türkçe"} sözlüğü; anahtarlar uygulamanın satır özetine (packs.key) çevrilir."""
     raw = gzip.decompress(gz)
-    return gzip.compress(raw[3:], 9) if raw[:3] == b"\xef\xbb\xbf" else gz
+    bom = raw[:3] == b"\xef\xbb\xbf"
+    d = json.loads(raw.decode("utf-8-sig"))
+    if isinstance(d, dict) and "entries" not in d and "segments" not in d and d \
+            and all(isinstance(v, str) for v in d.values()):
+        from altyazi.packs import key
+        entries = {}
+        for en, tr in d.items():
+            k = key(en)
+            if k and tr.strip():
+                entries[k] = tr
+        roman = {"ii", "iii", "iv", "vi", "vii", "viii", "ix", "xi", "xii", "xvi"}
+        title = " ".join(w.upper() if w in roman else w.capitalize() for w in pid.split("-"))
+        return gzip.compress(json.dumps({"id": pid, "title": title, "entries": entries}, ensure_ascii=False)
+                             .encode("utf-8"), 9)
+    return gzip.compress(raw[3:], 9) if bom else gz
 
 
 def entries_of(gz: bytes) -> tuple[str, int]:
@@ -91,7 +109,7 @@ def main(out: Path) -> int:
             if p.get("sha256") and hashlib.sha256(raw).hexdigest() != str(p["sha256"]).lower():
                 print("  SHA tutmadı, atlandı:", pid)
                 continue
-            gz = without_bom(raw if raw[:2] == b"\x1f\x8b" else gzip.compress(raw, 9))
+            gz = without_bom(raw if raw[:2] == b"\x1f\x8b" else gzip.compress(raw, 9), pid)
             title, n = entries_of(gz)
             (out / f"{pid}.json.gz").write_bytes(gz)
             index[pid] = {"id": pid, "title": p.get("title") or title or pid, "entries": int(p.get("entries") or n),
@@ -106,7 +124,7 @@ def main(out: Path) -> int:
             continue
         try:
             raw = get(GAMETRANSLATOR + pid + ".json")
-            gz = without_bom(gzip.compress(raw, 9))
+            gz = without_bom(gzip.compress(raw, 9), pid)
             title, n = entries_of(gz)
             (out / f"{pid}.json.gz").write_bytes(gz)
             index[pid] = {"id": pid, "title": title or pid, "entries": n, "version": 1, "auto": False,
