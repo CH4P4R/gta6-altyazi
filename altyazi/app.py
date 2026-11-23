@@ -225,6 +225,7 @@ class AppController(QObject):
                 self.rec = make_recognizer(c.ocr)
                 self.rec.warmup()
             self.engine = TranslationEngine(c.ceviri)
+            self._start_pool()
             info["ocr"] = self.rec.device
             f = self.engine.fast
             info["hizli"] = (f"{f.name} ({'GPU' if getattr(f, 'device', '') == 'cuda' else 'CPU'})"
@@ -664,6 +665,14 @@ class AppController(QObject):
             self._apply_tv_style()
         engines_changed = old.ceviri != cfg.ceviri or old.ocr != cfg.ocr
         running = self.state == "calisiyor"
+        if getattr(old, "havuz", None) != getattr(cfg, "havuz", None) and not engines_changed:
+            if not cfg.havuz.adres.strip() and getattr(self, "_pool", None) is not None:
+                self._pool.close()
+                self._pool = None
+                if self.engine:
+                    self.engine.pool = None
+            else:
+                self._start_pool()
         if old.kisayol != cfg.kisayol:
             if self.hotkeys:
                 self.hotkeys.stop()
@@ -1095,6 +1104,41 @@ class AppController(QObject):
 
         threading.Thread(target=run, daemon=True, name="paket").start()
 
+    def _start_pool(self) -> None:
+        """Ortak çeviri havuzu: adres ayarlıysa yapay zekâ çevirileri gönderilir, havuz paketi saatte bir iner."""
+        h = getattr(self.cfg, "havuz", None)
+        if self.engine is None or h is None or not h.adres.strip():
+            return
+        from . import config, paths
+        from .havuz import PoolClient
+        if not h.kimlik:
+            import secrets
+            h.kimlik = secrets.token_hex(16)
+            try:
+                config.save(self.cfg)
+            except Exception:  # noqa: BLE001
+                log.warning("Havuz kimliği kaydedilemedi")
+        old = getattr(self, "_pool", None)
+        if old is not None:
+            old.close()
+        pool = PoolClient(h.adres.strip(), h.kimlik, send=h.gonder)
+        self._pool = pool
+        self.engine.pool = pool
+        if not h.al:
+            return
+
+        def fetch_loop() -> None:
+            while self._pool is pool:
+                try:
+                    if pool.update_pack(paths.data("paketler")) and self.engine:
+                        self.engine.packs.reload()
+                except Exception as e:  # noqa: BLE001
+                    log.info("Havuz paketi alınamadı: %s", e)
+                if pool.stop_ev.wait(3600):
+                    return
+
+        threading.Thread(target=fetch_loop, daemon=True, name="havuz-paket").start()
+
     def export_pack(self, dest: str) -> int:
         from . import packs
         if not self.engine:
@@ -1107,6 +1151,8 @@ class AppController(QObject):
         self._shut = True
         from .harcama import tracker
         tracker.save()
+        if getattr(self, "_pool", None) is not None:
+            self._pool.close()
         self.stop()
         if self.hotkeys:
             self.hotkeys.stop()

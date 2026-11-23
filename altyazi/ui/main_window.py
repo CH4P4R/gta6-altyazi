@@ -1807,6 +1807,24 @@ class TranslationPage(QWidget):
         root.addWidget(script)
         self._script_status()
 
+        # --- ortak çeviri havuzu (kendi sunucumuz)
+        h = getattr(ctl.cfg, "havuz", None)
+        pool = SectionCard("Ortak çeviri havuzu", "Yapay zekânın çevirdiği satırlar GTA6 Altyazı'nın sunucusunda toplanır; "
+                           "aynı satırı başka oyuncular da aynı Türkçeyle görünce herkese ücretsiz ve anında gelir.",
+                           "translate", margins=16)
+        self.pool_url = QLineEdit(h.adres if h else "")
+        self.pool_url.setPlaceholderText("https://havuz.alanadi.com (boşsa havuz kapalı)")
+        self.pool_send = QCheckBox("Çevirdiğim satırları gönder", h.gonder if h else True)
+        self.pool_get = QCheckBox("Havuzun paketini indir", h.al if h else True)
+        pool.add(field("Havuz adresi", self.pool_url))
+        pool.add(hbox(self.pool_send, self.pool_get, None, spacing=16))
+        pool.add(label("Giden: İngilizce satır, Türkçesi ve rastgele bir kurulum numarası. Adın, anahtarın, ekran "
+                       "görüntün gitmez.", "faint", wrap=True))
+        self.pool_url.editingFinished.connect(self.save)
+        self.pool_send.toggled.connect(lambda _on: self.save())
+        self.pool_get.toggled.connect(lambda _on: self.save())
+        root.addWidget(pool)
+
         # --- motor seçimi
         root.addLayout(vbox(label("Çeviri motoru", "h1"),
                             label("Pakette olmayan satırlar için. Herkes kendi anahtarını kullanır; anahtar yalnız bu "
@@ -2191,6 +2209,10 @@ class TranslationPage(QWidget):
         c.konusan_goster = self.spk_show.isChecked()
         c.paket_kullan = self.packs_on.isChecked()
         c.oyun_metni = self.script_on.isChecked()
+        if hasattr(cfg, "havuz") and hasattr(self, "pool_url"):
+            cfg.havuz.adres = self.pool_url.text().strip().rstrip("/")
+            cfg.havuz.gonder = self.pool_send.isChecked()
+            cfg.havuz.al = self.pool_get.isChecked()
         c.gemini_model = self.gem_model.currentData()
         c.yerel_cihaz = self.mt_device.currentData()
         c.yerel_is_parcacigi = self.mt_threads.value()

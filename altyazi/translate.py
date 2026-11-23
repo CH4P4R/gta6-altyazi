@@ -597,6 +597,7 @@ class TranslationEngine:
             except Exception:  # noqa: BLE001
                 log.exception("Yerel çeviri kalite zinciri kurulamadı; düz çeviri kullanılacak")
         self.game_pack: str | None = None
+        self.pool = None                   # ortak çeviri havuzu (altyazi/havuz.py PoolClient); app kurar
         self._fuzzy: dict[str, object] = {}
         self._fuzzy_loading: set[str] = set()
         self.script = None                 # oyun metni (altyazi/oyun_metni.py): indirildiyse okuma düzeltmesi
@@ -673,6 +674,21 @@ class TranslationEngine:
             log.error("Kalite katmanı (%s) açılamadı: %s", cfg.kalite, e)
             return None
 
+    def _share(self, en: str, tr: str, source: str) -> None:
+        """Yapay zekânın çevirdiği GTA 6 satırı ortak havuza (başka oyun oynanıyorsa gönderilmez)."""
+        pool = self.pool
+        if pool is None or not tr:
+            return
+        if self.game_pack is not None:
+            from .oyun.oyun_algi import pack_for_game
+            from .oyun_metni import GAME
+            if self.game_pack != pack_for_game(GAME, self.packs.packs):
+                return
+        try:
+            pool.add(en, tr, source)
+        except Exception:  # noqa: BLE001
+            log.debug("havuz", exc_info=True)
+
     def _post(self, text: str) -> str:
         for k, v in self.cfg.sozluk.items():
             text = text.replace(k, v) if k != v else text
@@ -714,6 +730,7 @@ class TranslationEngine:
             if not tr:
                 return
             self.cache.put(text, tr, REFINED, "claude-görsel")
+            self._share(text, tr, "claude-görsel")
             self._remember(kind, text, tr)
             on_result(Result(tr, "claude-görsel", (time.perf_counter() - t0) * 1000, REFINED))
 
@@ -814,6 +831,7 @@ class TranslationEngine:
             if tr:
                 tr = self._post(tr)
                 self.cache.put(text, tr, REFINED, self.refine.name)
+                self._share(text, tr, self.refine.name)
                 return tr
         cached = self.cache.get(text)
         if cached:
@@ -907,6 +925,7 @@ class TranslationEngine:
         tr = self._post(tr)
         ms = (time.perf_counter() - t) * 1000
         self.cache.put(text, tr, REFINED, self.refine.name)
+        self._share(text, tr, self.refine.name)
         self._remember(kind, text, tr)
         if race is not None:
             race.refined_ok = True

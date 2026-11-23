@@ -128,6 +128,15 @@ class GosterimCfg:
 
 
 @dataclass
+class HavuzCfg:
+    """Ortak çeviri havuzu (kendi sunucumuz). Adres boşsa havuz kapalıdır."""
+    adres: str = ""            # ör. https://havuz.alanadi.com
+    gonder: bool = True        # yapay zekânın çevirdiği satırları havuza gönder (İngilizce + Türkçe, kişisel bilgi yok)
+    al: bool = True            # havuzun paketini indir (herkesin çevirdiği satırlar ücretsiz)
+    kimlik: str = ""           # rastgele kurulum kimliği (ilk açılışta üretilir)
+
+
+@dataclass
 class SunucuCfg:
     acik: bool = True
     port: int = 8787
@@ -213,6 +222,7 @@ class Config:
     kisayol: KisayolCfg = field(default_factory=KisayolCfg)
     otomatik: OtomatikCfg = field(default_factory=OtomatikCfg)
     ps5: Ps5Cfg = field(default_factory=Ps5Cfg)
+    havuz: HavuzCfg = field(default_factory=HavuzCfg)
     gocler: list[str] = field(default_factory=list)   # uygulanmış ayar göçleri (yeni sürümün getirdiği varsayılanlar)
 
 

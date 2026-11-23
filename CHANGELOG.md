@@ -3,6 +3,12 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## Sıradaki sürüm
+- **Ortak çeviri havuzu (kendi sunucumuz):** yapay zekânın çevirdiği GTA 6 satırları GTA6 Altyazı'nın sunucusunda
+  toplanır; aynı satırın aynı Türkçesini iki farklı oyuncu gönderince satır herkese ücretsiz ve anında gelir.
+  Ayarlar → Çeviri → Ortak çeviri havuzu. Giden yalnız İngilizce satır, Türkçesi ve rastgele bir kurulum numarası.
+  Sunucu ve VPS kurulumu: `sunucu/havuz/`.
+
 ## 0.9.6 · Telefon paneli telefon ekranının Türkçe kopyası, her şey kendi sunucumuzdan, GTA 6 paketi büyüdü
 - **Her şey kendi sunucumuzdan:** hazır paketler yalnız GTA6 Altyazı'nın kendi sunucusundan iner; uygulama başka
   bir projenin sunucusuna bağlanmaz. Uygulama ekranlarında başka projelerin adı geçmez (lisans bildirimleri NOTICE'ta).

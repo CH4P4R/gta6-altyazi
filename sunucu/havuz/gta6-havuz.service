@@ -1,0 +1,22 @@
+[Unit]
+Description=GTA6 Altyazı ortak çeviri havuzu
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=havuz
+Group=havuz
+EnvironmentFile=/etc/gta6-havuz/ayar.env
+ExecStart=/usr/bin/python3 /opt/gta6-havuz/havuz_sunucu.py
+Restart=always
+RestartSec=3
+# Güvenlik: yalnız kendi veri klasörüne yazabilir
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/gta6-havuz
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target
