@@ -41,3 +41,5 @@ versions (AGPL-3.0, sections 4 and 5).
 GTA6 Altyazı; Rockstar Games, Take-Two Interactive ya da Sony Interactive
 Entertainment ile bağlantılı değildir. "Grand Theft Auto" Take-Two'nun,
 "PlayStation" ve "PS5" Sony Interactive Entertainment Inc.'in ticari markalarıdır.
+
+altyazi/ui/fonts/Nunito-ExtraBold.ttf: Nunito (SIL Open Font License 1.1), tv-web/src/fonts/Nunito-Variable.ttf dosyasının wght=800 sabit örneği (fontTools ile).

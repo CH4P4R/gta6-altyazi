@@ -13,6 +13,7 @@ IS_MAC = sys.platform == "darwin"
 datas = [(str(ROOT / "config.yaml"), "."), (str(ROOT / "LICENSE"), "."), (str(ROOT / "NOTICE"), ".")]
 datas.append((str(ROOT / "altyazi" / "ui" / "rehber"), "altyazi/ui/rehber"))   # sihirbaz rehber görselleri
 datas.append((str(ROOT / "altyazi" / "ui" / "marka"), "altyazi/ui/marka"))     # simge, logo, ana ekran sahnesi
+datas.append((str(ROOT / "altyazi" / "ui" / "fonts"), "altyazi/ui/fonts"))     # masaüstü yazı tipi örnekleri
 for rel in ("tv-android/release", "tv-web/release", "tv-web/build/tizen", "models/opus-mt-en-tr", "models/ocr",
             "tools/platform-tools", "paketler"):   # paketler: kuruluma gömülü hazır çeviri paketleri
     p = ROOT / rel

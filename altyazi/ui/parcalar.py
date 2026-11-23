@@ -480,8 +480,13 @@ def tv_font(key: str, px: int, bold: bool = True) -> QFont:
         for k, _name, file in TV_FONTS:
             if not file:
                 continue
-            for d in ("tv-web/src/fonts", "tv-web/build/tizen/fonts"):
-                path = resource(d) / file
+            places = [(d, file) for d in ("tv-web/src/fonts", "tv-web/build/tizen/fonts")]
+            if k == "yuvarlak":
+                # Nunito değişken yazı tipinin varsayılanı çok ince (ExtraLight); Qt kalınlığı seçemiyor. Masaüstünde
+                # kalın sabit örneği (fontTools ile wght=800) kullanılır.
+                places.insert(0, ("altyazi/ui/fonts", "Nunito-ExtraBold.ttf"))
+            for d, name in places:
+                path = resource(d) / name
                 if path.exists():
                     fams = QFontDatabase.applicationFontFamilies(QFontDatabase.addApplicationFont(str(path)))
                     if fams:
