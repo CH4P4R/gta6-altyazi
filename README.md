@@ -40,6 +40,12 @@ Altta görev yazısı ("Go to the car.") dururken diyalog onun üstüne çıksa 
 
 Yalnız altyazı değil: oyundaki telefonun mesajları, araç çağırma, banka ve antrenman uygulamaları, haberler, harita görev kartları ve telefon görüşmeleri de Türkçe olur. Uygulamanın rengini alan etiketler yazının hizasında, mesajlar telefonun yanında bir panelde sırayla görünür.
 
+<p align="center"><img src="docs/img/telefon-demo.png" alt="Oyundaki telefon: önce İngilizce, sonra TV'de Türkçe" width="100%"></p>
+
+<sub>Üstteki demo programın gerçek koduyla üretildi: telefonu bulma, yazıları okuma (PP-OCR), yerleşim ve TV
+uygulamasının çizimi. Telefon ekranı bir çizimdir; mesaj Türkçeleri bu demoda elle yazıldı, programda çeviri motorundan
+gelir ("Ücret", "Varış Noktasını Değiştir" programın kendi telefon sözlüğünden).</sub>
+
 <table>
 <tr>
 <td width="33%"><img src="docs/tanitim/tanitim-telefon.png" alt="Oyundaki telefon artık Türkçe"></td>
