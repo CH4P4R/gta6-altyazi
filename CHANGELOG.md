@@ -3,7 +3,7 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
-## Sıradaki sürüm
+## 0.9.6 · Telefon paneli telefon ekranının Türkçe kopyası, her şey kendi sunucumuzdan, GTA 6 paketi büyüdü
 - **Her şey kendi sunucumuzdan:** hazır paketler yalnız GTA6 Altyazı'nın kendi sunucusundan iner; uygulama başka
   bir projenin sunucusuna bağlanmaz. Uygulama ekranlarında başka projelerin adı geçmez (lisans bildirimleri NOTICE'ta).
 - **Telefonun yanındaki mesaj paneli telefon ekranının Türkçe kopyası gibi:** gündüz sohbette panel süt beyazı ve

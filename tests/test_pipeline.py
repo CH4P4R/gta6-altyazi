@@ -180,8 +180,9 @@ def collect(eng, text, timeout=2.0, n=None):
 
 
 def test_quality_first_hides_fast_when_refined_is_quick(tmp_path):
-    eng = make_engine(tmp_path, Echo("yerel"), Echo("claude", 0.05), wait_ms=300)
-    got = collect(eng, "We gonna hit the bank.", timeout=0.6)
+    # Bekleme payı geniş: yoğun macOS CI makinesinde 0,05 sn'lik iş bile 300 ms'yi aşabiliyordu.
+    eng = make_engine(tmp_path, Echo("yerel"), Echo("claude", 0.05), wait_ms=2500)
+    got = collect(eng, "We gonna hit the bank.", timeout=3.0)
     assert [r.text for r in got] == ["claude:We gonna hit the bank."]
 
 
