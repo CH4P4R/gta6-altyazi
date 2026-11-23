@@ -95,7 +95,7 @@ Ctrl+Shift+9: menü, harita, telefon mesajı, tabela... Claude ekranı görerek 
 TV'de oyunun üstünde, bilgisayarda chiaki'nin üstünde, Discord yayınında ve OBS'de aynı anda.
 
 **📦 Hazır çeviri paketleri**<br>
-GTA 6, GTA V, RDR2 ve başka oyunların topluluk paketleri tek tıkla (CouchSubs ve GameTranslator). Pakette olan satır ücretsiz ve anında.
+GTA 6, GTA V, RDR2 ve başka oyunların hazır Türkçe paketleri tek tıkla, GTA6 Altyazı'nın kendi sunucusundan. Pakette olan satır ücretsiz ve anında.
 
 **🛡️ Gerçek oyun sorunlarına karşı**<br>
 Görev yazısı ile diyalog ayrılır, OCR hatası yüzünden yanlış çeviri gelmez, yazı titremez.

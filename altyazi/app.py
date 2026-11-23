@@ -1063,33 +1063,27 @@ class AppController(QObject):
         threading.Thread(target=run, daemon=True, name="guvenlik-duvari").start()
 
     def load_pack_catalog(self) -> None:
-        """CouchSubs paket sunucusunun listesini arka planda al (GTA 6 paketi burada)."""
+        """Hazır paket listesini arka planda al: yalnız kendi sunucumuz (GitHub 'paketler' sürümü)."""
         from . import packs
 
         def run() -> None:
-            cat = packs.own_catalog()                # önce kendi GitHub sürümümüz
-            if not cat:
-                cat = packs.couchsubs_catalog()      # yanıt yoksa doğrudan CouchSubs
+            cat = packs.own_catalog()
             self._cs_catalog = {p["id"]: p for p in cat}
             self.packCatalog.emit(cat)
 
         threading.Thread(target=run, daemon=True, name="paket-liste").start()
 
     def download_pack(self, pack_id: str) -> None:
-        """pack_id: GameTranslator kataloğundaki kimlik ya da CouchSubs için 'cs:<kimlik>'."""
+        """pack_id: 'cs:<kimlik>' (kendi paket listemizdeki kimlik)."""
         from . import paths, packs
 
         def run() -> None:
             try:
                 prog = lambda f: self.packProgress.emit(pack_id, min(f, 0.99))  # noqa: E731
-                if pack_id.startswith("cs:"):
-                    info = getattr(self, "_cs_catalog", {}).get(pack_id[3:])
-                    if not info:
-                        raise RuntimeError("CouchSubs paket listesi alınamadı; internet bağlantısını kontrol et.")
-                    dl = packs.download_own if info.get("own") else packs.download_couchsubs
-                    pack = dl(info, paths.data("paketler"), prog)
-                else:
-                    pack = packs.download(pack_id, paths.data("paketler"), prog)
+                info = getattr(self, "_cs_catalog", {}).get(str(pack_id)[3:]) if str(pack_id).startswith("cs:") else None
+                if not info:
+                    raise RuntimeError("Paket listesi alınamadı; internet bağlantısını kontrol edip listeyi yenile.")
+                pack = packs.download_own(info, paths.data("paketler"), prog)
                 if self.engine:
                     self.engine.packs.reload()
                 self.notice.emit(f"{pack.title}: {pack.count:,} satır hazır".replace(",", "."))

@@ -4,6 +4,8 @@ Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyaz
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
 ## Sıradaki sürüm
+- **Her şey kendi sunucumuzdan:** hazır paketler yalnız GTA6 Altyazı'nın kendi sunucusundan iner; uygulama başka
+  bir projenin sunucusuna bağlanmaz. Uygulama ekranlarında başka projelerin adı geçmez (lisans bildirimleri NOTICE'ta).
 - **Telefonun yanındaki mesaj paneli telefon ekranının Türkçe kopyası gibi:** gündüz sohbette panel süt beyazı ve
   buzlu (arkası bulanık), telefon boyunda; kişinin adı üstte, her mesaj telefondaki hizasında, gelenler solda beyaz,
   giden mesaj sağda açık mavi balonda. Yazılar biraz büyüdü, panelin sağ altında küçük GTA6 Altyazı rozeti var.

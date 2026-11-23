@@ -1776,17 +1776,15 @@ class TranslationPage(QWidget):
         packs.add(self.pack_grid_w)
         self.packs_l = label("", "muted", wrap=True)
         packs.add(self.packs_l)
-        from ..packs import CATALOG
         self.pack_combo = QComboBox()
-        for pid, title in CATALOG:
-            self.pack_combo.addItem(title, pid)
+        self.pack_combo.addItem("Paket listesi yükleniyor…", None)
         self.pack_dl = button("Hazır paketi indir", "primary", self._download_pack)
         packs.add(hbox(self.pack_combo, self.pack_dl, button("Listeyi yenile", "ghost", ctl.load_pack_catalog), None,
                        button("Paket yükle (.json, .gz)", None, self._add_pack), spacing=10))
         packs.add(hbox(self.cache_l, None, button("Önbelleği paket olarak kaydet", "ghost", self._export_pack),
                        button("Klasörü aç", "ghost", self._open_data), spacing=8))
-        packs.add(label("Paketler bu projenin GitHub sayfasından iner; her 6 saatte bir CouchSubs (GTA 6 dahil) ve "
-                        "GameTranslator'dan güncellenir. GTA 6 paketi kurulumla birlikte de gelir.", "faint", wrap=True))
+        packs.add(label("Hazır paketler GTA6 Altyazı'nın kendi sunucusundan iner ve her 6 saatte bir güncellenir. "
+                        "GTA 6 paketi kurulumla birlikte de gelir.", "faint", wrap=True))
         ctl.packCatalog.connect(self._on_catalog)
         ctl.load_pack_catalog()
         root.addWidget(packs)
@@ -1940,7 +1938,7 @@ class TranslationPage(QWidget):
                      slider_row("Yarım okunan satır için bekleme", self.wait_partial,
                                 lambda v: f"{v / 10:.1f} sn".replace(".", ",")), spacing=24))
         adv.add(field("Telefon mesajlarının Türkçesi", self.phone_where,
-                      "Yanında: telefonun yanında, oyundaki sırayla, her mesaj kendi balonunda (Nino'daki gibi). "
+                      "Yanında: telefonun yanında, telefon ekranının Türkçe kopyası gibi, her mesaj kendi balonunda. "
                       "Üstünde: her mesajın Türkçesi kendi balonunun tam üstünde."))
         adv.add(label("Sözlük", "h3"))
         adv.add(label("Her satıra bir terim: <b>İngilizce = Türkçe</b>. İsimleri olduğu gibi bırakmak için iki tarafa "
@@ -2081,24 +2079,21 @@ class TranslationPage(QWidget):
         self.packs_l.setVisible(not ps)
 
     def _on_catalog(self, cat: list) -> None:
-        # Önceki CouchSubs girdilerini kaldır, yenilerini en üste koy (GTA 6 en başta)
-        for i in reversed(range(self.pack_combo.count())):
-            if str(self.pack_combo.itemData(i)).startswith("cs:"):
-                self.pack_combo.removeItem(i)
+        # Önceki girdileri kaldır, yenilerini koy (GTA 6 en başta)
+        self.pack_combo.clear()
+        if not cat:
+            self.pack_combo.addItem("Paket listesi alınamadı; 'Listeyi yenile'ye bas", None)
         cat = sorted(cat, key=lambda p: (0 if "6" in p["id"] or "vi" in p["id"].split("-") else 1, p["title"]))
         for k, p in enumerate(cat):
             n = f"{p['entries']:,}".replace(",", ".")
             extra = " · ek satırlar" if p.get("auto") else ""
-            src = p.get("source") or "CouchSubs"
-            self.pack_combo.insertItem(k, f"{p['title']}{extra} · {src} ({n} satır)", f"cs:{p['id']}")
-        if cat:
-            self.pack_combo.setCurrentIndex(0)
-            if any(p.get("own") for p in cat):   # kendi listemiz geldiyse aynı oyunun eski kaynak girdisini gizle
-                for i in reversed(range(self.pack_combo.count())):
-                    if not str(self.pack_combo.itemData(i)).startswith("cs:"):
-                        self.pack_combo.removeItem(i)
+            self.pack_combo.insertItem(k, f"{p['title']}{extra} ({n} satır)", f"cs:{p['id']}")
+        self.pack_combo.setCurrentIndex(0)
 
     def _download_pack(self) -> None:
+        if not self.pack_combo.currentData():
+            self.ctl.load_pack_catalog()
+            return
         self.pack_dl.setEnabled(False)
         self.pack_dl.setText("İndiriliyor...")
         self.ctl.download_pack(self.pack_combo.currentData())
@@ -2674,11 +2669,8 @@ class AboutPage(QWidget):
             lb = label(text, obj)
             lb.setAlignment(Qt.AlignCenter)
             card.add(lb)
-        credit = label("Sinan Yorulmaz'ın <a href='https://github.com/yorulmazsinan/couchsubs'>CouchSubs</a> projesinden, "
-                       "<a href='https://gitlab.com/sefflex/GameTranslator'>GameTranslator</a>'dan ve Nino Game "
-                       "Translator'dan alınan kodları içerir. Uzaktan Oynatma bağlantısı "
-                       "<a href='https://github.com/streetpea/chiaki-ng'>chiaki-ng</a> (AGPL-3.0) ile; çeviri modeli "
-                       "OPUS-MT, Helsinki Üniversitesi (CC BY 4.0). Geliştiricilerine teşekkürler.", "muted", wrap=True)
+        credit = label("Kullanılan açık kaynak bileşenler ve lisansları: <a href='https://github.com/CH4P4R/gta6-altyazi/"
+                       "blob/main/NOTICE'>NOTICE</a>.", "muted", wrap=True)
         credit.setOpenExternalLinks(True)
         credit.setAlignment(Qt.AlignCenter)
         card.add(credit)
