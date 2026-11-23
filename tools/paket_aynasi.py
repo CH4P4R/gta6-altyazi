@@ -64,6 +64,20 @@ def without_bom(gz: bytes, pid: str = "") -> bytes:
     return gzip.compress(raw[3:], 9) if bom else gz
 
 
+def merged(first_gz: bytes, second_gz: bytes) -> bytes:
+    """İki paketi birleştirir: aynı satırda ilk paketin Türkçesi kalır."""
+    a = json.loads(gzip.decompress(first_gz).decode("utf-8-sig"))
+    b = json.loads(gzip.decompress(second_gz).decode("utf-8-sig"))
+    out = dict(b)
+    out.update({k: v for k, v in a.items() if k not in ("entries", "segments")})
+    for section in ("segments", "entries"):
+        both = dict(b.get(section) or {})
+        both.update(a.get(section) or {})
+        if both:
+            out[section] = both
+    return gzip.compress(json.dumps(out, ensure_ascii=False).encode("utf-8"), 9)
+
+
 def entries_of(gz: bytes) -> tuple[str, int]:
     d = json.loads(gzip.decompress(gz).decode("utf-8-sig"))
     n = len(d.get("entries") or {}) + len(d.get("segments") or {})
@@ -94,7 +108,7 @@ def main(out: Path) -> int:
             print("CouchSubs:", pid, index[pid]["entries"])
         except Exception as e:  # noqa: BLE001
             print("  indirilemedi:", pid, e)
-    # 2) GameTranslator'ın kendi paket sunucusu (yalnız Türkçe paketler; CouchSubs'ta olmayanlar)
+    # 2) GameTranslator'ın kendi paket sunucusu (yalnız Türkçe paketler; CouchSubs'ta da olan oyun birleştirilir)
     try:
         gt = json.loads(get(GT_SERVER).decode("utf-8")).get("packs") or []
     except Exception as e:  # noqa: BLE001
@@ -102,7 +116,7 @@ def main(out: Path) -> int:
         gt = []
     for p in gt:
         pid = str(p.get("id", ""))
-        if not pid or pid in index or str(p.get("lang") or "tr").lower() != "tr":
+        if not pid or str(p.get("lang") or "tr").lower() != "tr":
             continue
         try:
             raw = get(f"{GT_SERVER}/{pid}")
@@ -111,6 +125,17 @@ def main(out: Path) -> int:
                 continue
             gz = without_bom(raw if raw[:2] == b"\x1f\x8b" else gzip.compress(raw, 9), pid)
             title, n = entries_of(gz)
+            if pid in index:
+                # Aynı oyun CouchSubs'ta da var (GTA 6, GTA V, RDR2...): tek pakette birleşir; GameTranslator'ın satırı
+                # önce gelir, onda olmayanlar CouchSubs'tan tamamlanır.
+                cs_n = index[pid]["entries"]
+                gz = merged(gz, (out / f"{pid}.json.gz").read_bytes())
+                _, total = entries_of(gz)
+                (out / f"{pid}.json.gz").write_bytes(gz)
+                index[pid].update({"entries": total, "source": "GameTranslator + CouchSubs",
+                                   "sha256": hashlib.sha256(gz).hexdigest(), "size": len(gz)})
+                print(f"GameTranslator sunucusu: {pid} {n} (CouchSubs {cs_n}) -> birleşik {total}")
+                continue
             (out / f"{pid}.json.gz").write_bytes(gz)
             index[pid] = {"id": pid, "title": p.get("title") or title or pid, "entries": int(p.get("entries") or n),
                           "version": p.get("version", 1), "auto": False, "source": "GameTranslator",

@@ -8,6 +8,9 @@ sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
   buzlu (arkası bulanık), telefon boyunda; kişinin adı üstte, her mesaj telefondaki hizasında, gelenler solda beyaz,
   giden mesaj sağda açık mavi balonda. Yazılar biraz büyüdü, panelin sağ altında küçük GTA6 Altyazı rozeti var.
   Telefonun koyu çerçevesi ya da başparmak yüzünden panel koyu çıkıyordu, düzeldi.
+- **GTA 6 paketi GameTranslator + CouchSubs:** GameTranslator'ın kendi GTA 6 paketi artık alınıyor (önceden aynı adlı
+  CouchSubs paketi yüzünden atlanıyordu). İkisi tek pakette birleşir: GameTranslator'ın Türkçesi önce gelir, onda
+  olmayan satırlar CouchSubs'tan tamamlanır. GTA V ve RDR2 için de aynısı.
 - **Hazır paketler:** GameTranslator'ın Final Fantasy VII Rebirth paketi dosya başındaki görünmez bir işaret (BOM)
   yüzünden ve eski düz biçimde olduğu için alınamıyordu; artık 32 bin satırıyla alınıyor.
 

@@ -27,3 +27,14 @@ def test_normal_pack_untouched():
     d = {"title": "X", "entries": {"0123456789abcdef": "Merhaba"}}
     gz = gzip.compress(json.dumps(d).encode("utf-8"))
     assert paket_aynasi.without_bom(gz, "x") == gz
+
+
+def test_merge_prefers_first_pack():
+    gt = {"title": "Grand Theft Auto VI", "entries": {"aaaaaaaaaaaaaaaa": "GT", "bbbbbbbbbbbbbbbb": "GT2"}}
+    cs = {"title": "GTA 6", "version": 7, "entries": {"aaaaaaaaaaaaaaaa": "CS", "cccccccccccccccc": "CS3"},
+          "segments": {"dddddddddddddddd": "parça"}}
+    gz = paket_aynasi.merged(gzip.compress(json.dumps(gt).encode()), gzip.compress(json.dumps(cs).encode()))
+    d = json.loads(gzip.decompress(gz))
+    assert d["entries"] == {"aaaaaaaaaaaaaaaa": "GT", "bbbbbbbbbbbbbbbb": "GT2", "cccccccccccccccc": "CS3"}
+    assert d["segments"] == {"dddddddddddddddd": "parça"} and d["title"] == "Grand Theft Auto VI"
+    assert paket_aynasi.entries_of(gz) == ("Grand Theft Auto VI", 4)
