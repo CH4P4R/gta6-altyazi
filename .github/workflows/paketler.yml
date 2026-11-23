@@ -21,9 +21,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          NOTES="GTA6 Altyazı'nın hazır Türkçe paketleri. Uygulama bunları kendiliğinden indirir ve günceller; elle bir şey yapmana gerek yok. Her 6 saatte bir güncellenir. Lisans ve kaynak bildirimleri: NOTICE dosyası."
           if ! gh release view paketler > /dev/null 2>&1; then
-            gh release create paketler --prerelease --title "Hazır çeviri paketleri" \
-              --notes "Uygulamanın Çeviri sayfasındaki hazır paketler. Kaynaklar: CouchSubs (https://github.com/yorulmazsinan/couchsubs) ve GameTranslator (https://gitlab.com/sefflex/GameTranslator). Her 6 saatte bir güncellenir."
+            gh release create paketler --prerelease --title "Hazır çeviri paketleri" --notes "$NOTES"
+          else
+            gh release edit paketler --notes "$NOTES" || true
           fi
           gh release upload paketler cikti/*.json.gz cikti/index.json --clobber
           echo "Yüklendi: $(ls cikti | wc -l) dosya"
