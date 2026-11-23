@@ -67,7 +67,7 @@ def load(path: Path) -> Pack:
     raw = path.read_bytes()
     if raw[:2] == b"\x1f\x8b":
         raw = gzip.decompress(raw)
-    d = json.loads(raw.decode("utf-8"))
+    d = json.loads(raw.decode("utf-8-sig"))
     entries: dict[str, str] = {}
     for section in ("segments", "entries"):     # tam satırlar parçaların üstüne yazsın
         for k, v in (d.get(section) or {}).items():
@@ -184,7 +184,7 @@ def download(pack_id: str, folder: Path, progress=None) -> Pack:  # noqa: ANN001
             if progress and total:
                 progress(done / total)
     raw = b"".join(chunks)
-    json.loads(raw.decode("utf-8"))                       # bozuk/yarım indirmeyi yazmadan yakala
+    json.loads(raw.decode("utf-8-sig"))                       # bozuk/yarım indirmeyi yazmadan yakala
     dest = folder / f"{pack_id}.json.gz"
     tmp = dest.with_suffix(".tmp")
     tmp.write_bytes(gzip.compress(raw, 6))

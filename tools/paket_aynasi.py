@@ -40,8 +40,14 @@ def get(url: str, tries: int = 3) -> bytes:
     raise RuntimeError(url)
 
 
+def without_bom(gz: bytes) -> bytes:
+    """Bazı paketler (GameTranslator: final-fantasy-vii-rebirth) UTF-8 BOM ile başlıyor; BOM'suz yeniden sıkıştırılır."""
+    raw = gzip.decompress(gz)
+    return gzip.compress(raw[3:], 9) if raw[:3] == b"\xef\xbb\xbf" else gz
+
+
 def entries_of(gz: bytes) -> tuple[str, int]:
-    d = json.loads(gzip.decompress(gz).decode("utf-8"))
+    d = json.loads(gzip.decompress(gz).decode("utf-8-sig"))
     n = len(d.get("entries") or {}) + len(d.get("segments") or {})
     return str(d.get("title") or ""), n
 
@@ -85,7 +91,7 @@ def main(out: Path) -> int:
             if p.get("sha256") and hashlib.sha256(raw).hexdigest() != str(p["sha256"]).lower():
                 print("  SHA tutmadı, atlandı:", pid)
                 continue
-            gz = raw if raw[:2] == b"\x1f\x8b" else gzip.compress(raw, 9)
+            gz = without_bom(raw if raw[:2] == b"\x1f\x8b" else gzip.compress(raw, 9))
             title, n = entries_of(gz)
             (out / f"{pid}.json.gz").write_bytes(gz)
             index[pid] = {"id": pid, "title": p.get("title") or title or pid, "entries": int(p.get("entries") or n),
@@ -100,7 +106,7 @@ def main(out: Path) -> int:
             continue
         try:
             raw = get(GAMETRANSLATOR + pid + ".json")
-            gz = gzip.compress(raw, 9)
+            gz = without_bom(gzip.compress(raw, 9))
             title, n = entries_of(gz)
             (out / f"{pid}.json.gz").write_bytes(gz)
             index[pid] = {"id": pid, "title": title or pid, "entries": n, "version": 1, "auto": False,

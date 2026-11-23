@@ -8,6 +8,8 @@ sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
   buzlu (arkası bulanık), telefon boyunda; kişinin adı üstte, her mesaj telefondaki hizasında, gelenler solda beyaz,
   giden mesaj sağda açık mavi balonda. Yazılar biraz büyüdü, panelin sağ altında küçük GTA6 Altyazı rozeti var.
   Telefonun koyu çerçevesi ya da başparmak yüzünden panel koyu çıkıyordu, düzeldi.
+- **Hazır paketler:** GameTranslator'ın Final Fantasy VII Rebirth paketi dosya başındaki görünmez bir işaret (BOM)
+  yüzünden alınamıyordu; artık alınıyor.
 
 ## 0.9.5 · GameTranslator'ın yeni paket sunucusu, zaten Türkçe satırlar çevrilmez
 - **Hazır paketler:** GameTranslator paketlerini 23 Kasım'da kendi sunucusuna taşıdı; paket aynamız artık oradan da
