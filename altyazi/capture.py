@@ -186,7 +186,8 @@ def _os_camera_names() -> list[str]:
 
 
 CAPTURE_HINTS = ("elgato", "hd60", "cam link", "avermedia", "live gamer", "razer ripsaw", "capture", "usb video",
-                 "hdmi", "magewell", "genki", "ezcap", "4k60", "game capture")
+                 "hdmi", "magewell", "genki", "ezcap", "4k60", "game capture",
+                 "obs virtual camera")      # OBS sanal kamerası: görüntü OBS'ten alınır (GameTranslator 8475c4c)
 
 
 def list_capture_devices(max_index: int = 6) -> list[dict]:

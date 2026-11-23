@@ -1,3 +1,3 @@
 """GTA 6 için düşük gecikmeli, gerçek zamanlı Türkçe altyazı çevirici."""
 
-__version__ = "0.9.4"
+__version__ = "0.9.5"

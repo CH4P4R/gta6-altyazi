@@ -3,6 +3,13 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.9.5 · GameTranslator'ın yeni paket sunucusu, zaten Türkçe satırlar çevrilmez
+- **Hazır paketler:** GameTranslator paketlerini 23 Kasım'da kendi sunucusuna taşıdı; paket aynamız artık oradan da
+  alıyor (eski yer yedek). Yeni GameTranslator paketleri kendiliğinden gelir.
+- **Zaten Türkçe satır çevrilmez** (CouchSubs #298, GameTranslator'da da var): PS5'in Türkçe menüleri ve oyunun Türkçe
+  altyazısı çevirmene gitmez, olduğu gibi kalır; içinde Türkçe ad geçen İngilizce satır yine çevrilir.
+- **Capture kart listesinde OBS Sanal Kamera** da tanınır: görüntüyü OBS'ten almak isteyen onu seçebilir.
+
 ## 0.9.4 · GTA 6 oyun metniyle okuma düzeltme, CouchSubs'tan bağlantı düzeltmeleri
 - **GTA 6 oyun metni** (Çeviri ve paketler › İndir): oyunun İngilizce satırlarının tamamı (~460 bin, kaynak
   github.com/psviethoa/gta6-text-en) bilgisayarda küçük bir dizine kurulur. Okunan satırda bir iki harf hatası varsa

@@ -18,7 +18,9 @@ import urllib.request
 from pathlib import Path
 
 COUCHSUBS = "https://couchsubs-packs.enmera.workers.dev/v1/packs"
-GAMETRANSLATOR = "https://gitlab.com/sefflex/GameTranslator/-/raw/main/yamalar/"
+GAMETRANSLATOR = "https://gitlab.com/sefflex/GameTranslator/-/raw/main/yamalar/"     # eski yer (yedek)
+# GameTranslator 1.8.50'den (23 Kas 2026) beri paketler kendi sunucusunda: GET /v1/packs, GET /v1/packs/{id} (gzip)
+GT_SERVER = "https://gametranslator-packs.gametranslator-pool.workers.dev/v1/packs"
 GT_PACKS = ["gta-v", "red-dead-redemption-2", "mafia-the-old-country", "watch-dogs", "call-of-duty-modern-warfare-2019",
             "assassins-creed-shadows", "elden-ring", "death-stranding-2", "final-fantasy-vii-rebirth",
             "final-fantasy-vii-remake", "marvels-spider-man-2", "death-stranding-directors-cut"]
@@ -68,7 +70,31 @@ def main(out: Path) -> int:
             print("CouchSubs:", pid, index[pid]["entries"])
         except Exception as e:  # noqa: BLE001
             print("  indirilemedi:", pid, e)
-    # 2) GameTranslator (CouchSubs'ta olmayanlar)
+    # 2) GameTranslator'ın kendi paket sunucusu (yalnız Türkçe paketler; CouchSubs'ta olmayanlar)
+    try:
+        gt = json.loads(get(GT_SERVER).decode("utf-8")).get("packs") or []
+    except Exception as e:  # noqa: BLE001
+        print("GameTranslator paket sunucusu listesi alınamadı:", e)
+        gt = []
+    for p in gt:
+        pid = str(p.get("id", ""))
+        if not pid or pid in index or str(p.get("lang") or "tr").lower() != "tr":
+            continue
+        try:
+            raw = get(f"{GT_SERVER}/{pid}")
+            if p.get("sha256") and hashlib.sha256(raw).hexdigest() != str(p["sha256"]).lower():
+                print("  SHA tutmadı, atlandı:", pid)
+                continue
+            gz = raw if raw[:2] == b"\x1f\x8b" else gzip.compress(raw, 9)
+            title, n = entries_of(gz)
+            (out / f"{pid}.json.gz").write_bytes(gz)
+            index[pid] = {"id": pid, "title": p.get("title") or title or pid, "entries": int(p.get("entries") or n),
+                          "version": p.get("version", 1), "auto": False, "source": "GameTranslator",
+                          "sha256": hashlib.sha256(gz).hexdigest(), "size": len(gz)}
+            print("GameTranslator sunucusu:", pid, index[pid]["entries"])
+        except Exception as e:  # noqa: BLE001
+            print("  indirilemedi:", pid, e)
+    # 3) GameTranslator'ın eski deposu (sunucuda olmayanlar için yedek)
     for pid in GT_PACKS:
         if pid in index:
             continue

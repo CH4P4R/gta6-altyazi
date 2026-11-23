@@ -798,6 +798,9 @@ class TranslationEngine:
 
     def translate_now(self, text: str, kind: str = "arayuz", context=None) -> str | None:  # noqa: ANN001
         """Bekleyerek çevir (ekran yazıları için, arka plan iş parçacığında): paket → önbellek → kalite → hızlı."""
+        from .turkce_metin import is_sure
+        if is_sure(text):
+            return text
         text = self.snap(text)
         found = self.lookup(text)
         if found:
@@ -829,6 +832,10 @@ class TranslationEngine:
     def submit(self, text: str, kind: str, on_result: Callable[[Result], None], refine: bool = True) -> None:
         """Sonuçlar on_result ile (başka iş parçacığından) gelir: önce hızlı, sonra kaliteli."""
         t0 = time.perf_counter()
+        from .turkce_metin import is_sure
+        if is_sure(text):                    # zaten Türkçe (PS5'in Türkçe arayüzü): çevirmene gitmez (CouchSubs #298)
+            on_result(Result(text, "türkçe", (time.perf_counter() - t0) * 1000, REFINED))
+            return
         text = self.snap(text)               # oyun metniyle okuma hatası düzeltilir (indirildiyse)
         pack_hit = self.pack_lookup(text)
         if pack_hit:                         # hazır paket: anında, ücretsiz, yapay zekaya sorulmaz

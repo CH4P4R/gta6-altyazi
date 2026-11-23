@@ -124,7 +124,7 @@ jobs:
       - name: Testler
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m pytest -q tests/test_remoteplay.py tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py tests/test_yeni_arayuz.py tests/test_oyun_metni.py tests/test_sihirbaz_nino.py tests/test_ocr_vision.py tests/test_sahne_izleyici.py tests/test_kalite_zincir.py tests/test_bulanik_cevirmen.py tests/test_seslendirme.py tests/test_yardimci.py
+        run: python -m pytest -q tests/test_remoteplay.py tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py tests/test_yeni_arayuz.py tests/test_oyun_metni.py tests/test_turkce_metin.py tests/test_sihirbaz_nino.py tests/test_ocr_vision.py tests/test_sahne_izleyici.py tests/test_kalite_zincir.py tests/test_bulanik_cevirmen.py tests/test_seslendirme.py tests/test_yardimci.py
 
       - name: TV kurulum testleri (Windows'ta)
         continue-on-error: true
