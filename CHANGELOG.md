@@ -3,6 +3,16 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## 0.9.4 · GTA 6 oyun metniyle okuma düzeltme, CouchSubs'tan bağlantı düzeltmeleri
+- **GTA 6 oyun metni** (Çeviri ve paketler › İndir): oyunun İngilizce satırlarının tamamı (~460 bin, kaynak
+  github.com/psviethoa/gta6-text-en) bilgisayarda küçük bir dizine kurulur. Okunan satırda bir iki harf hatası varsa
+  gerçek satırla düzeltilir ("Stop your vehic1e!" → "Stop your vehicle!"): hazır paketin Türkçesi bulunur, yapay zekâya
+  hatasız İngilizce gider. Emin olunmayan satıra dokunulmaz; başka oyunda kapalıdır. Program bu metni dağıtmaz.
+- **PS5 bağlantısı (CouchSubs #353):** PS5 akışı kendisi kapattığında (PS5'te ikinci hesap seçildi) sınırsız yeniden
+  bağlanma yok: bir kez denenir, sonra nedeni söylenir. Ağ kopmasında art arda en çok beş deneme.
+- **Remote Play:** akla yatmayan boyuttaki görüntü kareleri çözücüye verilmez (CouchSubs #855).
+- **TV:** başka bilgisayara geçince eski altyazı ekranda kalmaz.
+
 ## 0.9.3 · Yeni simge ve logo, gerçekçi ana ekran, kaydırmalı düğme, yeni telefon kumandası
 - **Yeni marka:** uygulama simgesi (ay yıldızlı oyun kolu, EN → TR balonları), büyük simge, logo, rozet, yardımcının robot
   yüzü; Windows / macOS simgesi, kurulum görselleri, Android TV simgesi ve ana ekran banner'ı, LG / Samsung simgeleri,

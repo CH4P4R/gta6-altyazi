@@ -42,6 +42,7 @@ EVENT_CB = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_int, ctypes.c_char_p, c
 
 EVENT_CONNECTED, EVENT_QUIT, EVENT_LOGIN_PIN = 0, 1, 2
 QUIT_STOPPED, QUIT_IN_USE, QUIT_REFUSED, QUIT_NETWORK, QUIT_OTHER, QUIT_RP_CRASHED, QUIT_PSN_REGIST_FAILED = range(7)
+QUIT_CONSOLE_CLOSED = 7      # PS5 akışı kendisi kapattı (kullanıcı PS5'te hesap değiştirdi): ağ kopması değil
 
 
 class _Registered(ctypes.Structure):
@@ -468,6 +469,40 @@ class ReconnectPolicy:
         self.connected_at = None
 
 
+class ReconnectLimit:
+    """Yeniden bağlanma sınırı (CouchSubs 8f82f3c4, GitHub #353): PS5 akışı kendisi kapattıysa en çok 1, ağ kopmasında
+    art arda en çok 5 kez yeniden denenir; sonra durulur, nedeni ve Yeniden bağlan gösterilir. Eskiden sınırsız
+    deneniyor, PS5'te durmadan "uzaktan oynatma bağlandı / koptu" bildirimi çıkıp oyun bölünüyordu. Sayaçlar çeviri
+    başlayınca, Yeniden bağlan'da ve 2 dk süren oturumdan sonra sıfırlanır."""
+    MAX_CONSOLE_CLOSED = 1
+    MAX_NETWORK = 5
+    STABLE_AFTER = 120.0
+
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
+        self.console_closed = 0
+        self.network = 0
+        self.connected_at: float | None = None
+
+    def connected(self, now: float) -> None:
+        self.connected_at = now
+
+    def ended(self, kind: str, now: float) -> str | None:
+        """Yeniden denenecekse None, durulacaksa gösterilecek neden ("console_closed_repeatedly" / "gave_up")."""
+        if self.connected_at is not None and now - self.connected_at >= self.STABLE_AFTER:
+            self.console_closed = self.network = 0
+        self.connected_at = None
+        if kind == "console_closed":
+            self.console_closed += 1
+            return "console_closed_repeatedly" if self.console_closed > self.MAX_CONSOLE_CLOSED else None
+        if kind in ("network", "not_found", "refused", "other"):
+            self.network += 1
+            return "gave_up" if self.network > self.MAX_NETWORK else None
+        return None
+
+
 class QualityFallback:
     """10 dk içinde 2 kopma olursa bu çeviri boyunca 720p (kablosuz ağda PS5 akışı kopuyordu)."""
 
@@ -558,7 +593,8 @@ _UNREACHABLE = ("Session request connect failed eventually", "Failed to send ses
 
 @dataclass
 class Disconnect:
-    kind: str            # stopped|in_use|refused|network|not_found|asleep|crashed|regist|login_pin|login_wrong|rejected|other
+    kind: str            # stopped|in_use|refused|network|not_found|asleep|crashed|regist|login_pin|login_wrong|rejected|
+    #                      console_closed|console_closed_repeatedly|gave_up|other
     detail: str | None = None
 
     def message(self, host: str = "") -> str:
@@ -586,6 +622,14 @@ class Disconnect:
             return f"PS5 bağlantıyı kabul etmedi{f' ({self.detail})' if self.detail else ''}. Yeniden deneniyor."
         if k == "stopped":
             return "PS5 bağlantısı kapandı."
+        if k == "console_closed":
+            return "PS5 Uzaktan Oynatma'yı kendisi kapattı (PS5'te kullanıcı değişmiş olabilir). Bir kez yeniden deneniyor."
+        if k == "console_closed_repeatedly":
+            return ("PS5 bağlantıyı yine kapattı. PS5'te programın giriş yaptığı ikinci hesapla oynuyorsun; kolu açınca "
+                    "kendi (ana) hesabını seç. Hazır olunca fişi çekip yeniden tak (ya da Durdur, sonra Başlat).")
+        if k == "gave_up":
+            return ("PS5'e art arda bağlanılamadı; denemeler durduruldu. PS5 açık ve aynı ağda mı? Hazır olunca "
+                    "fişi çekip yeniden tak (ya da Durdur, sonra Başlat).")
         return f"PS5 bağlantısı koptu{f': {self.detail}' if self.detail else ''}. Yeniden deneniyor."
 
 
@@ -594,7 +638,8 @@ def from_native(quit_reason: int, text: str | None, hint: Disconnect | None = No
         return hint or Disconnect("rejected")
     return {QUIT_STOPPED: Disconnect("stopped"), QUIT_IN_USE: Disconnect("in_use"), QUIT_REFUSED: Disconnect("refused"),
             QUIT_NETWORK: Disconnect("network"), QUIT_RP_CRASHED: Disconnect("crashed"),
-            QUIT_PSN_REGIST_FAILED: Disconnect("regist")}.get(quit_reason, Disconnect("other", text))
+            QUIT_PSN_REGIST_FAILED: Disconnect("regist"),
+            QUIT_CONSOLE_CLOSED: Disconnect("console_closed", text)}.get(quit_reason, Disconnect("other", text))
 
 
 def session_request_hint(line: str | None) -> Disconnect | None:
@@ -687,6 +732,7 @@ class StreamSession:
         self._gen = 0
         self._box: _Box | None = None
         self._policy, self._wake, self._quality = ReconnectPolicy(), WakePolicy(), QualityFallback()
+        self._limit = ReconnectLimit()
         self._watchdog = PictureWatchdog()
         self._crashes = 0
         self._streaming = False
@@ -703,6 +749,7 @@ class StreamSession:
 
         def go() -> None:
             self._policy.reset()
+            self._limit.reset()
             self._wake = WakePolicy()
             self._crashes = 0
             self._connect(gen)
@@ -713,13 +760,14 @@ class StreamSession:
         self._post(self._close_box)
 
     def reconnect_now(self) -> None:
-        if not self._running:
-            return
+        if not self._running and self._limit.console_closed == 0 and self._limit.network == 0:
+            return                          # hiç başlamamış oturum (denemeler durdurulduysa yeniden açılır)
         gen = self._bump(True)
 
         def go() -> None:
             self._close_box()
             self._policy.reset()
+            self._limit.reset()
             self._crashes = 0
             self._connect(gen)
         self._post(go)
@@ -842,6 +890,14 @@ class StreamSession:
     def _schedule(self, gen: int, reason: Disconnect) -> None:
         if not self._search_answered and reason.kind in ("network", "other"):
             reason = Disconnect("not_found", self.console.host)
+        if self._current(gen):
+            stop = self._limit.ended(reason.kind, time.monotonic())
+            if stop is not None:            # sınırsız döngü yerine dur; Yeniden bağlan'la sayaç sıfırlanır (#353)
+                log.warning("PS5 oturumu: yeniden bağlanma durduruldu (%s; PS5 kapattı %d, ağ %d kez)", stop,
+                            self._limit.console_closed, self._limit.network)
+                self._bump(False)
+                self._emit("kopuk", Disconnect(stop).message(self.console.host))
+                return
         self._emit("kopuk", reason.message(self.console.host))
         if not self._current(gen):
             return
@@ -889,6 +945,7 @@ class StreamSession:
                     return
                 now = time.monotonic()
                 self._policy.connected(now)
+                self._limit.connected(now)
                 self._wake.streamed = True
                 self._crashes = 0
                 self._streaming = True

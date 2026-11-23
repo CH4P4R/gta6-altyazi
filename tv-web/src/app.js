@@ -856,7 +856,11 @@
   function connect(address) {
     if (demoRunning()) stopDemo();
     if (eventSource) eventSource.close();
-    if (address !== server) failures = 0;
+    if (address !== server) {
+      failures = 0;
+      // Başka bilgisayara geçince eski bilgisayarın altyazısı yeni akış açılırken ekranda kalmasın (CouchSubs b4043675).
+      hideSubtitle('server-change');
+    }
     server = address;
     $('waiting').className = 'hidden';
     setStatus('st-server', address);

@@ -1791,6 +1791,24 @@ class TranslationPage(QWidget):
         ctl.load_pack_catalog()
         root.addWidget(packs)
 
+        # --- oyun metni: GTA 6'nın İngilizce satırlarıyla okuma düzeltme (kullanıcı kaynağından indirir)
+        script = SectionCard("GTA 6 oyun metni", "Oyundaki İngilizce satırların tamamı (yaklaşık 460 bin). Okunan satırda "
+                             "bir iki harf hatası varsa gerçek satırla düzeltilir: hazır paketin Türkçesi bulunur, yapay "
+                             "zekâya hatasız İngilizce gider.", "translate", margins=16)
+        self.script_on = QCheckBox("Açık", getattr(c, "oyun_metni", True))
+        self.script_on.toggled.connect(lambda on: (self.save(), ctl.engine and (
+            setattr(ctl.engine.cfg, "oyun_metni", on), ctl.engine.load_script())))
+        script.add_right(self.script_on)
+        self.script_l = label("", "muted", wrap=True)
+        self.script_dl = button("İndir (~40 MB)", "primary", self._script_download)
+        self.script_rm = button("Sil", "ghost", self._script_remove)
+        script.add(hbox(self.script_l, None, self.script_dl, self.script_rm, spacing=8))
+        script.add(label("Kaynak: github.com/psviethoa/gta6-text-en (Xbox 1.0.2.1 metin dökümü, CyberLeek). Program bu "
+                         "metni dağıtmaz; İndir'e basınca doğrudan kaynağından iner ve yalnız bu bilgisayarda durur.",
+                         "faint", wrap=True))
+        root.addWidget(script)
+        self._script_status()
+
         # --- motor seçimi
         root.addLayout(vbox(label("Çeviri motoru", "h1"),
                             label("Pakette olmayan satırlar için. Herkes kendi anahtarını kullanır; anahtar yalnız bu "
@@ -2104,6 +2122,64 @@ class TranslationPage(QWidget):
         self.window().toast.show_text(msg)
         self._refresh_packs()
 
+    # --------------------------------------------------------------- oyun metni
+    def _script_status(self, text: str = "") -> None:
+        from ..oyun_metni import default_path
+        p = default_path()
+        eng = self.ctl.engine
+        if text:
+            self.script_l.setText(text)
+        elif p.exists():
+            n = eng.script.count if eng is not None and getattr(eng, "script", None) is not None else None
+            self.script_l.setText(f"İndirildi · {n:,} satır".replace(",", ".") if n else
+                                  f"İndirildi ({p.stat().st_size // 1_000_000} MB)")
+        else:
+            self.script_l.setText("İndirilmedi. İndirince okuma hataları kendiliğinden düzelir.")
+        self.script_dl.setVisible(not p.exists())
+        self.script_rm.setVisible(p.exists())
+
+    def _script_download(self) -> None:
+        import threading
+        from PySide6.QtCore import QMetaObject, Q_ARG
+        self.script_dl.setEnabled(False)
+
+        def say(msg: str) -> None:
+            QMetaObject.invokeMethod(self, "_script_progress", Qt.QueuedConnection, Q_ARG(str, msg))
+
+        def work() -> None:
+            from ..oyun_metni import build, default_path
+            try:
+                n = build(default_path(), progress=say)
+                if self.ctl.engine is not None:
+                    self.ctl.engine.load_script()
+                say(f"bitti:{n}")
+            except Exception as e:  # noqa: BLE001
+                say(f"hata:{e}")
+
+        threading.Thread(target=work, daemon=True, name="oyun-metni").start()
+
+    @Slot(str)
+    def _script_progress(self, msg: str) -> None:
+        if msg.startswith("bitti:"):
+            self.script_dl.setEnabled(True)
+            self._script_status()
+            self.window().toast.show_text("Oyun metni hazır: okuma hataları artık düzeliyor")
+        elif msg.startswith("hata:"):
+            self.script_dl.setEnabled(True)
+            self._script_status(f"İndirilemedi: {msg[5:]}")
+        else:
+            self._script_status(msg)
+
+    def _script_remove(self) -> None:
+        from ..oyun_metni import default_path
+        if self.ctl.engine is not None:
+            self.ctl.engine.script = None
+        try:
+            default_path().unlink()
+        except OSError:
+            pass
+        self._script_status()
+
     def _export_pack(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Önbelleği paket olarak kaydet", "gta6-altyazi-paket.json.gz",
                                               "Paket (*.json.gz *.json)")
@@ -2119,6 +2195,7 @@ class TranslationPage(QWidget):
         c.ekran_yazilari = self.scene_cb.isChecked()
         c.konusan_goster = self.spk_show.isChecked()
         c.paket_kullan = self.packs_on.isChecked()
+        c.oyun_metni = self.script_on.isChecked()
         c.gemini_model = self.gem_model.currentData()
         c.yerel_cihaz = self.mt_device.currentData()
         c.yerel_is_parcacigi = self.mt_threads.value()

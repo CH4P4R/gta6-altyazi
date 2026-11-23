@@ -109,6 +109,8 @@ class CeviriCfg:
     oyun_sor: bool = True           # oyun paketle tanınmazsa iki dakika sonra "Hangi oyunu oynuyorsun?" diye sor
     paket_kullan: bool = True       # hazır oyun paketlerinde olan satır çevirmene gitmeden gelsin
     yerel_is_parcacigi: int = 0     # yerel modelin işlemcide kullanacağı çekirdek sayısı (0 = kendiliğinden)
+    # GTA 6'nın İngilizce metni (kullanıcı indirir): okunan satır oyunun gerçek satırına çok benziyorsa düzeltilir
+    oyun_metni: bool = True
 
 
 @dataclass

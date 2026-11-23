@@ -266,3 +266,22 @@ def test_ps5_dialog_builds(monkeypatch):
     assert ("psn", "https://remoteplay.dl.playstation.net/remoteplay/redirect?code=abc") in calls
     d._on_result(False, "Sony girişi reddetti")
     assert "reddetti" in d.acc_state.text()
+
+
+def test_reconnect_limit_stops_endless_loop():
+    """CouchSubs #353: PS5 akışı kendisi kapattıysa bir kez, ağ kopmasında art arda beş kez yeniden denenir."""
+    from altyazi.remoteplay import QUIT_CONSOLE_CLOSED, ReconnectLimit, from_native
+    assert from_native(QUIT_CONSOLE_CLOSED, "Server shutting down").kind == "console_closed"
+    lim = ReconnectLimit()
+    assert lim.ended("console_closed", 0) is None
+    assert lim.ended("console_closed", 1) == "console_closed_repeatedly"
+    lim.reset()
+    for i in range(5):
+        assert lim.ended("network", i) is None
+    assert lim.ended("network", 6) == "gave_up"
+    lim.reset()
+    lim.connected(0)
+    assert lim.ended("console_closed", 10) is None
+    lim.connected(20)
+    assert lim.ended("console_closed", 20 + ReconnectLimit.STABLE_AFTER) is None   # uzun oturum sayacı sıfırlar
+    assert lim.ended("in_use", 500) is None

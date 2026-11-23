@@ -599,6 +599,46 @@ class TranslationEngine:
         self.game_pack: str | None = None
         self._fuzzy: dict[str, object] = {}
         self._fuzzy_loading: set[str] = set()
+        self.script = None                 # oyun metni (altyazi/oyun_metni.py): indirildiyse okuma düzeltmesi
+        self.load_script()
+
+    def load_script(self) -> None:
+        """Oyun metni dizini indirilmiş ve açıksa yüklenir (indirmeden sonra da çağrılır)."""
+        self.script = None
+        if not getattr(self.cfg, "oyun_metni", True):
+            return
+        try:
+            from .oyun_metni import ScriptIndex, default_path
+            p = default_path()
+            if p.exists():
+                self.script = ScriptIndex(p)
+                log.info("Oyun metni yüklendi: %d satır", self.script.count)
+        except Exception as e:  # noqa: BLE001
+            log.warning("Oyun metni açılamadı: %s", e)
+
+    def snap(self, text: str) -> str:
+        """Okunan satır oyunun gerçek satırına çok benziyorsa o satır (konuşan adı korunur); değilse aynısı.
+        Başka bir oyun oynanıyorsa (oyun paketi GTA 6'nınki değil) dokunulmaz."""
+        sc = self.script
+        if sc is None or not text:
+            return text
+        if self.game_pack is not None:
+            from .oyun.oyun_algi import pack_for_game
+            from .oyun_metni import GAME
+            if self.game_pack != pack_for_game(GAME, self.packs.packs):
+                return text
+        try:
+            from .kalite import konusan
+            sp = konusan.split(text)
+            body = sp.body if sp else text
+            fixed = sc.snap(body)
+        except Exception:  # noqa: BLE001
+            log.exception("Oyun metni araması")
+            return text
+        if not fixed:
+            return text
+        log.debug("Okuma düzeltildi: %r -> %r", body, fixed)
+        return text[: len(text) - len(body)] + fixed if sp and text.endswith(body) else fixed
 
     @staticmethod
     def _make_fast(cfg: CeviriCfg):
@@ -758,6 +798,7 @@ class TranslationEngine:
 
     def translate_now(self, text: str, kind: str = "arayuz", context=None) -> str | None:  # noqa: ANN001
         """Bekleyerek çevir (ekran yazıları için, arka plan iş parçacığında): paket → önbellek → kalite → hızlı."""
+        text = self.snap(text)
         found = self.lookup(text)
         if found:
             return found
@@ -788,6 +829,7 @@ class TranslationEngine:
     def submit(self, text: str, kind: str, on_result: Callable[[Result], None], refine: bool = True) -> None:
         """Sonuçlar on_result ile (başka iş parçacığından) gelir: önce hızlı, sonra kaliteli."""
         t0 = time.perf_counter()
+        text = self.snap(text)               # oyun metniyle okuma hatası düzeltilir (indirildiyse)
         pack_hit = self.pack_lookup(text)
         if pack_hit:                         # hazır paket: anında, ücretsiz, yapay zekaya sorulmaz
             tr, pack_id = pack_hit
