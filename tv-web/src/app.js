@@ -501,6 +501,20 @@
       head.style.fontSize = Math.max(BUBBLE_MIN_FONT, Math.round(headLine * 1.05)) + 'px';
       panel.appendChild(head);
     }
+    // Koyu sohbette başlık ve rozet açık renkli yazılır.
+    var r = parseInt(fill.substr(1, 2), 16), g = parseInt(fill.substr(3, 2), 16), b = parseInt(fill.substr(5, 2), 16);
+    if ((r * 299 + g * 587 + b * 114) / 1000 < 128) panel.className += ' dark';
+    var badge = document.createElement('div');
+    badge.className = 'panel-badge';
+    var icon = document.createElement('img');
+    icon.src = 'icon.png';
+    icon.alt = '';
+    badge.appendChild(icon);
+    var name = document.createElement('span');
+    name.textContent = 'GTA6 Altyazı';
+    badge.appendChild(name);
+    badge.style.fontSize = Math.max(10, Math.round(height * 0.014)) + 'px';
+    panel.appendChild(badge);
     return panel;
   }
 

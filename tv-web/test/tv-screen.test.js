@@ -106,7 +106,7 @@ test('alpha, angle ve side', { skip: skip() }, async () => {
   } finally { await tv.close(); }
 });
 
-test('backdrop: yazısız panel, başlığı gönderenin adı, filigran yok', { skip: skip() }, async () => {
+test('backdrop: yazısız panel, başlığı gönderenin adı, sağ altta GTA6 Altyazı rozeti', { skip: skip() }, async () => {
   const tv = await openTv(browser, { width: W, height: H });
   try {
     await tv.send('screen', { duration: 10000, items: [
@@ -118,7 +118,7 @@ test('backdrop: yazısız panel, başlığı gönderenin adı, filigran yok', { 
     assert.equal(panel.cls, 'item backdrop');
     assert.equal(panel.bg, 'rgba(242, 242, 247, 0.9)');
     assert.equal(panel.title, 'Donnie');
-    assert.equal(panel.images, 0);
+    assert.equal(panel.images, 1);
     assert.equal(panel.dataText, '');
     assert.ok(Math.abs(panel.width - 0.22 * W) < 1 && Math.abs(panel.height - 0.55 * H) < 1, JSON.stringify(panel));
     assert.equal(plainPanel.bg, 'rgb(242, 242, 247)');

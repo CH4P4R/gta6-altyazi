@@ -3,6 +3,12 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## Sıradaki sürüm
+- **Telefonun yanındaki mesaj paneli telefon ekranının Türkçe kopyası gibi:** gündüz sohbette panel süt beyazı ve
+  buzlu (arkası bulanık), telefon boyunda; kişinin adı üstte, her mesaj telefondaki hizasında, gelenler solda beyaz,
+  giden mesaj sağda açık mavi balonda. Yazılar biraz büyüdü, panelin sağ altında küçük GTA6 Altyazı rozeti var.
+  Telefonun koyu çerçevesi ya da başparmak yüzünden panel koyu çıkıyordu, düzeldi.
+
 ## 0.9.5 · GameTranslator'ın yeni paket sunucusu, zaten Türkçe satırlar çevrilmez
 - **Hazır paketler:** GameTranslator paketlerini 23 Kasım'da kendi sunucusuna taşıdı; paket aynamız artık oradan da
   alıyor (eski yer yedek). Yeni GameTranslator paketleri kendiliğinden gelir.

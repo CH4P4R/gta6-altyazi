@@ -518,7 +518,9 @@ COVER_PAD_Y = 0.004
 SIDE_WIDTH = 0.27
 SIDE_ALPHA = 0.95
 BACKDROP_ALPHA = 0.6
-# Panelin altında logoya bırakılan yer (kare yüksekliğine oranla).
+# Açık (gündüz) sohbette panel telefon ekranının buzlu bir kopyası gibi süt beyazı ve daha az saydamdır.
+LIGHT_BACKDROP_ALPHA = 0.88
+# Panelin sağ altında GTA6 Altyazı rozetine bırakılan yer (kare yüksekliğine oranla).
 BADGE_SPACE = 0.03
 
 
@@ -708,6 +710,11 @@ def _hex(r: int, g: int, b: int) -> str:
     return "#%02x%02x%02x" % (int(r), int(g), int(b))
 
 
+def _fill_rgb(fill: Optional[str]) -> Optional[tuple[int, int, int]]:
+    value = _parse_hex(fill)
+    return None if value is None else ((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff)
+
+
 def _parse_hex(fill: Optional[str]) -> Optional[int]:
     if fill is None or len(fill) != 7:
         return None
@@ -792,14 +799,14 @@ def side_bubbles(messages: Sequence[Message], translations: Sequence[str], panel
     longest: list[int] = []
     heights: list[float] = []
     for index, cover in enumerate(cover_items):
-        # Kullanıcı isteği: Türkçe %4, sonra %6 daha büyütüldü (→ 0,97).
-        line = min(max(kept[index].line_height, 0.018), 0.028) * 0.97
+        # Türkçe telefondaki yazıya yakın boyda (panel telefon ekranının kopyası gibi okunsun).
+        line = min(max(kept[index].line_height, 0.018), 0.028) * 1.08
         count, long = lines(cover.translation, bubble_max - pad, line)
         counts.append(count)
         longest.append(long)
         heights.append(line)
     placed = boxes(kept, counts, heights, (inner.left, inner.right))
-    # Panel telefonun boyundadır; balonlar sığmazsa yukarı doğru sıkışır. Panelin sağ altında Nino logosu durur.
+    # Panel telefonun boyundadır; balonlar sığmazsa yukarı doğru sıkışır. Panelin sağ altında GTA6 Altyazı rozeti durur.
     bottom = panel.box.bottom - gap - BADGE_SPACE
     if placed and placed[-1].bottom > bottom:
         shift = placed[-1].bottom - bottom
@@ -830,15 +837,25 @@ def side_bubbles(messages: Sequence[Message], translations: Sequence[str], panel
     ordered = sorted(samples, key=lambda c: c[0] + c[1] + c[2])
     ground = ordered[len(samples) // 2] if ordered else (226, 228, 233)
     backdrop = ScreenItem("", "", TextBox(col.left, panel.box.top, col.right, panel.box.bottom), 0.02)
-    # Açık sohbette zemin beyaza yaklaşır, gelen balon beyazlaşır, giden balonun mavisi belirginleşir.
-    light_chat = chat and (ground[0] * 299 + ground[1] * 587 + ground[2] * 114) // 1000 > 150
+
+    def lum(c: Sequence[int]) -> int:
+        return (c[0] * 299 + c[1] * 587 + c[2] * 114) // 1000
+
+    # Açık sohbette zemin beyaza yaklaşır, gelen balon beyazlaşır, giden balonun mavisi belirginleşir. Zemin örneği
+    # telefonun koyu çerçevesine ya da başparmağa denk gelebilir: gelen balonlar açıksa sohbet de açık sayılır.
+    incoming = sorted(lum(c) for c in (_fill_rgb(cover_items[i].fill) for i in range(len(cover_items)) if not outgoing[i])
+                      if c is not None)
+    light_bubbles = bool(incoming) and incoming[len(incoming) // 2] > 150
+    light_chat = chat and (lum(ground) > 150 or light_bubbles)
+    if light_chat and lum(ground) <= 150:
+        ground = (236, 236, 240)
     to_white = 0.6 if light_chat else 0.0
 
     def lift(v: int) -> int:
         return int(float(v) + (255 - float(v)) * to_white)
 
     backdrop.fill = _hex(lift(ground[0]), lift(ground[1]), lift(ground[2]))
-    backdrop.alpha = BACKDROP_ALPHA
+    backdrop.alpha = LIGHT_BACKDROP_ALPHA if light_chat else BACKDROP_ALPHA
     backdrop.backdrop = True
     # Panelin en üstünde ortada gönderenin adı (TV başlık olarak çizer; ad çevrilmez).
     if chat and title:
