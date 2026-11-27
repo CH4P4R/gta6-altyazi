@@ -3,7 +3,7 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
-## Sıradaki sürüm
+## 0.9.7 · Ortak çeviri havuzu, telefonun bütün uygulamalarında panel, alanları oyunun üstünde düzenleme, OBS görünümü, Intel Mac
 - **Intel işlemcili Mac'ler için sürüm:** artık ayrı bir GTA6Altyazi-mac-intel.dmg da var; program güncellemede
   Mac'ine uygun olanı kendisi seçer.
 - **OBS için ayrı yayın görünümü:** OBS katmanı sayfasında yayına özel yerleşim (oyunun yazısının üstünde ya da
