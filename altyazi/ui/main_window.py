@@ -1812,16 +1812,19 @@ class TranslationPage(QWidget):
         pool = SectionCard("Ortak çeviri havuzu", "Yapay zekânın çevirdiği satırlar GTA6 Altyazı'nın sunucusunda toplanır; "
                            "aynı satırı başka oyuncular da aynı Türkçeyle görünce herkese ücretsiz ve anında gelir.",
                            "translate", margins=16)
+        self.pool_on = QCheckBox("Açık", h.acik if h else True)
+        pool.add_right(self.pool_on)
         self.pool_url = QLineEdit(h.adres if h else "")
-        self.pool_url.setPlaceholderText("https://havuz.alanadi.com (boşsa havuz kapalı)")
+        self.pool_url.setPlaceholderText("Boş bırak: GTA6 Altyazı'nın sunucusu")
         self.pool_send = QCheckBox("Çevirdiğim satırları gönder", h.gonder if h else True)
         self.pool_get = QCheckBox("Havuzun paketini indir", h.al if h else True)
-        pool.add(field("Havuz adresi", self.pool_url))
+        pool.add(field("Havuz adresi (yalnız kendi sunucunu kullanacaksan)", self.pool_url))
         pool.add(hbox(self.pool_send, self.pool_get, None, spacing=16))
         pool.add(label("Giden: İngilizce satır, Türkçesi ve rastgele bir kurulum numarası. Adın, anahtarın, ekran "
                        "görüntün gitmez.", "faint", wrap=True))
         self.pool_url.editingFinished.connect(self.save)
         self.pool_send.toggled.connect(lambda _on: self.save())
+        self.pool_on.toggled.connect(lambda _on: self.save())
         self.pool_get.toggled.connect(lambda _on: self.save())
         root.addWidget(pool)
 
@@ -2210,6 +2213,7 @@ class TranslationPage(QWidget):
         c.paket_kullan = self.packs_on.isChecked()
         c.oyun_metni = self.script_on.isChecked()
         if hasattr(cfg, "havuz") and hasattr(self, "pool_url"):
+            cfg.havuz.acik = self.pool_on.isChecked()
             cfg.havuz.adres = self.pool_url.text().strip().rstrip("/")
             cfg.havuz.gonder = self.pool_send.isChecked()
             cfg.havuz.al = self.pool_get.isChecked()

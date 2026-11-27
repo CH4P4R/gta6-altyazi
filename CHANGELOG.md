@@ -7,6 +7,7 @@ sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 - **Yazı tipi seçimindeki "Yuvarlak" düğmesi** artık kalın ve okunaklı (önceden çok ince görünüyordu).
 - **Ortak çeviri havuzu (kendi sunucumuz):** yapay zekânın çevirdiği GTA 6 satırları GTA6 Altyazı'nın sunucusunda
   toplanır; aynı satırın aynı Türkçesini iki farklı oyuncu gönderince satır herkese ücretsiz ve anında gelir.
+  Havuz kendiliğinden açık ve GTA6 Altyazı'nın sunucusuna bağlı; kapatmak ya da kendi sunucunu yazmak için
   Ayarlar → Çeviri → Ortak çeviri havuzu. Giden yalnız İngilizce satır, Türkçesi ve rastgele bir kurulum numarası.
   Sunucu ve VPS kurulumu: `sunucu/havuz/`.
 

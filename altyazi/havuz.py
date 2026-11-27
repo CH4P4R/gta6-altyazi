@@ -6,7 +6,7 @@
   kurulum kimliği. Kişisel bilgi, anahtar, ekran görüntüsü gitmez.
 - Alma: havuzun paketi ("havuz-gta-6") hazır paketler gibi paket klasörüne iner; değişmediyse yeniden inmez.
 
-Ayarda adres boşsa hiçbir şey yapılmaz.
+Ayarda havuz kapatılırsa hiçbir şey gönderilmez ve indirilmez; adres boşsa varsayılan sunucu kullanılır.
 """
 
 from __future__ import annotations
@@ -24,6 +24,8 @@ from typing import Callable
 
 log = logging.getLogger(__name__)
 
+# GTA6 Altyazı'nın havuz sunucusu (sunucu/havuz, VPS). Ayardaki adres boşsa bu kullanılır.
+DEFAULT_URL = "http://87.232.127.103:8787"
 SOURCES = {"claude", "gemini", "deepl", "claude-görsel"}
 _PACK_ID = re.compile(r"^havuz-[a-z0-9-]{1,40}$")
 _LETTER = re.compile(r"[A-Za-z]")

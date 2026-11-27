@@ -102,3 +102,11 @@ def test_engine_shares_only_ai_translations(tmp_path):
     assert eng.pool.got == [("Where are you?", "Neredesin?", "claude")]
     eng._share("x", "", "claude")
     assert len(eng.pool.got) == 1
+
+
+def test_pool_is_on_by_default_with_our_server():
+    from altyazi.config import Config
+    from altyazi.havuz import DEFAULT_URL
+    h = Config().havuz
+    assert h.acik and h.gonder and h.al and h.adres == ""
+    assert DEFAULT_URL.startswith("http") and ":8787" in DEFAULT_URL

@@ -129,8 +129,9 @@ class GosterimCfg:
 
 @dataclass
 class HavuzCfg:
-    """Ortak çeviri havuzu (kendi sunucumuz). Adres boşsa havuz kapalıdır."""
-    adres: str = ""            # ör. https://havuz.alanadi.com
+    """Ortak çeviri havuzu (kendi sunucumuz)."""
+    acik: bool = True          # havuzu kullan
+    adres: str = ""            # boş: GTA6 Altyazı'nın sunucusu (altyazi/havuz.py DEFAULT_URL); başka sunucu için adres
     gonder: bool = True        # yapay zekânın çevirdiği satırları havuza gönder (İngilizce + Türkçe, kişisel bilgi yok)
     al: bool = True            # havuzun paketini indir (herkesin çevirdiği satırlar ücretsiz)
     kimlik: str = ""           # rastgele kurulum kimliği (ilk açılışta üretilir)

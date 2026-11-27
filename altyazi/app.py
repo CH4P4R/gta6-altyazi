@@ -666,7 +666,7 @@ class AppController(QObject):
         engines_changed = old.ceviri != cfg.ceviri or old.ocr != cfg.ocr
         running = self.state == "calisiyor"
         if getattr(old, "havuz", None) != getattr(cfg, "havuz", None) and not engines_changed:
-            if not cfg.havuz.adres.strip() and getattr(self, "_pool", None) is not None:
+            if not cfg.havuz.acik and getattr(self, "_pool", None) is not None:
                 self._pool.close()
                 self._pool = None
                 if self.engine:
@@ -1105,12 +1105,12 @@ class AppController(QObject):
         threading.Thread(target=run, daemon=True, name="paket").start()
 
     def _start_pool(self) -> None:
-        """Ortak çeviri havuzu: adres ayarlıysa yapay zekâ çevirileri gönderilir, havuz paketi saatte bir iner."""
+        """Ortak çeviri havuzu: açıksa yapay zekâ çevirileri gönderilir, havuz paketi saatte bir iner."""
         h = getattr(self.cfg, "havuz", None)
-        if self.engine is None or h is None or not h.adres.strip():
+        if self.engine is None or h is None or not h.acik:
             return
         from . import config, paths
-        from .havuz import PoolClient
+        from .havuz import DEFAULT_URL, PoolClient
         if not h.kimlik:
             import secrets
             h.kimlik = secrets.token_hex(16)
@@ -1121,7 +1121,7 @@ class AppController(QObject):
         old = getattr(self, "_pool", None)
         if old is not None:
             old.close()
-        pool = PoolClient(h.adres.strip(), h.kimlik, send=h.gonder)
+        pool = PoolClient(h.adres.strip() or DEFAULT_URL, h.kimlik, send=h.gonder)
         self._pool = pool
         self.engine.pool = pool
         if not h.al:
