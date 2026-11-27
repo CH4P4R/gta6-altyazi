@@ -4,6 +4,8 @@ Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyaz
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
 ## Sıradaki sürüm
+- **Intel işlemcili Mac'ler için sürüm:** artık ayrı bir GTA6Altyazi-mac-intel.dmg da var; program güncellemede
+  Mac'ine uygun olanı kendisi seçer.
 - **OBS için ayrı yayın görünümü:** OBS katmanı sayfasında yayına özel yerleşim (oyunun yazısının üstünde ya da
   altta/üstte altyazı şeridi), yazı tipi, boyut, renk, siyah çizgi ve kutu koyuluğu. TV'yi ve kendi ekranını
   etkilemez; değişiklik yayında 2 saniye içinde görünür.

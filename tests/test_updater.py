@@ -110,5 +110,6 @@ def test_mac_update_script_replaces_bundle(tmp_path):
 
 def test_release_asset_per_platform():
     from altyazi import updater
-    assert updater.asset_name("darwin") == "GTA6Altyazi-mac.dmg"
+    assert updater.asset_name("darwin", "arm64") == "GTA6Altyazi-mac.dmg"
+    assert updater.asset_name("darwin", "x86_64") == "GTA6Altyazi-mac-intel.dmg"
     assert updater.asset_name("win32") == "GTA6Altyazi-Setup.exe"

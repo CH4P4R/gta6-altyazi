@@ -1,6 +1,7 @@
 name: macOS uygulaması (.dmg)
 
-# Windows derlemesiyle aynı: commit mesajında [exe] geçince ya da elle çalışır. Yalnız Apple Silicon (M1 ve sonrası).
+# Windows derlemesiyle aynı: commit mesajında [exe] geçince ya da elle çalışır. İki ayrı .dmg: Apple Silicon (M1 ve
+# sonrası) GTA6Altyazi-mac.dmg, Intel işlemcili eski Mac'ler GTA6Altyazi-mac-intel.dmg.
 # İmza ve Apple onayı (notarization) için GitHub Secrets: MAC_CERT_P12_B64, MAC_CERT_PASSWORD, APPLE_ID,
 # APPLE_TEAM_ID, APPLE_APP_PASSWORD. Yoksa imzasız (yerel imzalı) derlenir; ilk açılışta sağ tık › Aç gerekir.
 on:
@@ -13,8 +14,18 @@ permissions:
 jobs:
   dmg:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[exe]')
-    runs-on: macos-latest      # Apple Silicon (arm64)
-    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest        # Apple Silicon (arm64)
+            arch: arm64
+            dmg: GTA6Altyazi-mac.dmg
+          - runner: macos-15-intel      # Intel (x86_64), 2020 öncesi Mac'ler
+            arch: x86_64
+            dmg: GTA6Altyazi-mac-intel.dmg
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
 
@@ -56,7 +67,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: native/bin/couchsubs_native.dylib
-          key: native-mac-${{ hashFiles('native/*.c', 'native/*.h', 'native/CMakeLists.txt', 'native/CHIAKI_COMMIT', 'native/patches/*', 'native/build-mac.sh') }}
+          key: native-mac-${{ matrix.arch }}-${{ hashFiles('native/*.c', 'native/*.h', 'native/CMakeLists.txt', 'native/CHIAKI_COMMIT', 'native/patches/*', 'native/build-mac.sh') }}
 
       - name: Remote Play bağımlılıkları önbelleği (OpenSSL, FFmpeg... kaynaktan)
         if: steps.native-cache.outputs.cache-hit != 'true'
@@ -65,7 +76,7 @@ jobs:
           path: |
             native/build/mac-work/prefix
             native/build/mac-work/.done-*
-          key: native-mac-deps-${{ hashFiles('native/build-mac.sh') }}
+          key: native-mac-deps-${{ matrix.arch }}-${{ hashFiles('native/build-mac.sh') }}
 
       - name: Remote Play kütüphanesi (libchiaki + FFmpeg)
         if: steps.native-cache.outputs.cache-hit != 'true'
@@ -73,6 +84,7 @@ jobs:
           brew list cmake >/dev/null 2>&1 || brew install cmake
           brew list ninja >/dev/null 2>&1 || brew install ninja
           brew list protobuf >/dev/null 2>&1 || brew install protobuf
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then brew list nasm >/dev/null 2>&1 || brew install nasm; fi
           bash native/fetch-chiaki.sh
           bash native/build-mac.sh
 
@@ -179,8 +191,8 @@ jobs:
           mkdir -p dmg
           cp -R "dist/GTA6 Altyazı.app" dmg/
           ln -s /Applications dmg/Applications
-          hdiutil create -volname "GTA6 Altyazı" -srcfolder dmg -ov -format UDZO dist/GTA6Altyazi-mac.dmg
-          ls -la dist/GTA6Altyazi-mac.dmg
+          hdiutil create -volname "GTA6 Altyazı" -srcfolder dmg -ov -format UDZO dist/${{ matrix.dmg }}
+          ls -la dist/${{ matrix.dmg }}
 
       - name: Apple onayı (notarization)
         if: env.MAC_SIGNED == '1'
@@ -192,9 +204,9 @@ jobs:
           if [ -z "$APPLE_ID" ] || [ -z "$APPLE_TEAM_ID" ] || [ -z "$APPLE_APP_PASSWORD" ]; then
             echo "::warning::APPLE_ID / APPLE_TEAM_ID / APPLE_APP_PASSWORD yok: imzalı ama Apple onaysız"; exit 0
           fi
-          xcrun notarytool submit dist/GTA6Altyazi-mac.dmg --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait --timeout 60m
-          xcrun stapler staple dist/GTA6Altyazi-mac.dmg
-          spctl -a -t open --context context:primary-signature -vv dist/GTA6Altyazi-mac.dmg || true
+          xcrun notarytool submit dist/${{ matrix.dmg }} --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait --timeout 60m
+          xcrun stapler staple dist/${{ matrix.dmg }}
+          spctl -a -t open --context context:primary-signature -vv dist/${{ matrix.dmg }} || true
 
       - name: Uçtan uca deneme (gerçek Mac - açılış, çeviri, TV akışı, güncelleme)
         env:
@@ -204,22 +216,22 @@ jobs:
           old=""
           # .dmg'si olan en son önceki sürüm
           for prev in $(gh release list --limit 30 --json tagName -q '.[].tagName' | grep '^v' | grep -v "^v$v$"); do
-            if gh release download "$prev" -p GTA6Altyazi-mac.dmg -D eski --clobber 2>/dev/null; then old="eski/GTA6Altyazi-mac.dmg"; break; fi
+            if gh release download "$prev" -p ${{ matrix.dmg }} -D eski --clobber 2>/dev/null; then old="eski/${{ matrix.dmg }}"; break; fi
           done
           echo "Önceki Mac sürümü: ${old:-yok}"
-          python tools/e2e_mac.py dist/GTA6Altyazi-mac.dmg "$old"
+          python tools/e2e_mac.py dist/${{ matrix.dmg }} "$old"
 
       - name: Sürümler sayfasına koy
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash tools/surum_yayinla.sh dist/GTA6Altyazi-mac.dmg
+        run: bash tools/surum_yayinla.sh dist/${{ matrix.dmg }}
 
       - name: Disk görüntüsünü sakla (sürüm sayfası açılamazsa kaybolmasın)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: GTA6Altyazi-mac
-          path: dist/GTA6Altyazi-mac.dmg
+          name: GTA6Altyazi-mac-${{ matrix.arch }}
+          path: dist/${{ matrix.dmg }}
           if-no-files-found: ignore
           retention-days: 14
 

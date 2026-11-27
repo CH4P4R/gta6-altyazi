@@ -26,11 +26,16 @@ log = logging.getLogger(__name__)
 REPO = "CH4P4R/gta6-altyazi"
 RELEASES_API = f"https://api.github.com/repos/{REPO}/releases?per_page=15"
 SETUP_NAME = "GTA6Altyazi-Setup.exe"
-MAC_NAME = "GTA6Altyazi-mac.dmg"
+MAC_NAME = "GTA6Altyazi-mac.dmg"              # Apple Silicon (M1 ve sonrası)
+MAC_INTEL_NAME = "GTA6Altyazi-mac-intel.dmg"  # Intel işlemcili Mac
 
 
-def asset_name(platform: str = sys.platform) -> str:
-    return MAC_NAME if platform == "darwin" else SETUP_NAME
+def asset_name(platform: str = sys.platform, machine: str | None = None) -> str:
+    if platform != "darwin":
+        return SETUP_NAME
+    import platform as _platform
+    m = (machine if machine is not None else _platform.machine()).lower()
+    return MAC_INTEL_NAME if m in ("x86_64", "i386", "amd64") else MAC_NAME
 _TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 
 

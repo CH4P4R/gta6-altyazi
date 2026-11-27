@@ -223,7 +223,7 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 | 📺 [TV'de oyna, bilgisayar izlesin](#rehber-tv-izle) | Sen TV'den HDMI ile oyna; bilgisayar ikinci hesapla izleyip Türkçeyi TV'ye göndersin. |
 | 🎞️ [Capture kart ile oyna](#rehber-capture) | Elgato, AVerMedia ya da USB HDMI kartla: görüntü TV'ye geçer, Türkçe TV'de ya da bilgisayarda. |
 | 🔌 ["Fişi takın" ne demek?](#rehber-fis) | Ana ekrandaki fiş, programın Başlat düğmesidir. |
-| • [Mac'te kullanım (Apple Silicon)](#rehber-mac) | M1 ve sonrası Mac'lerde kurulum, chiaki-ng ve macOS izinleri. |
+| • [Mac'te kullanım](#rehber-mac) | Apple işlemcili ve Intel Mac'lerde kurulum, chiaki-ng ve macOS izinleri. |
 | 🤖 [TV uygulaması: Google TV / Android TV](#rehber-google-tv) | TCL, Sony, Philips, Xiaomi, Hisense ve diğer Android TV'ler. |
 | 📺 [TV uygulaması: LG (webOS)](#rehber-lg) | LG Developer Mode ile kurulum. |
 | 📺 [TV uygulaması: Samsung (Tizen)](#rehber-samsung) | Tizen Studio olmadan, Samsung hesabıyla kurulum. |
@@ -530,11 +530,11 @@ Uygulamayı ilk açtığında **resimli kurulum sihirbazı** bu yolu adım adım
 
 <a name="rehber-mac"></a>
 <details>
-<summary><b>• Mac'te kullanım (Apple Silicon)</b> · M1 ve sonrası Mac'lerde kurulum, chiaki-ng ve macOS izinleri.</summary>
+<summary><b>• Mac'te kullanım</b> · Apple işlemcili ve Intel Mac'lerde kurulum, chiaki-ng ve macOS izinleri.</summary>
 
 #### Adım 1: GTA6 Altyazı'yı kur
 
-1. Releases sayfasından **GTA6Altyazi-mac.dmg**'yi indir ve aç (yalnız Apple Silicon: M1 ve sonrası).
+1. Releases sayfasından Mac'ine uygun dosyayı indir ve aç: Apple işlemcili (M1 ve sonrası) için **GTA6Altyazi-mac.dmg**, Intel işlemcili için **GTA6Altyazi-mac-intel.dmg** (elma menüsü › **Bu Mac Hakkında**'da yazar).
 2. Açılan pencerede **GTA6 Altyazı**'yı **Applications** (Uygulamalar) klasörüne sürükle.
 3. Uygulamalar'dan **GTA6 Altyazı**'yı aç.
 4. "Apple doğrulayamadı" uyarısı çıkarsa **Bitti**'ye bas; **Sistem Ayarları › Gizlilik ve Güvenlik**'in en altında **GTA6 Altyazı engellendi** yazısının yanındaki **Yine de Aç**'a bas, Mac şifreni gir. Bunu yalnız ilk açılışta bir kez yaparsın.

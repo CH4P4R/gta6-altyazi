@@ -222,7 +222,9 @@ SAMSUNG_TV = [
 
 MAC = [
     step("GTA6 Altyazı'yı kur",
-         ["Releases sayfasından **GTA6Altyazi-mac.dmg**'yi indir ve aç (yalnız Apple Silicon: M1 ve sonrası).",
+         ["Releases sayfasından Mac'ine uygun dosyayı indir ve aç: Apple işlemcili (M1 ve sonrası) için "
+          "**GTA6Altyazi-mac.dmg**, Intel işlemcili için **GTA6Altyazi-mac-intel.dmg** (elma menüsü › **Bu Mac Hakkında**'da "
+          "yazar).",
           "Açılan pencerede **GTA6 Altyazı**'yı **Applications** (Uygulamalar) klasörüne sürükle.",
           "Uygulamalar'dan **GTA6 Altyazı**'yı aç.",
           "\"Apple doğrulayamadı\" uyarısı çıkarsa **Bitti**'ye bas; **Sistem Ayarları › Gizlilik ve Güvenlik**'in en "
@@ -453,8 +455,8 @@ GUIDES: list[dict] = [
      "steps": CAPTURE},
     {"key": "fis", "icon": "play", "title": "\"Fişi takın\" ne demek?",
      "summary": "Ana ekrandaki fiş, programın Başlat düğmesidir.", "steps": FIS},
-    {"key": "mac", "icon": "ps", "title": "Mac'te kullanım (Apple Silicon)",
-     "summary": "M1 ve sonrası Mac'lerde kurulum, chiaki-ng ve macOS izinleri.", "steps": MAC},
+    {"key": "mac", "icon": "ps", "title": "Mac'te kullanım",
+     "summary": "Apple işlemcili ve Intel Mac'lerde kurulum, chiaki-ng ve macOS izinleri.", "steps": MAC},
     {"key": "google-tv", "icon": "tv", "title": "TV uygulaması: Google TV / Android TV",
      "summary": "TCL, Sony, Philips, Xiaomi, Hisense ve diğer Android TV'ler.", "steps": GOOGLE_TV},
     {"key": "lg", "icon": "tv", "title": "TV uygulaması: LG (webOS)",

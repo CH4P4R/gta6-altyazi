@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: AGPL-3.0-only
-# Yerleşik Remote Play kütüphanesini (couchsubs_native.dylib: libchiaki + FFmpeg) macOS Apple Silicon için derler.
+# Yerleşik Remote Play kütüphanesini (couchsubs_native.dylib: libchiaki + FFmpeg) macOS için (Apple Silicon ya da Intel, derleyen makineye göre) derler.
 # CouchSubs'ın scripts/build-chiaki-macos.sh betiğinden uyarlandı: Homebrew kütüphaneleri derleyen makinenin macOS'unu
 # hedeflediği için (eski macOS'ta açılışta çöker) OpenSSL, json-c, libevent, miniupnpc ve FFmpeg kaynaktan, macOS 13'ü
 # hedefleyerek statik derlenir; hepsi tek .dylib'in içine bağlanır (yalnız sistem kütüphanelerine bağlı kalır).
@@ -16,7 +16,7 @@ PREFIX="$WORK/prefix"
 VENV="$WORK/venv"
 JOBS="${JOBS:-$(sysctl -n hw.ncpu)}"
 MIN="13.0"
-ARCH="arm64"
+ARCH="${ARCH:-$(uname -m)}"            # arm64 (Apple Silicon) ya da x86_64 (Intel); derleyen makineye göre
 OPENSSL_VERSION="3.5.4"
 JSONC_TAG="json-c-0.18-20240915"
 FFMPEG_VERSION="7.1.2"

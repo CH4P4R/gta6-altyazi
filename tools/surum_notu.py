@@ -29,8 +29,10 @@ def notes(version: str, sha: str = "") -> str:
 2. "Windows kişisel bilgisayarınızı korudu" uyarısında **Ek bilgi › Yine de çalıştır**.
 3. İlk açılışta resimli kurulum sihirbazı adım adım yol gösterir. Takıldığın yerde uygulamadaki **Rehber** sayfasına bak.
 
-### Kurulum (Mac, M1 ve sonrası)
-1. Aşağıdaki **GTA6Altyazi-mac.dmg**'yi indir, aç, **GTA6 Altyazı**'yı **Applications** klasörüne sürükle.
+### Kurulum (Mac)
+1. Mac'in Apple işlemcili mi Intel mi, sol üstteki elma menüsü › **Bu Mac Hakkında**'da yazar ("Çip: Apple M…" ya da
+   "İşlemci: Intel"). Apple (M1 ve sonrası) için **GTA6Altyazi-mac.dmg**'yi, Intel için **GTA6Altyazi-mac-intel.dmg**'yi
+   indir, aç, **GTA6 Altyazı**'yı **Applications** klasörüne sürükle.
 2. İlk açılışta "Apple doğrulayamadı" uyarısı çıkarsa: **Sistem Ayarları › Gizlilik ve Güvenlik › Yine de Aç**.
 3. Ekran Kaydı ve Erişilebilirlik izinleri için uygulamadaki **Rehber › Mac'te kullanım**'a bak.
 
