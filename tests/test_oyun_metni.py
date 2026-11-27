@@ -46,3 +46,36 @@ def test_engine_snap_keeps_speaker(tmp_path, monkeypatch):
     eng.script, eng.game_pack = ix, None
     assert eng.snap("LUCIA: Get in the cor, we got cornpany!") == "LUCIA: Get in the car, we got company!"
     assert eng.snap("Nothing like this in the game here") == "Nothing like this in the game here"
+
+
+def test_pack_hit_does_not_wait_for_script_search(tmp_path):
+    """Hız: satır pakette varsa oyun metninde arama yapılmaz; yalnız pakette yoksa düzeltilip yeniden bakılır."""
+    from altyazi.translate import TranslationEngine
+
+    class Script:
+        calls = 0
+
+        def snap(self, text):
+            Script.calls += 1
+            return "Get in the car, we got company!" if "cornpany" in text else None
+
+    class Packs:
+        packs = []
+
+        def lookup(self, text):
+            return ("Arabaya bin, misafirimiz var!", "gta-6") if text == "Get in the car, we got company!" else None
+
+    class Cache:
+        def get(self, text):
+            return None
+
+    eng = TranslationEngine.__new__(TranslationEngine)
+    eng.script, eng.game_pack, eng.packs, eng.cache = Script(), None, Packs(), Cache()
+    eng.pack_lookup = lambda text: Packs().lookup(text)
+    eng.cfg = type("C", (), {"paket_kullan": True})()
+    eng.context, eng.ctx_lock = __import__("collections").deque(maxlen=0), __import__("threading").Lock()
+    got = []
+    eng.submit("Get in the car, we got company!", "altyazi", got.append)
+    assert got[0].text == "Arabaya bin, misafirimiz var!" and Script.calls == 0
+    eng.submit("Get in the car, we got cornpany!", "altyazi", got.append)
+    assert got[1].text == "Arabaya bin, misafirimiz var!" and Script.calls == 1

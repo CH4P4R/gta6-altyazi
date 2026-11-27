@@ -614,6 +614,10 @@ class TranslationEngine:
             if p.exists():
                 self.script = ScriptIndex(p)
                 log.info("Oyun metni yüklendi: %d satır", self.script.count)
+                sc = self.script
+                # İlk aramada disk okunuyor (1 sn'ye kadar): arka planda bir kez aranarak ısıtılır
+                threading.Thread(target=lambda: sc.snap("Get in the car, we have to go right now."), daemon=True,
+                                 name="oyun-metni-isit").start()
         except Exception as e:  # noqa: BLE001
             log.warning("Oyun metni açılamadı: %s", e)
 
@@ -818,10 +822,15 @@ class TranslationEngine:
         from .turkce_metin import is_sure
         if is_sure(text):
             return text
-        text = self.snap(text)
         found = self.lookup(text)
         if found:
             return found
+        fixed = self.snap(text)
+        if fixed != text:
+            text = fixed
+            found = self.lookup(text)
+            if found:
+                return found
         if self.refine:
             try:
                 tr = self._refine_text(text, kind, context or [])
@@ -854,8 +863,14 @@ class TranslationEngine:
         if is_sure(text):                    # zaten Türkçe (PS5'in Türkçe arayüzü): çevirmene gitmez (CouchSubs #298)
             on_result(Result(text, "türkçe", (time.perf_counter() - t0) * 1000, REFINED))
             return
-        text = self.snap(text)               # oyun metniyle okuma hatası düzeltilir (indirildiyse)
         pack_hit = self.pack_lookup(text)
+        if not pack_hit and self.script is not None and not self.cache.get(text):
+            # Okuma hatası olabilir: oyun metninde en yakın satır (50-100 ms) yalnız pakette ve önbellekte yoksa aranır;
+            # satırların %99'u pakette olduğu için altyazı bunu beklemez.
+            fixed = self.snap(text)
+            if fixed != text:
+                text = fixed
+                pack_hit = self.pack_lookup(text)
         if pack_hit:                         # hazır paket: anında, ücretsiz, yapay zekaya sorulmaz
             tr, pack_id = pack_hit
             on_result(Result(tr, f"paket/{pack_id}", (time.perf_counter() - t0) * 1000, REFINED))

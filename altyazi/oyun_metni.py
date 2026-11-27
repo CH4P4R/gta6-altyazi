@@ -121,6 +121,11 @@ class ScriptIndex:
         db = getattr(self._local, "db", None)
         if db is None:
             db = sqlite3.connect(f"file:{self.path}?mode=ro", uri=True, check_same_thread=False)
+            try:
+                db.execute("PRAGMA mmap_size=268435456")      # dizin belleğe eşlenir: aramalar diskten okumaz
+                db.execute("PRAGMA cache_size=-32768")
+            except sqlite3.Error:
+                pass
             self._local.db = db
         return db
 

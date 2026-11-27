@@ -3,6 +3,11 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
+## Sıradaki sürüm
+- **Daha hızlı altyazı:** oyun metniyle okuma düzeltmesi artık yalnız satır hazır pakette yoksa yapılıyor (önceden
+  her satırda paketten önce çalışıp 50-100 ms, ilk satırda 1 saniyeye kadar bekletiyordu). Düzeltme de ~4 kat hızlandı
+  (dizin belleğe eşleniyor ve açılışta ısıtılıyor).
+
 ## 0.9.7 · Ortak çeviri havuzu, telefonun bütün uygulamalarında panel, alanları oyunun üstünde düzenleme, OBS görünümü, Intel Mac
 - **Intel işlemcili Mac'ler için sürüm:** artık ayrı bir GTA6Altyazi-mac-intel.dmg da var; program güncellemede
   Mac'ine uygun olanı kendisi seçer.
