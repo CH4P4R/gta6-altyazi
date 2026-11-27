@@ -62,8 +62,14 @@ def test_port_holder_other_program():
         def log_message(self, *a):
             pass
 
+    class Quick(HTTPServer):
+        def server_bind(self):  # ters DNS (getfqdn) macOS CI'da 35 sn sürüyordu
+            import socketserver
+            socketserver.TCPServer.server_bind(self)
+            self.server_name, self.server_port = "localhost", self.server_address[1]
+
     port = free_port()
-    httpd = HTTPServer(("0.0.0.0", port), H)
+    httpd = Quick(("0.0.0.0", port), H)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     try:
         kind, _pid, name = tekkopya.port_holder(port)

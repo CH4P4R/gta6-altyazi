@@ -4,7 +4,6 @@ import importlib
 import json
 import sys
 import threading
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -20,7 +19,7 @@ def server(tmp_path, monkeypatch):
     store = hs.Store(tmp_path / "havuz.sqlite")
     packs = hs.Packs(store, min_votes=2)
     packs.rebuild()
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), hs.make_handler(store, packs, hs.RateLimit()))
+    httpd = hs.HavuzServer(("127.0.0.1", 0), hs.make_handler(store, packs, hs.RateLimit()))
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{httpd.server_address[1]}", store, packs, hs
     httpd.shutdown()

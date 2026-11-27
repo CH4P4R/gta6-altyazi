@@ -259,6 +259,17 @@ class RateLimit:
 
 
 # ------------------------------------------------------------------ HTTP
+class HavuzServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def server_bind(self) -> None:
+        # HTTPServer.server_bind makinenin adını ters DNS ile sorar (socket.getfqdn); bazı ağlarda 30 sn'yi buluyor.
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+        host, port = self.server_address[:2]
+        self.server_name, self.server_port = str(host), port
+
+
 def make_handler(store: Store, packs: Packs, limit: RateLimit):
     class Handler(BaseHTTPRequestHandler):
         server_version = "gta6-havuz/1"
@@ -371,7 +382,7 @@ def serve() -> None:
                 log.exception("Paket kurulamadı")
 
     threading.Thread(target=rebuild_loop, daemon=True).start()
-    httpd = ThreadingHTTPServer((HOST, PORT), make_handler(store, packs, RateLimit()))
+    httpd = HavuzServer((HOST, PORT), make_handler(store, packs, RateLimit()))
     log.info("Havuz %s:%d (en az %d oy, oyunlar: %s, veri: %s)", HOST, PORT, MIN_VOTES, ",".join(GAMES), DB_PATH)
     httpd.serve_forever()
 
