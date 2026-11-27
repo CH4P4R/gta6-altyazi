@@ -41,19 +41,6 @@ jobs:
           pip install --no-deps rapidocr_onnxruntime
           pip install onnxruntime
 
-      # Intel'de pyobjc'nin CoreMedia modülü @rpath/libswiftCoreMedia.dylib arıyor ama içinde LC_RPATH yok
-      # ("no LC_RPATH's found"); Swift kütüphaneleri sistemin /usr/lib/swift'inde: yol eklenir, yeniden yerel imzalanır.
-      - name: Intel'de pyobjc Swift yolu
-        if: matrix.arch == 'x86_64'
-        run: |
-          SP=$(python -c "import sysconfig; print(sysconfig.get_paths()['platlib'])")
-          find "$SP" -name "*.so" | while read -r f; do
-            if otool -L "$f" 2>/dev/null | grep -q "@rpath/libswift" && ! otool -l "$f" | grep -q "/usr/lib/swift"; then
-              install_name_tool -add_rpath /usr/lib/swift "$f" && codesign -f -s - "$f" && echo "rpath eklendi: $f"
-            fi
-          done
-          python -c "import CoreMedia, ScreenCaptureKit; print('CoreMedia tamam')"
-
       - name: Çeviri modeli önbelleği
         id: model-cache
         uses: actions/cache@v4
@@ -116,7 +103,15 @@ jobs:
           print("pencereler:", wins[:5])
           print("ekran kaydı izni:", macutil.screen_capture_allowed())
           print("kısayol:", Hotkeys.parse_mac("ctrl+shift+9"))
-          import ScreenCaptureKit, CoreMedia, Quartz, AppKit  # paketlenecek modüller yükleniyor mu
+          import platform, ScreenCaptureKit, Quartz, AppKit  # paketlenecek modüller yükleniyor mu
+          try:
+              import CoreMedia  # noqa: F401
+          except ImportError as e:
+              # Intel'de pyobjc'nin CoreMedia'sı bu macOS'un Swift kütüphanesiyle uyuşmuyor; uygulama pencereyi
+              # ScreenCaptureKit yerine CGWindowListCreateImage ile yakalar (capture_mac.py yedek yolu).
+              if platform.machine() != "x86_64":
+                  raise
+              print("::warning::Intel'de CoreMedia yüklenemedi, pencere yakalama yedek yolla:", e)
           print("pyobjc tamam")
           PY
 
