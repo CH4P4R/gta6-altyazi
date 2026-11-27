@@ -3,7 +3,7 @@
 Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyazi/releases) sayfasındadır. Eski bir
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
-## Sıradaki sürüm
+## 0.9.8 · Intel Mac sürümü çalışıyor, daha hızlı altyazı
 - **Intel Mac'te çökme düzeltildi:** Apple'ın yazı okuyucusu (Vision) altyazı ve ekran yazıları için aynı anda
   çağrılınca Intel işlemcili Mac'lerde program kapanıyordu; okumalar artık sırayla yapılıyor.
 - **Daha hızlı altyazı:** oyun metniyle okuma düzeltmesi artık yalnız satır hazır pakette yoksa yapılıyor (önceden
