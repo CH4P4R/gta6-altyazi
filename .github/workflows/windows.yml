@@ -193,17 +193,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Uçtan uca deneme başarısız: kurulum dosyası yayınlanmadı" }
 
       - name: Sürümler sayfasına koy
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          $v = python -c "import altyazi; print(altyazi.__version__)"
-          $tag = "v$v"
-          $sha = "${{ github.sha }}".Substring(0, 7)
-          python tools/surum_notu.py $v notlar.md $sha
-          gh release view $tag *> $null
-          if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --target "${{ github.sha }}" --prerelease --title "GTA6 Altyazı $v" --notes-file notlar.md
-          } else {
-            gh release edit $tag --notes-file notlar.md
-          }
-          gh release upload $tag dist\GTA6Altyazi-Setup.exe --clobber
+        run: bash tools/surum_yayinla.sh dist/GTA6Altyazi-Setup.exe
+
+      - name: Kurulum dosyasını sakla (sürüm sayfası açılamazsa kaybolmasın)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTA6Altyazi-Setup
+          path: dist/GTA6Altyazi-Setup.exe
+          if-no-files-found: ignore
+          retention-days: 14

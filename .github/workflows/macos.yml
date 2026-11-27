@@ -212,16 +212,16 @@ jobs:
       - name: Sürümler sayfasına koy
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          v=$(python -c "import altyazi; print(altyazi.__version__)")
-          tag="v$v"
-          for i in 1 2 3 4 5 6; do
-            if gh release view "$tag" >/dev/null 2>&1; then break; fi
-            python tools/surum_notu.py "$v" notlar.md "${GITHUB_SHA::7}"
-            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "GTA6 Altyazı $v" --notes-file notlar.md && break
-            sleep 30
-          done
-          gh release upload "$tag" dist/GTA6Altyazi-mac.dmg --clobber
+        run: bash tools/surum_yayinla.sh dist/GTA6Altyazi-mac.dmg
+
+      - name: Disk görüntüsünü sakla (sürüm sayfası açılamazsa kaybolmasın)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTA6Altyazi-mac
+          path: dist/GTA6Altyazi-mac.dmg
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Anahtar zincirini sil
         if: always()
