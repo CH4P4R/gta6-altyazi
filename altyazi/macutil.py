@@ -247,8 +247,9 @@ def accessibility_allowed(prompt: bool = False) -> bool | None:
         return None
 
 
-def raise_overlay(widget) -> None:  # noqa: ANN001
-    """Qt penceresini tam ekran uygulamaların (chiaki-ng) da üstünde, bütün masaüstlerinde göster; tıklamayı geçir."""
+def raise_overlay(widget, mouse: bool = False) -> None:  # noqa: ANN001
+    """Qt penceresini tam ekran uygulamaların (chiaki-ng) da üstünde, bütün masaüstlerinde göster; tıklamayı geçir
+    (mouse=True: alanlar ekranda düzenlenirken fareyi alır)."""
     try:
         import AppKit
         import objc
@@ -262,7 +263,7 @@ def raise_overlay(widget) -> None:  # noqa: ANN001
                                    | AppKit.NSWindowCollectionBehaviorFullScreenAuxiliary
                                    | AppKit.NSWindowCollectionBehaviorStationary
                                    | AppKit.NSWindowCollectionBehaviorIgnoresCycle)
-        win.setIgnoresMouseEvents_(True)
+        win.setIgnoresMouseEvents_(not mouse)
         win.setHasShadow_(False)
         if hasattr(win, "setHidesOnDeactivate_"):
             win.setHidesOnDeactivate_(False)

@@ -952,6 +952,13 @@ class RegionsPage(QWidget):
         self.extra_bg.sliderReleased.connect(self._extra_changed)
         self.extra.add(slider_row("Ek alanlarda kutu zemini (İngilizceyi örten kutunun koyuluğu)", self.extra_bg,
                                   lambda v: f"%{v}"))
+        self.extra.add(hbox(label("Oyun oynarken alanları doğrudan oyun görüntüsünün üstünde fareyle taşı, köşesinden "
+                                  "boyutlandır, sağ tıkla aç/kapat ya da yeni alan ekle. Kısayol: Ctrl+Shift+5.",
+                                  "faint", wrap=True), 12,
+                            button("Ekranda düzenle", "ghost", lambda: ctl.command("alan_duzenle")
+                                   if ctl.window is not None else ctl.notice.emit(
+                                       "Önce çeviriyi başlat; alanlar oyun görüntüsünün üstünde düzenlenir.")),
+                            spacing=0))
         root.addWidget(self.extra)
         self.chips = Chips([("__oto__", "Otomatik (önerilen)")] + [(k, k.split(" (")[0]) for k in PRESETS])
         self.chips.picked.connect(self._apply_preset_name)

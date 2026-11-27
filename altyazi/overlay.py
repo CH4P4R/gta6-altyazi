@@ -67,6 +67,7 @@ class Painter:
         self.items: dict[str, DisplayItem] = {}
         self.last: DisplayItem | None = None
         self.overlay: list[dict] = []
+        self.edit = None                  # alan_duzen.RegionEdit: alanlar ekranda düzenleniyorsa
 
     def paint(self, p: QPainter, area: QRectF) -> None:
         p.setRenderHint(QPainter.Antialiasing)
@@ -79,6 +80,9 @@ class Painter:
             self._item(p, area, it)
         if self.show_latency and self.last:
             self._hud(p, area)
+        if self.edit is not None:
+            from . import alan_duzen
+            alan_duzen.paint(p, area, self.edit)
 
     def _item(self, p: QPainter, A: QRectF, it: DisplayItem) -> None:
         x0, y0, x1, y1 = it.rect
@@ -222,7 +226,97 @@ class Painter:
         self.items.pop(zone, None)
 
 
-class OverlayWindow(QWidget):
+class _RegionEditing:
+    """Okuma alanlarını pencerenin üstünde fareyle düzenleme (alan_duzen.py). Pencere `_edit_area()` vermeli."""
+
+    def start_edit(self, edit, done) -> None:  # noqa: ANN001
+        """edit: alan_duzen.RegionEdit; done(edit) kaydedince, done(None) vazgeçince çağrılır."""
+        self.painter_.edit = edit
+        self._edit_done = done
+        self._input(True)
+        self.setFocus()
+        self.update()
+
+    def _finish(self, save: bool) -> None:
+        edit, done = self.painter_.edit, getattr(self, "_edit_done", None)
+        self.painter_.edit = None
+        self._edit_done = None
+        self._input(False)
+        self.update()
+        if done:
+            done(edit if save else None)
+
+    def _input(self, on: bool) -> None:  # noqa: ARG002
+        """Pencere fareyi ve klavyeyi alsın mı (katman normalde tıklamayı oyuna geçirir)."""
+
+    def _edit_area(self) -> QRectF:
+        return QRectF(self.rect())
+
+    def _norm(self, e) -> tuple[float, float]:  # noqa: ANN001
+        a = self._edit_area()
+        pos = e.position()
+        return ((pos.x() - a.left()) / max(1.0, a.width()), (pos.y() - a.top()) / max(1.0, a.height()))
+
+    def mousePressEvent(self, e) -> None:  # noqa: ANN001, N802
+        ed = self.painter_.edit
+        if ed is None:
+            return super().mousePressEvent(e)
+        x, y = self._norm(e)
+        if e.button() == Qt.RightButton:
+            self._context(ed, x, y, e.globalPosition().toPoint())
+        else:
+            ed.press(x, y)
+        self.update()
+
+    def mouseMoveEvent(self, e) -> None:  # noqa: ANN001, N802
+        ed = self.painter_.edit
+        if ed is None:
+            return super().mouseMoveEvent(e)
+        x, y = self._norm(e)
+        if ed.move(x, y):
+            self.update()
+            return
+        h = ed.hit(x, y)
+        shapes = {"move": Qt.SizeAllCursor, "l": Qt.SizeHorCursor, "r": Qt.SizeHorCursor, "t": Qt.SizeVerCursor,
+                  "b": Qt.SizeVerCursor, "tl": Qt.SizeFDiagCursor, "br": Qt.SizeFDiagCursor,
+                  "tr": Qt.SizeBDiagCursor, "bl": Qt.SizeBDiagCursor}
+        self.setCursor(shapes.get(h[1], Qt.ArrowCursor) if h else Qt.ArrowCursor)
+
+    def mouseReleaseEvent(self, e) -> None:  # noqa: ANN001, N802
+        ed = self.painter_.edit
+        if ed is None:
+            return super().mouseReleaseEvent(e)
+        ed.release()
+        self.update()
+
+    def keyPressEvent(self, e) -> None:  # noqa: ANN001, N802
+        if self.painter_.edit is not None and e.key() in (Qt.Key_Return, Qt.Key_Enter):
+            self._finish(True)
+        elif self.painter_.edit is not None and e.key() == Qt.Key_Escape:
+            self._finish(False)
+        else:
+            super().keyPressEvent(e)
+
+    def _context(self, ed, x: float, y: float, where) -> None:  # noqa: ANN001
+        from PySide6.QtWidgets import QMenu
+        menu = QMenu(self)
+        h = ed.hit(x, y)
+        if h is None:
+            menu.addAction("Buraya yeni alan ekle", lambda: ed.add(x, y))
+        else:
+            i = h[0]
+            r = ed.regions[i]
+            menu.addAction("Kapat" if r.aktif else "Aç", lambda: ed.toggle(i))
+            if not r.main:
+                menu.addAction("Sil", lambda: ed.remove(i))
+        menu.addSeparator()
+        menu.addAction("Kaydet (Enter)", lambda: self._finish(True))
+        menu.addAction("Vazgeç (Esc)", lambda: self._finish(False))
+        menu.exec(where)
+        self.update()
+
+
+class OverlayWindow(_RegionEditing, QWidget):
     def __init__(self, painter: Painter, bridge: Bridge, hwnd: int | None):
         super().__init__(None, Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
                          | Qt.WindowTransparentForInput | Qt.WindowDoesNotAcceptFocus)
@@ -277,6 +371,18 @@ class OverlayWindow(QWidget):
         self.painter_.paint(p, QRectF(self.rect()))
         p.end()
 
+    def _input(self, on: bool) -> None:
+        self.setWindowFlag(Qt.WindowTransparentForInput, not on)
+        self.setWindowFlag(Qt.WindowDoesNotAcceptFocus, not on)
+        self.setMouseTracking(on)
+        self.show()
+        if on:
+            self.raise_()
+            self.activateWindow()
+        if sys.platform == "darwin":
+            from . import macutil
+            macutil.raise_overlay(self, mouse=on)
+
     def closeEvent(self, e) -> None:  # noqa: ANN001, N802
         # Kullanıcı bu pencereyi kapatamaz (çerçevesiz, tıklamayı geçirir); kapatma isteği yalnız sistemden gelir
         # (Windows kapanırken, taskkill). Eskiden yalnız katman kapanıyor, program penceresiz açık kalıp port 8787'yi
@@ -286,7 +392,7 @@ class OverlayWindow(QWidget):
             QApplication.quit()
 
 
-class VideoWindow(QWidget):
+class VideoWindow(_RegionEditing, QWidget):
     def __init__(self, painter: Painter, bridge: Bridge, fullscreen: bool = False):
         super().__init__()
         self.setWindowTitle("GTA6 Altyazi")
@@ -302,9 +408,19 @@ class VideoWindow(QWidget):
         bridge.overlaid.connect(lambda items: (setattr(painter, "overlay", list(items or [])), self.update()))
         bridge.frame_ready.connect(self._on_frame, Qt.QueuedConnection)
         QShortcut(QKeySequence("F11"), self, self._toggle_fs)
-        QShortcut(QKeySequence("Esc"), self, self.showNormal)
+        QShortcut(QKeySequence("Esc"), self, lambda: self._finish(False) if self.painter_.edit else self.showNormal())
+        self._area = QRectF(self.rect())
         if fullscreen:
             self.showFullScreen()
+
+    def _edit_area(self) -> QRectF:
+        return self._area if self._area.width() > 0 else QRectF(self.rect())
+
+    def _input(self, on: bool) -> None:
+        self.setMouseTracking(on)
+        if on:
+            self.raise_()
+            self.activateWindow()
 
     def _toggle_fs(self) -> None:
         self.showNormal() if self.isFullScreen() else self.showFullScreen()
@@ -333,7 +449,10 @@ class VideoWindow(QWidget):
             s = min(self.width() / w, self.height() / h)
             area = QRectF((self.width() - w * s) / 2, (self.height() - h * s) / 2, w * s, h * s)
             p.drawImage(area, img)
+            self._area = area
             self.painter_.paint(p, area)
+        elif self.painter_.edit is not None:
+            self.painter_.paint(p, self._edit_area())
         p.end()
 
 

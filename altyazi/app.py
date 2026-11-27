@@ -181,7 +181,8 @@ class AppController(QObject):
         k = self.cfg.kisayol
         acts = {"tam_ekran": (k.tam_ekran, k.tam_ekran2), "duraklat": (k.duraklat, k.duraklat2),
                 "baslat_durdur": (k.baslat, k.baslat2), "seslendir": (k.seslendir, k.seslendir2),
-                "tv_deneme": (k.tv_deneme, k.tv_deneme2)}
+                "tv_deneme": (k.tv_deneme, k.tv_deneme2),
+                "alan_duzenle": (getattr(k, "alan_duzenle", ""), getattr(k, "alan_duzenle2", ""))}
         bindings = {}
         for name, combos in acts.items():
             for combo in combos:
@@ -490,6 +491,8 @@ class AppController(QObject):
             self.apply_config(cfg)
         elif name == "baglan":
             self.launch_chiaki(stream=True)
+        elif name == "alan_duzenle":
+            self.edit_regions_on_screen()
         elif name == "ps5_kaydet" and getattr(self, "_found_ps5", None):
             cfg = self.edit_config()
             cfg.otomatik.ps5_adi, cfg.otomatik.ps5_ip = self._found_ps5.name, self._found_ps5.ip
@@ -547,6 +550,11 @@ class AppController(QObject):
         if name == "tv_deneme":
             self.tv_test()
             return {"mesaj": "TV'ye deneme altyazısı gönderildi"}
+        if name == "alan_duzenle":
+            if self.window is None:
+                return {"mesaj": "Önce çeviriyi bilgisayar penceresinde başlat (oyun TV'deyse Okuma alanı sayfasını kullan)"}
+            self._uiCommand.emit("alan_duzenle")
+            return {"mesaj": "Alanlar ekranda düzenleniyor: Enter kaydet, Esc vazgeç"}
         if name == "baglan":
             self._uiCommand.emit("baglan")
             return {"mesaj": "chiaki-ng açılıyor..."}
@@ -1103,6 +1111,27 @@ class AppController(QObject):
                 self.packProgress.emit(pack_id, -1.0)
 
         threading.Thread(target=run, daemon=True, name="paket").start()
+
+    def edit_regions_on_screen(self) -> bool:
+        """Okuma alanlarını çeviri penceresinin (oyunun üstündeki katman ya da capture kart penceresi) üstünde
+        fareyle düzenlet. Kaydedilince ayara yazılır."""
+        win = self.window
+        if win is None or not hasattr(win, "start_edit"):
+            self._notice("Alanları ekranda düzenlemek için çeviri bilgisayar penceresinde çalışıyor olmalı.")
+            return False
+        from .alan_duzen import RegionEdit
+
+        def done(edit) -> None:  # noqa: ANN001
+            if edit is None:
+                self._notice("Alan düzenleme iptal edildi")
+                return
+            cfg = self.edit_config()
+            cfg.bolgeler = edit.apply_to(cfg.bolgeler)
+            self.apply_config(cfg)
+            self._notice(f"Alanlar kaydedildi ({len(cfg.bolgeler)} alan)")
+
+        win.start_edit(RegionEdit.from_config(self.cfg.bolgeler), done)
+        return True
 
     def _start_pool(self) -> None:
         """Ortak çeviri havuzu: açıksa yapay zekâ çevirileri gönderilir, havuz paketi saatte bir iner."""

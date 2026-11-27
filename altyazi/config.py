@@ -158,6 +158,8 @@ class KisayolCfg:
     seslendir2: str = "num7"
     tv_deneme: str = "ctrl+shift+6"   # TV'ye deneme altyazısı gönder
     tv_deneme2: str = "num6"
+    alan_duzenle: str = "ctrl+shift+5"   # okuma alanlarını oyun görüntüsünün üstünde fareyle düzenle
+    alan_duzenle2: str = "num5"
 
 
 @dataclass
