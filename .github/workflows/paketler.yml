@@ -15,6 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Ortak çeviri havuzu ayakta mı (bilgi; başarısız olsa da devam)
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import json, sys, urllib.request
+          sys.path.insert(0, ".")
+          from altyazi.havuz import DEFAULT_URL
+          try:
+              with urllib.request.urlopen(DEFAULT_URL + "/v1/saglik", timeout=15) as r:
+                  d = json.loads(r.read())
+              print("Havuz:", DEFAULT_URL, "ok" if d.get("ok") else "SORUNLU", "| oy", d.get("oy"), "| satır", d.get("satir"),
+                    "| kurulum", d.get("kurulum"), "| paket", [(p["id"], p["entries"]) for p in d.get("paket") or []])
+          except Exception as e:
+              print("::warning::Havuz yanıt vermedi:", DEFAULT_URL, e)
+          PY
       - name: Paketleri indir ve doğrula
         run: python3 tools/paket_aynasi.py cikti
       - name: Paketler sürümüne yükle
