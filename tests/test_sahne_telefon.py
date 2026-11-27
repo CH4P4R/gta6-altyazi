@@ -686,3 +686,20 @@ def test_daylight_phone_is_found():
 @pytest.mark.skip(reason=VISION)
 def test_daylight_phone_with_photo_is_a_thread():
     pass
+
+
+def test_app_screen_becomes_panel_with_title_and_rows_like_the_phone():
+    """Taksi gibi koyu uygulama: telefonun yanında başlıklı panel; satırlar zeminden biraz açık kutularda, beyaz yazı."""
+    lines = [Message("Standard Ride", TextBox(0.61, 0.30, 0.70, 0.32), 0.02),
+             Message("Change Destination", TextBox(0.61, 0.70, 0.73, 0.72), 0.02)]
+    items = telefon.side_bubbles(lines, ["Standart Araç", "Varış Noktasını Değiştir"], COVER_PANEL, chat=False,
+                                 title="Yolculuk Bilgileri", color=lambda x, y: (40, 38, 52),
+                                 lines=lambda t, w, h: (1, len(t)))
+    backdrop, rows = items[0], items[1:]
+    assert backdrop.backdrop and backdrop.translation == "Yolculuk Bilgileri"
+    assert backdrop.alpha == telefon.LIGHT_BACKDROP_ALPHA, "telefon ekranı gibi az saydam"
+    for row in rows:
+        assert row.ink == "#f5f5f7"
+        r, g, b = (int(row.fill[i:i + 2], 16) for i in (1, 3, 5))
+        assert r > 40 and b > 52, "zeminden biraz açık"
+    assert abs(rows[0].box.top - 0.30) < 0.01 and rows[1].box.top > rows[0].box.top, "telefondaki yerinde"

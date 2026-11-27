@@ -855,10 +855,10 @@ def side_bubbles(messages: Sequence[Message], translations: Sequence[str], panel
         return int(float(v) + (255 - float(v)) * to_white)
 
     backdrop.fill = _hex(lift(ground[0]), lift(ground[1]), lift(ground[2]))
-    backdrop.alpha = LIGHT_BACKDROP_ALPHA if light_chat else BACKDROP_ALPHA
+    backdrop.alpha = LIGHT_BACKDROP_ALPHA if light_chat or not chat else BACKDROP_ALPHA
     backdrop.backdrop = True
     # Panelin en üstünde ortada gönderenin adı (TV başlık olarak çizer; ad çevrilmez).
-    if chat and title:
+    if title:
         backdrop.translation = title
         backdrop.line_height = min(max(max((m.line_height for m in kept), default=0.022), 0.02), 0.028)
     items.append(backdrop)
@@ -890,6 +890,19 @@ def side_bubbles(messages: Sequence[Message], translations: Sequence[str], panel
             else:
                 tuned = (r + (255 - r) * 0.7, g + (255 - g) * 0.7, b + (255 - b) * 0.7)
             item.fill = _hex(int(tuned[0]), int(tuned[1]), int(tuned[2]))
+        own = _fill_rgb(item.fill)
+        colored = own is not None and max(own) - min(own) > 60
+        if not chat and not colored:
+            # Uygulama ekranı: satırlar telefondaki gibi zeminden biraz açık (koyu uygulama) ya da biraz koyu (açık
+            # uygulama) kutularda; örnek renk telefonun parlatılmış görüntüsünden geldiği için zeminden türetilir.
+            # Renkli kartın (mor banka kartı) üstündeki satır kartın rengini ve yazı rengini korur.
+            if lum(ground) < 110:
+                row = tuple(int(c + (255 - c) * 0.14) for c in ground)
+                item.ink = "#f5f5f7"
+            else:
+                row = tuple(int(c * 0.9) for c in ground)
+                item.ink = "#1c1c1e"
+            item.fill = _hex(*row)
         item.box = box
         item.line_height = heights[index]
         item.angle = None

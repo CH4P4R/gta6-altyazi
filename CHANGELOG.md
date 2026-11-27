@@ -4,6 +4,8 @@ Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyaz
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
 ## Sıradaki sürüm
+- **Telefonun bütün uygulamalarında panel:** taksi, banka, haber gibi uygulamalarda da Türkçe artık telefonun yanında,
+  telefon boyunda bir panelde: uygulamanın başlığı en üstte, her satır telefondaki yerinde ve uygulamanın renginde.
 - **Yazı tipi seçimindeki "Yuvarlak" düğmesi** artık kalın ve okunaklı (önceden çok ince görünüyordu).
 - **Ortak çeviri havuzu (kendi sunucumuz):** yapay zekânın çevirdiği GTA 6 satırları GTA6 Altyazı'nın sunucusunda
   toplanır; aynı satırın aynı Türkçesini iki farklı oyuncu gönderince satır herkese ücretsiz ve anında gelir.

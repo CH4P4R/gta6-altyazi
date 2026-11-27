@@ -295,10 +295,11 @@ class SceneWatcher:
         if len(self.phone_memory) > 600:
             self.phone_memory.clear()
         color = telefon.lifted_sampler(frame, panel)
+
+        def lines(text: str, width: float, line: float) -> tuple[int, int]:
+            w = wrap(text, width, line)
+            return len(w), max(len(x) for x in w)
         if chat:
-            def lines(text: str, width: float, line: float) -> tuple[int, int]:
-                w = wrap(text, width, line)
-                return len(w), max(len(x) for x in w)
             if self.phone_mode == "ust":
                 # Telefonun kendi ekranında: her mesajın Türkçesi balonun tam üstünde, balonun renginde (eğik
                 # telefonda eğik); TV'de telefon sanki Türkçeymiş gibi görünür
@@ -306,8 +307,31 @@ class SceneWatcher:
             else:
                 items = telefon.side_bubbles(msgs, texts, panel, chat=True, title=telefon.title_text(reading, panel),
                                              color=color, lines=lines)
-        else:
+        elif self.phone_mode == "ust":
             items = telefon.app_bubbles(msgs, texts, panel, color=color)
+        else:
+            # Banka, taksi, haber gibi uygulamalar da mesajlar gibi telefonun yanında, telefon boyunda bir panelde:
+            # başlık en üstte, her satır telefondaki yerinde ve kendi zemininin renginde.
+            head, head_tr = telefon.title_text(reading, panel), None
+            if head:
+                k = normalize(head)
+                for m, t in zip(msgs, texts):
+                    if normalize(m.text) == k and t:
+                        head_tr = t
+                if head_tr is None:
+                    head_tr = telefon.glossary(head) or self.lookup(head) or self.phone_memory.get(k)
+                if head_tr is None and len(k) > 2:
+                    try:
+                        head_tr = without_icons(self.translate(head, "arayuz", []) or "").strip() or None
+                    except Exception:  # noqa: BLE001
+                        head_tr = None
+                    if head_tr:
+                        self.phone_memory[k] = head_tr
+            body = [(m, t) for m, t in zip(msgs, texts) if not head or normalize(m.text) != normalize(head)]
+            items = telefon.side_bubbles([m for m, _ in body], [t for _, t in body], panel, chat=False,
+                                         title=head_tr or head, color=color, lines=lines) if body else []
+            if not items:
+                items = telefon.app_bubbles(msgs, texts, panel, color=color)
         anchor = panel.box
         if self.phone_base is not None:              # telefon elde az oynadıysa panel yerinde kalır
             old = self.phone_base[0]

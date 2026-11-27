@@ -1959,7 +1959,8 @@ class TranslationPage(QWidget):
                      slider_row("Yarım okunan satır için bekleme", self.wait_partial,
                                 lambda v: f"{v / 10:.1f} sn".replace(".", ",")), spacing=24))
         adv.add(field("Telefon mesajlarının Türkçesi", self.phone_where,
-                      "Yanında: telefonun yanında, telefon ekranının Türkçe kopyası gibi, her mesaj kendi balonunda. "
+                      "Yanında: telefonun yanında, telefon ekranının Türkçe kopyası gibi bir panel (mesajlar, taksi, banka, haber "
+                      "uygulamaları). "
                       "Üstünde: her mesajın Türkçesi kendi balonunun tam üstünde."))
         adv.add(label("Sözlük", "h3"))
         adv.add(label("Her satıra bir terim: <b>İngilizce = Türkçe</b>. İsimleri olduğu gibi bırakmak için iki tarafa "
