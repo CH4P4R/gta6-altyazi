@@ -1139,7 +1139,7 @@ class AppController(QObject):
     def _start_pool(self) -> None:
         """Ortak çeviri havuzu: açıksa yapay zekâ çevirileri gönderilir, havuz paketi saatte bir iner."""
         h = getattr(self.cfg, "havuz", None)
-        if self.engine is None or h is None or not h.acik:
+        if self.engine is None or h is None or not h.acik or os.environ.get("ALTYAZI_HAVUZ_KAPALI"):
             return
         from . import config, paths
         from .havuz import DEFAULT_URL, PoolClient

@@ -10,6 +10,7 @@ Vision yoksa (Windows, Linux, eski Mac) available() False döner ve PP-OCR (ocr.
 
 from __future__ import annotations
 
+import threading
 import logging
 import sys
 
@@ -20,6 +21,8 @@ log = logging.getLogger(__name__)
 _GAP = 0.6          # birleştirilmiş görüntüde satır arası boşluk (satır yüksekliğine oran)
 _MIN_H = 32         # Vision küçük yazıyı kaçırır: satır bundan kısaysa büyütülür
 
+
+_VISION_LOCK = threading.Lock()
 
 def available() -> bool:
     if sys.platform != "darwin":
@@ -59,7 +62,9 @@ def read(img: np.ndarray, fast: bool = False, correction: bool = True,
 
     h, w = img.shape[:2]
     out = []
-    with objc.autorelease_pool():
+    # Vision aynı anda iki iş parçacığından çağrılınca Intel Mac'te (Neural Engine yok) program çöküyordu (CI'da
+    # görüldü: altyazı hattı ve ekran yazıları izleyicisi aynı anda okuyordu). Okumalar sıraya alınır.
+    with _VISION_LOCK, objc.autorelease_pool():
         req = Vision.VNRecognizeTextRequest.alloc().init()
         req.setRecognitionLevel_(Vision.VNRequestTextRecognitionLevelFast if fast
                                  else Vision.VNRequestTextRecognitionLevelAccurate)
