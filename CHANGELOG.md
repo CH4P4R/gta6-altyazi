@@ -4,6 +4,9 @@ Her sürümün kurulum dosyası [Releases](https://github.com/CH4P4R/gta6-altyaz
 sürümün üstüne kurabilirsin; ayarların ve Claude anahtarın korunur.
 
 ## Sıradaki sürüm
+- **OBS için ayrı yayın görünümü:** OBS katmanı sayfasında yayına özel yerleşim (oyunun yazısının üstünde ya da
+  altta/üstte altyazı şeridi), yazı tipi, boyut, renk, siyah çizgi ve kutu koyuluğu. TV'yi ve kendi ekranını
+  etkilemez; değişiklik yayında 2 saniye içinde görünür.
 - **Okuma alanlarını oyunun üstünde düzenle:** oyun oynarken Ctrl+Shift+5 (ya da Okuma alanı → "Ekranda düzenle"):
   alanlar oyun görüntüsünün üstünde görünür; fareyle taşı, köşesinden boyutlandır, sağ tıkla aç/kapat/sil ya da boş
   yere sağ tıkla yeni alan ekle. Enter kaydeder, Esc vazgeçer. Bilgisayar katmanında ve capture kart penceresinde çalışır.

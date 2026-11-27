@@ -157,6 +157,7 @@ class AppController(QObject):
             log.info("Yerel sunucu açılamadı (port %s): %s", self.cfg.sunucu.port, e)
             return False
         self.server = srv
+        srv.obs_style = self.cfg.obs.style() if hasattr(self.cfg, "obs") else {}
         self._apply_tv_style()
         return True
 
@@ -671,6 +672,8 @@ class AppController(QObject):
             x, y, w, h = cfg.tv.kalibrasyon
             self.server.tv = {"x": x, "y": y, "w": w, "h": h}
             self._apply_tv_style()
+        if self.server and hasattr(cfg, "obs"):
+            self.server.obs_style = cfg.obs.style()           # OBS sayfası 2 sn içinde yeni görünümü alır
         engines_changed = old.ceviri != cfg.ceviri or old.ocr != cfg.ocr
         running = self.state == "calisiyor"
         if getattr(old, "havuz", None) != getattr(cfg, "havuz", None) and not engines_changed:

@@ -37,6 +37,11 @@ _MARKA_NAME = re.compile(r"[a-z0-9_]+\.(png|json)")
 _MARKA_TYPES = {"png": "image/png", "json": "application/json; charset=utf-8"}
 
 
+# OBS yayın görünümünün yazı tipleri (/yazi/<ad>): TV uygulamasının dosyaları; Yuvarlak'ın kalın sabit örneği masaüstüyle ortak
+FONT_FILES = {"BarlowCondensed-SemiBold.ttf", "Barlow-SemiBold.ttf", "Nunito-ExtraBold.ttf"}
+FONT_DIRS = ("altyazi/ui/fonts", "tv-web/src/fonts", "tv-web/build/tizen/fonts")
+
+
 def _box(rect) -> dict:  # noqa: ANN001
     x0, y0, x1, y1 = (max(0.0, min(1.0, float(v))) for v in rect)
     return {"left": round(x0, 4), "top": round(y0, 4), "right": round(x1, 4), "bottom": round(y1, 4)}
@@ -52,32 +57,54 @@ PAGE = """<!doctype html><html lang="tr"><head><meta charset="utf-8">
 // PC ve TV'deki çizimle aynı: İngilizcenin yerini kutuyla kapatır, Türkçeyi aynı boyutta ortasına yazar.
 // OBS: Tarayıcı kaynağı, 1920x1080, oyun görüntüsünün (capture kart) tam üstüne.
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),items={};
-const FONT='600 {px}px "Segoe UI Semibold","Segoe UI",Roboto,sans-serif';
+// OBS: yayın görünümü programdaki "OBS katmanı" sayfasından ayarlanır (/obs/stil, 2 sn'de bir okunur, anında değişir).
+const OBS=OBSMODE,SADE='"Segoe UI Semibold","Segoe UI",Roboto,sans-serif';
+let ST={gorunum:'ust',yazi_tipi:'sade',boyut:100,renk:'#ffffff',kontur:true,kutu:-1,konum:'alt',bosluk:6};
+const FAM={aksiyon:'"OBS Aksiyon",'+SADE,modern:'"OBS Modern",'+SADE,yuvarlak:'"OBS Yuvarlak",'+SADE,sade:SADE};
+function fontPx(px){return '600 '+px+'px '+(OBS?(FAM[ST.yazi_tipi]||SADE):SADE)}
+function loadFonts(){[['OBS Aksiyon','BarlowCondensed-SemiBold.ttf'],['OBS Modern','Barlow-SemiBold.ttf'],
+ ['OBS Yuvarlak','Nunito-ExtraBold.ttf']].forEach(function(f){try{new FontFace(f[0],'url(/yazi/'+f[1]+')').load()
+ .then(function(x){document.fonts.add(x);draw()}).catch(function(){})}catch(e){}})}
+function style(){fetch('/obs/stil',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){
+ const before=JSON.stringify(ST);ST=Object.assign(ST,s);if(JSON.stringify(ST)!==before)draw()}).catch(function(){})}
 function size(){const r=devicePixelRatio||1;cv.width=innerWidth*r;cv.height=innerHeight*r;
  cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';ctx.setTransform(r,0,0,r,0,0);draw()}
 function wrap(t,maxW){const out=[];let cur='';for(const w of t.trim().split(/\\s+/)){const tr=cur?cur+' '+w:w;
  if(cur&&ctx.measureText(tr).width>maxW){out.push(cur);cur=w}else cur=tr}if(cur)out.push(cur);return out.length?out:['']}
 function rrect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();ctx.fill()}
+function paintText(lines,x0,y0,tw,sp,asc,pad,align){ctx.lineJoin='round';
+ ctx.fillStyle=OBS?ST.renk:'#fff';let y=y0+pad+asc;for(const s of lines){const w=ctx.measureText(s).width;
+  const x=align==='sol'?x0+pad:align==='sag'?x0+tw-pad-w:x0+tw/2-w/2;if(!OBS||ST.kontur)ctx.strokeText(s,x,y);
+  ctx.fillText(s,x,y);y+=sp}}
+function boxAlpha(it){return OBS&&ST.kutu>=0?ST.kutu/100:(it.box_opacity??255)/255}
+function strip(list,W,H){// OBS "altyazı şeridi": konumdan bağımsız, ekranın altında (ya da üstünde) ortada
+ const line=Math.max(14,0.042*H*(ST.boyut/100)),pad=line*0.32;ctx.font=fontPx(Math.round(line*0.92));
+ const m=ctx.measureText('Ğg'),asc=m.actualBoundingBoxAscent,fh=asc+m.actualBoundingBoxDescent,sp=fh*1.15;
+ let lines=[];for(const it of list)lines=lines.concat(wrap(it.text,W*0.8-2*pad));
+ const tw=Math.max(...lines.map(s=>ctx.measureText(s).width))+2*pad,th=sp*lines.length+2*pad-(sp-fh);
+ const bx=W/2-tw/2,gap=H*(ST.bosluk/100),by=ST.konum==='ust'?gap:H-gap-th;
+ ctx.fillStyle='rgba(0,0,0,'+boxAlpha(list[0])+')';rrect(bx,by,tw,th,pad*0.8);
+ ctx.lineWidth=Math.max(2,line*0.10);ctx.strokeStyle='#000';paintText(lines,bx,by,tw,sp,asc,pad,'orta')}
 function item(it,W,H){const [x0,y0,x1,y1]=it.rect,z=it.zone_rect||it.rect;
  const R={l:x0*W,t:y0*H,r:x1*W,b:y1*H};R.w=R.r-R.l;R.h=R.b-R.t;
- const zoneW=(z[2]-z[0])*W,line=Math.max(14,(it.line_h||0.035)*H),pad=line*0.28;
- ctx.font=FONT.replace('{px}',Math.round(line*0.92*(it.font_scale||1)));
+ const zoneW=(z[2]-z[0])*W,line=Math.max(14,(it.line_h||0.035)*H*(OBS?ST.boyut/100:1)),pad=line*0.28;
+ ctx.font=fontPx(Math.round(line*0.92*(it.font_scale||1)));
  const maxW=it.align==='orta'?Math.max(R.w,zoneW*0.96):Math.min(zoneW,Math.max(R.w*1.15,line*12));
  const lines=wrap(it.text,maxW-2*pad),m=ctx.measureText('Ğg'),asc=m.actualBoundingBoxAscent,fh=asc+m.actualBoundingBoxDescent;
  const sp=fh*1.15,tw=Math.max(...lines.map(s=>ctx.measureText(s).width))+2*pad,th=sp*lines.length+2*pad-(sp-fh);
  const bx=it.align==='sol'?R.l-pad:it.align==='sag'?R.r+pad-tw:(R.l+R.r)/2-tw/2;
  const by=th<=R.h+2*pad?(R.t+R.b)/2-th/2:(it.anchor==='alt'?R.b+pad-th:R.t-pad);
  const cl=Math.min(bx,R.l-pad),ct=Math.min(by,R.t-pad),cr=Math.max(bx+tw,R.r+pad),cb=Math.max(by+th,R.b+pad);
- ctx.fillStyle='rgba(0,0,0,'+((it.box_opacity??255)/255)+')';rrect(cl,ct,cr-cl,cb-ct,pad*0.8);
- ctx.lineJoin='round';ctx.lineWidth=Math.max(2,line*0.10);ctx.strokeStyle='#000';ctx.fillStyle='#fff';
- let y=by+pad+asc;for(const s of lines){const w=ctx.measureText(s).width;
-  const x=it.align==='sol'?bx+pad:it.align==='sag'?bx+tw-pad-w:bx+tw/2-w/2;ctx.strokeText(s,x,y);ctx.fillText(s,x,y);y+=sp}}
-function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);for(const k in items)item(items[k],innerWidth,innerHeight)}
+ ctx.fillStyle='rgba(0,0,0,'+boxAlpha(it)+')';rrect(cl,ct,cr-cl,cb-ct,pad*0.8);
+ ctx.lineWidth=Math.max(2,line*0.10);ctx.strokeStyle='#000';paintText(lines,bx,by,tw,sp,asc,pad,it.align)}
+function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);const W=innerWidth,H=innerHeight,main=[];
+ for(const k in items){if(OBS&&ST.gorunum==='serit'&&k==='altyazi')main.push(items[k]);else item(items[k],W,H)}
+ if(main.length)strip(main,W,H)}
 function go(){const es=new EventSource('/olaylar');
  es.onmessage=e=>{const d=JSON.parse(e.data);if(d.type==='show')items[d.zone]=d;else delete items[d.zone];draw()};
  es.onerror=()=>{es.close();for(const k in items)delete items[k];draw();setTimeout(go,1000)}}
-addEventListener('resize',size);size();go();
+addEventListener('resize',size);size();go();if(OBS){loadFonts();style();setInterval(style,2000)}
 </script></body></html>"""
 
 
@@ -795,6 +822,7 @@ class EventServer:
         self.clients: list[queue.Queue] = []
         self.lock = threading.RLock()     # TV durumu birden çok iş parçacığından değişir; gönderim de aynı kilitle
         self.screen_ms = 20000            # "Ekranı çevir" kaç ms kalsın (ayar: kisayol.tam_ekran_sure)
+        self.obs_style: dict = {}         # OBS yayın görünümü (/obs/stil; ayar: obs)
         self._sub_english = ""
         self.state: dict[str, dict] = {}
         # TV uygulamaları (CouchSubs protokolü)
@@ -1011,6 +1039,27 @@ class EventServer:
                 self.end_headers()
                 self.wfile.write(body)
 
+            def _font(self, name: str) -> None:
+                """OBS yayın görünümünün yazı tipleri (TV uygulamasıyla aynı dosyalar)."""
+                body = None
+                if name in FONT_FILES:
+                    from .paths import resource
+                    for d in FONT_DIRS:
+                        try:
+                            body = (resource(d) / name).read_bytes()
+                            break
+                        except OSError:
+                            continue
+                if body is None:
+                    self.send_error(404)
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "font/ttf")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "max-age=86400")
+                self.end_headers()
+                self.wfile.write(body)
+
             def do_GET(self):  # noqa: N802
                 path = self.path.split("?")[0]
                 if path in ("/kim", "/hello"):   # TV uygulaması kasayı ağda bu adresle bulur
@@ -1032,8 +1081,14 @@ class EventServer:
                     self.wfile.write(body)
                 elif path.startswith("/marka/"):
                     self._marka(path[len("/marka/"):])
+                elif path == "/obs/stil":
+                    self._json(200, dict(srv.obs_style))
+                elif path.startswith("/yazi/"):
+                    self._font(path[len("/yazi/"):])
                 elif path in ("/", "/obs"):
-                    body = PAGE.replace("BG", "transparent" if path == "/obs" else "#000").encode()
+                    obs = path == "/obs"
+                    body = PAGE.replace("BG", "transparent" if obs else "#000") \
+                        .replace("OBSMODE", "true" if obs else "false").encode()
                     self.send_response(200)
                     self.send_header("Content-Type", "text/html; charset=utf-8")
                     self.send_header("Content-Length", str(len(body)))

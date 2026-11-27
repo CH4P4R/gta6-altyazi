@@ -2671,6 +2671,39 @@ class ObsPage(QWidget):
             box.setObjectName("mono")
             src.add(hbox(box, button("Kopyala", None, lambda _=False, u=url: self._copy(u)), spacing=8))
         root.addWidget(src)
+
+        # --- yayına özel görünüm (TV ve bilgisayar katmanından bağımsız)
+        o = ctl.cfg.obs
+        look = SectionCard("Yayın görünümü", "Altyazının yayında nasıl görüneceği. TV'yi ve kendi ekranını etkilemez; "
+                           "değişiklik OBS'te 2 saniye içinde görünür.", margins=18, spacing=10)
+        self.o_mode = Segmented([("ust", "Oyunun yazısının üstünde"), ("serit", "Altyazı şeridi")], o.gorunum)
+        self.o_mode.setFixedWidth(420)
+        look.add(hbox(label("Yerleşim", "h3"), self.o_mode, None, spacing=12))
+        self.o_font = FontChoice(o.yazi_tipi)
+        look.add(field("Yazı tipi", self.o_font))
+        self.o_size = slider(50, 250, int(o.boyut))
+        self.o_box = slider(0, 100, int(o.kutu))
+        look.add(hbox(slider_row("Yazı boyu", self.o_size, lambda v: f"%{v}"),
+                      slider_row("Kutu koyuluğu (0: kutusuz)", self.o_box, lambda v: f"%{v}"), spacing=24))
+        self.o_color = Segmented([("#ffffff", "Beyaz"), ("#ffe14d", "Sarı"), ("#ff9ccc", "Pembe"), ("#7fe3ff", "Mavi")],
+                                 o.renk if o.renk in ("#ffffff", "#ffe14d", "#ff9ccc", "#7fe3ff") else "#ffffff")
+        self.o_color.setFixedWidth(360)
+        self.o_outline = QCheckBox("Yazının çevresinde siyah çizgi", o.kontur)
+        look.add(hbox(label("Renk", "h3"), self.o_color, 16, self.o_outline, None, spacing=12))
+        self.o_pos = Segmented([("alt", "Altta"), ("ust", "Üstte")], o.konum)
+        self.o_pos.setFixedWidth(200)
+        self.o_gap = slider(0, 40, int(o.bosluk))
+        self.o_strip = QWidget()
+        self.o_strip.setLayout(hbox(label("Şeridin yeri", "h3"), self.o_pos, 16,
+                                    slider_row("Kenardan uzaklık", self.o_gap, lambda v: f"%{v}"), None, spacing=12))
+        look.add(self.o_strip)
+        self.o_strip.setVisible(o.gorunum == "serit")
+        for sig in (self.o_mode.changed, self.o_font.changed, self.o_color.changed, self.o_pos.changed):
+            sig.connect(lambda _v: self._save_obs())
+        for sl in (self.o_size, self.o_box, self.o_gap):
+            sl.sliderReleased.connect(self._save_obs)
+        self.o_outline.toggled.connect(lambda _on: self._save_obs())
+        root.addWidget(look)
         win = SectionCard("Yayın penceresi", "Saydam tarayıcı kaynağı olmayan yayın programları (TikTok LIVE Studio, "
                           "Streamlabs ve diğerleri) için: yayın penceresini aç, programda Pencere yakalama ile ekle "
                           "(pencerenin adı GTA6 Altyazı Yayın) ve zeminini Chroma key filtresiyle sil.", margins=18)
@@ -2687,6 +2720,20 @@ class ObsPage(QWidget):
         from PySide6.QtWidgets import QApplication
         QApplication.clipboard().setText(url)
         self.window().toast.show_text("Adres kopyalandı")
+
+    def _save_obs(self) -> None:
+        cfg = self.ctl.edit_config()
+        o = cfg.obs
+        o.gorunum = self.o_mode.value() or "ust"
+        o.yazi_tipi = self.o_font.value()
+        o.boyut = self.o_size.value()
+        o.kutu = self.o_box.value()
+        o.renk = self.o_color.value() or "#ffffff"
+        o.kontur = self.o_outline.isChecked()
+        o.konum = self.o_pos.value() or "alt"
+        o.bosluk = self.o_gap.value()
+        self.o_strip.setVisible(o.gorunum == "serit")
+        self.ctl.apply_config(cfg)
 
 
 # ============================================================================ Hakkında

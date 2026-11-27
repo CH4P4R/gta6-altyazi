@@ -128,6 +128,24 @@ class GosterimCfg:
 
 
 @dataclass
+class ObsCfg:
+    """OBS / yayın için ayrı altyazı görünümü (http://localhost:8787/obs). TV ve bilgisayar katmanını etkilemez."""
+    gorunum: str = "ust"       # ust: oyunun İngilizcesinin tam üstünde (kutuyla örter) | serit: altyazı şeridi
+    yazi_tipi: str = "modern"  # aksiyon | modern | yuvarlak | sade
+    boyut: int = 100           # yazı boyu (%)
+    renk: str = "#ffffff"      # yazı rengi
+    kontur: bool = True        # yazının çevresinde siyah çizgi
+    kutu: int = 85             # yazının arkasındaki kutunun koyuluğu (%; 0 = kutusuz)
+    konum: str = "alt"         # şerit: alt | ust
+    bosluk: int = 6            # şerit: ekranın kenarından uzaklık (yüksekliğin %'si)
+
+    def style(self) -> dict:
+        return {"gorunum": self.gorunum, "yazi_tipi": self.yazi_tipi, "boyut": max(50, min(250, int(self.boyut))),
+                "renk": self.renk, "kontur": bool(self.kontur), "kutu": max(0, min(100, int(self.kutu))),
+                "konum": self.konum, "bosluk": max(0, min(40, int(self.bosluk)))}
+
+
+@dataclass
 class HavuzCfg:
     """Ortak çeviri havuzu (kendi sunucumuz)."""
     acik: bool = True          # havuzu kullan
@@ -226,6 +244,7 @@ class Config:
     otomatik: OtomatikCfg = field(default_factory=OtomatikCfg)
     ps5: Ps5Cfg = field(default_factory=Ps5Cfg)
     havuz: HavuzCfg = field(default_factory=HavuzCfg)
+    obs: ObsCfg = field(default_factory=ObsCfg)
     gocler: list[str] = field(default_factory=list)   # uygulanmış ayar göçleri (yeni sürümün getirdiği varsayılanlar)
 
 
