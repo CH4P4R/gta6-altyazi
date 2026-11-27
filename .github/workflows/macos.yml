@@ -80,7 +80,7 @@ jobs:
         timeout-minutes: 35
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m pytest -q --durations=15 tests/test_yeni_arayuz.py tests/test_oyun_metni.py tests/test_turkce_metin.py tests/test_havuz.py tests/test_alan_duzen.py tests/test_obs_gorunum.py tests/test_sihirbaz_nino.py tests/test_ocr_vision.py tests/test_sahne_izleyici.py tests/test_kalite_zincir.py tests/test_bulanik_cevirmen.py tests/test_seslendirme.py tests/test_yardimci.py tests/test_remoteplay.py tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py tests/test_adb_native.py tests/test_samsung_direct.py tests/test_updater.py tests/test_harcama.py tests/test_tv_brands.py tests/test_auto.py
+        run: set -o pipefail; python -m pytest -q --durations=25 -o junit_duration_report=call tests/test_yeni_arayuz.py tests/test_oyun_metni.py tests/test_turkce_metin.py tests/test_havuz.py tests/test_alan_duzen.py tests/test_obs_gorunum.py tests/test_sihirbaz_nino.py tests/test_ocr_vision.py tests/test_sahne_izleyici.py tests/test_kalite_zincir.py tests/test_bulanik_cevirmen.py tests/test_seslendirme.py tests/test_yardimci.py tests/test_remoteplay.py tests/test_detector.py tests/test_pipeline.py tests/test_server.py tests/test_ui.py tests/test_tekkopya.py tests/test_adb_native.py tests/test_samsung_direct.py tests/test_updater.py tests/test_harcama.py tests/test_tv_brands.py tests/test_auto.py 2>&1 | tee test-sure.txt
 
       - name: macOS platform denemesi (pencere listesi, Quartz, kısayol ayrıştırma)
         run: |
@@ -222,6 +222,10 @@ jobs:
           path: dist/GTA6Altyazi-mac.dmg
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: En yavaş testler (Mac CI süresini kısaltmak için)
+        if: always()
+        run: sed -n '/slowest/,$p' test-sure.txt 2>/dev/null | head -40 || true
 
       - name: Anahtar zincirini sil
         if: always()
