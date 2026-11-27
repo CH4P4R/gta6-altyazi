@@ -199,7 +199,11 @@ jobs:
           mkdir -p dmg
           cp -R "dist/GTA6 Altyazı.app" dmg/
           ln -s /Applications dmg/Applications
-          hdiutil create -volname "GTA6 Altyazı" -srcfolder dmg -ov -format UDZO dist/${{ matrix.dmg }}
+          # hdiutil bazen "Resource busy" veriyor (CI'da görüldü): birkaç kez denenir
+          for i in 1 2 3 4; do
+            hdiutil create -volname "GTA6 Altyazı" -srcfolder dmg -ov -format UDZO dist/${{ matrix.dmg }} && break
+            echo "hdiutil yeniden deneniyor ($i)"; sleep 15
+          done
           ls -la dist/${{ matrix.dmg }}
 
       - name: Apple onayı (notarization)
